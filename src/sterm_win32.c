@@ -89,9 +89,21 @@ static bool initHandle(DWORD handleNo, HANDLE *outHandle, DWORD *outMode) {
 }
 
 bool termInit(void) {
-    return initHandle(STD_INPUT_HANDLE,  &g_consoleInput,  &g_origInputMode)
-        && initHandle(STD_OUTPUT_HANDLE, &g_consoleOutput, &g_origOutputMode)
-        && initHandle(STD_ERROR_HANDLE,  &g_consoleError,  &g_origErrorMode);
+    if (!initHandle(STD_INPUT_HANDLE, &g_consoleInput, &g_origInputMode))
+        return false;
+    if (!initHandle(STD_OUTPUT_HANDLE, &g_consoleOutput, &g_origOutputMode))
+        return false;
+    if (!initHandle(STD_ERROR_HANDLE,  &g_consoleError,  &g_origErrorMode))
+        return false;
+    if (!SetConsoleCP(CP_UTF8)) {
+        g_error.type = TermErrType_errno;
+        return false;
+    }
+    if (!SetConsoleOutputCP(CP_UTF8)) {
+        g_error.type = TermErrType_errno;
+        return false;
+    }
+    return true;
 }
 
 bool termEnableRawMode(void) {
