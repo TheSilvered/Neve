@@ -15,11 +15,9 @@
 #define UNREACHABLE do { __assume(0); abort(); } while (0)
 
 static HANDLE g_consoleInput = INVALID_HANDLE_VALUE;
-static DWORD g_origInputMode = 0;
 static HANDLE g_consoleOutput = INVALID_HANDLE_VALUE;
+static DWORD g_origInputMode = 0;
 static DWORD g_origOutputMode = 0;
-static HANDLE g_consoleError = INVALID_HANDLE_VALUE;
-static DWORD g_origErrorMode = 0;
 static TermErr g_error = { 0 };
 
 #define W_MSG_BUF_SIZE 4096
@@ -36,28 +34,29 @@ static size_t g_eventsSize = 0;
 
 // Initialization
 
-static bool initHandle(DWORD handleNo, HANDLE *outHandle, DWORD *outMode) {
-    *outHandle = GetStdHandle(handleNo);
-    if (*outHandle == INVALID_HANDLE_VALUE) {
-        g_error.type = TermErrType_errno;
-        return false;
-    }
-
-    if (GetConsoleMode(g_consoleInput, outMode) == FALSE) {
-        g_error.type = TermErrType_errno;
-        return false;
-    }
-
-    return true;
-}
-
 bool termInit(void) {
-    if (!initHandle(STD_INPUT_HANDLE, &g_consoleInput, &g_origInputMode))
+    g_consoleInput = GetStdHandle(STD_INPUT_HANDLE);
+    if (g_consoleInput == INVALID_HANDLE_VALUE) {
+        g_error.type = TermErrType_errno;
         return false;
-    if (!initHandle(STD_OUTPUT_HANDLE, &g_consoleOutput, &g_origOutputMode))
+    }
+
+    if (GetConsoleMode(g_consoleInput, &g_origInputMode) == FALSE) {
+        g_error.type = TermErrType_errno;
         return false;
-    if (!initHandle(STD_ERROR_HANDLE,  &g_consoleError,  &g_origErrorMode))
+    }
+
+    g_consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (g_consoleOutput == INVALID_HANDLE_VALUE) {
+        g_error.type = TermErrType_errno;
         return false;
+    }
+
+    if (GetConsoleMode(g_consoleOutput, &g_origOutputMode) == FALSE) {
+        g_error.type = TermErrType_errno;
+        return false;
+    }
+
     if (!SetConsoleCP(CP_UTF8)) {
         g_error.type = TermErrType_errno;
         return false;
@@ -70,7 +69,8 @@ bool termInit(void) {
 }
 
 bool termEnableRawMode(void) {
-    DWORD inputMode  = g_origInputMode;
+    DWORD inputMode = g_origInputMode;
+    DWORD outputMode = g_origOutputMode;
 
     inputMode &= ~(ENABLE_ECHO_INPUT
                  | ENABLE_LINE_INPUT
@@ -78,7 +78,15 @@ bool termEnableRawMode(void) {
                  | ENABLE_QUICK_EDIT_MODE);
     inputMode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
 
+    outputMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING
+               | DISABLE_NEWLINE_AUTO_RETURN;
+
     if (SetConsoleMode(g_consoleInput, inputMode) == FALSE) {
+        g_error.type = TermErrType_errno;
+        return false;
+    }
+
+    if (SetConsoleMode(g_consoleOutput, outputMode) == FALSE) {
         g_error.type = TermErrType_errno;
         return false;
     }
@@ -94,8 +102,7 @@ bool termEnableRawMode(void) {
 void termQuit(void) {
     // Ignore failures, there is nothing left to do
     (void)SetConsoleMode(g_consoleInput,  g_origInputMode);
-    (void)SetConsoleMode(g_consoleOutput, g_origInputMode);
-    (void)SetConsoleMode(g_consoleError,  g_origInputMode);
+    (void)SetConsoleMode(g_consoleOutput,  g_origOutputMode);
 }
 
 // Error handling
@@ -135,10 +142,14 @@ void termLogError(const char *msg) {
             snprintf(
                 g_msgBuf,
                 MSG_BUF_SIZE,
-                "failed to format message, error 0x%04lX", errId);
+                "failed to format message, error 0x%04lX", errId
+            );
             printErrMsg(msg, g_msgBuf);
         } else {
-            ucdUTF16ToUTF8(g_wMsgBuf, wcslen(g_wMsgBuf), g_msgBuf, MSG_BUF_SIZE);
+            ucdUTF16ToUTF8(
+                g_wMsgBuf, wcslen(g_wMsgBuf),
+                g_msgBuf, MSG_BUF_SIZE
+            );
             printErrMsg(msg, g_msgBuf);
         }
         break;
@@ -186,10 +197,14 @@ TermKey termGetKey(void) {
         UNREACHABLE;
     }
 
+    DWORD eventsRead;
+
     BOOL result = ReadConsoleInputW(
         g_consoleInput,
         g_inputEvents, INPUT_EVENTS_SIZE,
-        &g_eventsSize);
+        &eventsRead
+    );
+    g_eventsSize = eventsRead;
     if (result == FALSE) {
         g_error.type = TermErrType_errno;
         return -1;

@@ -25,7 +25,9 @@ int main(void) {
             termLogError("failed to read the key");
             return 1;
         }
-        if (iscntrl(key)) {
+        if (key == 0) {
+            continue;
+        } else if (iscntrl(key)) {
             printf("%d\r\n", key);
         } else {
             printf("%d ('%c')\r\n", key, key);
