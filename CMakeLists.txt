@@ -7,4 +7,4 @@ set(CMAKE_C_STANDARD_REQUIRED true)
 
 include_directories(Neve include)
 
-add_executable(Neve src/main.c src/term.c)
+add_executable(Neve src/main.c src/sterm.c)

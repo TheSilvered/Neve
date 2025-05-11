@@ -7,11 +7,7 @@
 #include <unistd.h>
 #include <termios.h>
 
-#ifdef _MSC_VER
-#define UNREACHABLE __assert(0)
-#else
 #define UNREACHABLE __builtin_unreachable()
-#endif // !_MSVC_VER
 
 static struct termios g_origTermios = { 0 };
 static TermErr g_error = { 0 };
@@ -45,6 +41,33 @@ bool termEnableRawMode(void) {
 void termQuit(void) {
     // Ignore failures, there is nothing left to do
     (void)tcsetattr(STDIN_FILENO, TCSAFLUSH, &g_origTermios);
+}
+
+// Error handling
+
+TermErr *termErr(void) {
+    return &g_error;
+}
+
+static void printErrMsg(const char *msg, char *desc) {
+    if (msg == NULL || *msg == '\0') {
+        (void)fprintf(stderr, "%s\r\n", desc);
+    } else {
+        (void)fprintf(stderr, "%s: %s\r\n", msg, desc);
+    }
+}
+
+void termLogError(const char *msg) {
+    switch (g_error.type) {
+    case TermErrType_none:
+        printErrMsg(msg, (char *)"no error occurred");
+        break;
+    case TermErrType_errno:
+        printErrMsg(msg, strerror(errno));
+        break;
+    default:
+        UNREACHABLE;
+    }
 }
 
 // Error handling

@@ -4,14 +4,14 @@
 #include <stdbool.h>
 
 // Type of errors
-typedef enum TermErrorType {
+typedef enum TermErrType {
     TermErrType_none = 0, // No error occurred
     TermErrType_errno // An internal error set by a C function
-} TermErrorType;
+} TermErrType;
 
 // The current error of the library
 typedef struct TermErr {
-    TermErrorType type; // The type of the error
+    TermErrType type; // The type of the error
 } TermErr;
 
 // Key pressed
