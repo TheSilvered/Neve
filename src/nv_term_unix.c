@@ -1,11 +1,11 @@
-#include "sterm.h"
-
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <termios.h>
+
+#include "nv_term.h"
 
 #define UNREACHABLE __builtin_unreachable()
 
@@ -70,41 +70,15 @@ void termLogError(const char *msg) {
     }
 }
 
-// Error handling
-
-TermErr *termErr(void) {
-    return &g_error;
-}
-
-static void printErrMsg(const char *msg, char *desc) {
-    if (msg == NULL || *msg == '\0') {
-        (void)fprintf(stderr, "%s\r\n", desc);
-    } else {
-        (void)fprintf(stderr, "%s: %s\r\n", msg, desc);
-    }
-}
-
-void termLogError(const char *msg) {
-    switch (g_error.type) {
-    case TermErrType_none:
-        printErrMsg(msg, (char *)"no error occurred");
-        break;
-    case TermErrType_errno:
-        printErrMsg(msg, strerror(errno));
-        break;
-    default:
-        UNREACHABLE;
-    }
-}
-
 // Input
 
 TermKey termGetKey(void) {
-    char ch;
-
+    unsigned char ch = 0;
     if (read(STDIN_FILENO, &ch, 1) < 0) {
         g_error.type = TermErrType_errno;
         return -1;
     }
-    return (int)((unsigned char)ch);
+
+    // TODO: Read the full UTF8 character before returning
+    return (TermKey)ch;
 }

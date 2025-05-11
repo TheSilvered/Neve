@@ -1,4 +1,4 @@
-#include "sterm.h"
+#include "nv_term.h"
 #include <stdlib.h> // atexit
 #include <ctype.h> // iscntrl
 #include <stdio.h>

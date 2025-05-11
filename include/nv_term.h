@@ -1,17 +1,21 @@
-#ifndef STERM_H_
-#define STERM_H_
+#ifndef NV_TERM_H_
+#define NV_TERM_H_
 
 #include <stdbool.h>
 
 // Type of errors
 typedef enum TermErrType {
     TermErrType_none = 0, // No error occurred
-    TermErrType_errno // An internal error set by a C function
+    TermErrType_errno, // An internal error set by a C function
+    TermErrType_customMsg // An error with a custom message in data.customMsg
 } TermErrType;
 
 // The current error of the library
 typedef struct TermErr {
     TermErrType type; // The type of the error
+    union {
+        char *customMsg;
+    } data;
 } TermErr;
 
 // Key pressed
@@ -37,4 +41,4 @@ void termLogError(const char *msg);
 // Get the pressed key
 TermKey termGetKey(void);
 
-#endif // !STERM_H_
+#endif // !NV_TERM_H_

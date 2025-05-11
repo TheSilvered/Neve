@@ -1,17 +1,18 @@
-#include "sterm.h"
-
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
-
+#include <stdlib.h>
 #define WIN32_LEAN_AND_MEAN
 #define UNICODE
 #define _UNICODE
 #include <windows.h>
 
-#define UNREACHABLE __assume(0)
+#include "nv_term.h"
+#include "nv_unicode.h"
+
+#define UNREACHABLE do { __assume(0); abort(); } while (0)
 
 static HANDLE g_consoleInput = INVALID_HANDLE_VALUE;
 static DWORD g_origInputMode = 0;
@@ -24,52 +25,14 @@ static TermErr g_error = { 0 };
 #define W_MSG_BUF_SIZE 4096
 #define MSG_BUF_SIZE 4096
 
-static TCHAR wMsgBuf[MSG_BUF_SIZE];
-static char msgBuf[MSG_BUF_SIZE];
+static TCHAR g_wMsgBuf[MSG_BUF_SIZE];
+static char g_msgBuf[MSG_BUF_SIZE];
 
-typedef int32_t unicode_t;
+#define INPUT_EVENTS_SIZE 512
 
-// Windows utilities
-
-static size_t wcharToChar(
-    wchar_t *str, size_t strLen,
-    char *buf, size_t bufSize
-) {
-    size_t bufIdx = 0;
-    for (size_t strIdx = 0; strIdx < strLen;) {
-        wchar_t wch = str[strIdx++];
-        unicode_t unicodeCP = 0;
-        if (wch < 0xd800 || wch > 0xdfff) {
-            unicodeCP = wch;
-        } else {
-            if (strIdx == strLen) {
-                break;
-            }
-            unicodeCP = ((wch & 0x3ff) << 10)
-                      + (str[strIdx++] & 0x3ff)
-                      + 0x10000;
-        }
-
-        if (unicodeCP <= 0x7f && bufSize - bufIdx > 1) {
-            buf[bufIdx++] = (char)unicodeCP;
-        } else if (unicodeCP <= 0x7ff && bufSize - bufIdx > 2) {
-            buf[bufIdx++] = 0b11000000 | (char)(unicodeCP >> 6);
-            buf[bufIdx++] = 0b10000000 | (char)(unicodeCP & 0x3f);
-        } else if (unicodeCP <= 0xffff && bufSize - bufIdx > 3) {
-            buf[bufIdx++] = 0b11100000 | (char)(unicodeCP >> 12);
-            buf[bufIdx++] = 0b10000000 | (char)(unicodeCP >> 6 & 0x3f);
-            buf[bufIdx++] = 0b10000000 | (char)(unicodeCP & 0x3f);
-        } else if (unicodeCP <= 0x10fffe && bufSize - bufIdx > 4) {
-            buf[bufIdx++] = 0b11110000 | (char)(unicodeCP >> 18);
-            buf[bufIdx++] = 0b10000000 | (char)(unicodeCP >> 12 & 0x3f);
-            buf[bufIdx++] = 0b10000000 | (char)(unicodeCP >> 6 & 0x3f);
-            buf[bufIdx++] = 0b10000000 | (char)(unicodeCP & 0x3f);
-        } else
-            break;
-    }
-    buf[bufIdx] = '\0';
-    return bufIdx;
-}
+static INPUT_RECORD g_inputEvents[INPUT_EVENTS_SIZE];
+static size_t g_eventIdx = 0;
+static size_t g_eventsSize = 0;
 
 // Initialization
 
@@ -120,6 +83,11 @@ bool termEnableRawMode(void) {
         return false;
     }
 
+    if (FlushConsoleInputBuffer(g_consoleInput) == FALSE) {
+        g_error.type = TermErrType_errno;
+        return false;
+    }
+
     return true;
 }
 
@@ -159,40 +127,76 @@ void termLogError(const char *msg) {
             NULL,
             errId,
             0,
-            wMsgBuf, W_MSG_BUF_SIZE,
+            g_wMsgBuf, W_MSG_BUF_SIZE,
             NULL
         );
 
         if (fmtResult == FALSE) {
             snprintf(
-                msgBuf,
+                g_msgBuf,
                 MSG_BUF_SIZE,
                 "failed to format message, error 0x%04lX", errId);
-            printErrMsg(msg, msgBuf);
+            printErrMsg(msg, g_msgBuf);
         } else {
-            wcharToChar(wMsgBuf, wcslen(wMsgBuf), msgBuf, MSG_BUF_SIZE);
-            printErrMsg(msg, msgBuf);
+            ucdUTF16ToUTF8(g_wMsgBuf, wcslen(g_wMsgBuf), g_msgBuf, MSG_BUF_SIZE);
+            printErrMsg(msg, g_msgBuf);
         }
         break;
     }
     default:
         UNREACHABLE;
+
     }
 }
 
 // Input
 
 TermKey termGetKey(void) {
-    wchar_t ch;
-    DWORD charsRead;
-    if (ReadConsoleW(g_consoleInput, &ch, 1, &charsRead, NULL) == FALSE) {
-        g_error.type = TermErrType_errno;
-        return -1;
+    while (g_eventIdx < g_eventsSize) {
+        INPUT_RECORD *event = &g_inputEvents[g_eventIdx++];
+        switch (event->EventType) {
+        case MOUSE_EVENT:
+        case WINDOW_BUFFER_SIZE_EVENT:
+        case FOCUS_EVENT:
+        case MENU_EVENT:
+            continue;
+        case KEY_EVENT:
+            if (event->Event.KeyEvent.bKeyDown) {
+                return (TermKey)event->Event.KeyEvent.uChar.UnicodeChar;
+            } else {
+                continue;
+            }
+        }
     }
 
-    if (charsRead < 1) {
+    g_eventIdx = 0;
+    g_eventsSize = 0;
+
+    switch (WaitForSingleObject(g_consoleInput, 100)) {
+    case WAIT_ABANDONED:
+        return 0;
+    case WAIT_TIMEOUT:
+        return 0;
+    case WAIT_FAILED:
+        g_error.type = TermErrType_errno;
+        return -1;
+    case WAIT_OBJECT_0:
+        break;
+    default:
+        UNREACHABLE;
+    }
+
+    BOOL result = ReadConsoleInputW(
+        g_consoleInput,
+        g_inputEvents, INPUT_EVENTS_SIZE,
+        &g_eventsSize);
+    if (result == FALSE) {
+        g_error.type = TermErrType_errno;
+        return -1;
+    } else if (g_eventsSize == 0) {
+        // this should be unreachable but in any case avoids infinite recursion
         return 0;
     } else {
-        return (TermKey)ch;
+        return termGetKey();
     }
 }
