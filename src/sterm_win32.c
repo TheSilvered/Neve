@@ -95,7 +95,19 @@ bool termInit(void) {
 }
 
 bool termEnableRawMode(void) {
-    // TODO: figure out a way to enable raw mode on Windows
+    DWORD inputMode  = g_origInputMode;
+
+    inputMode &= ~(ENABLE_ECHO_INPUT
+                 | ENABLE_LINE_INPUT
+                 | ENABLE_PROCESSED_INPUT
+                 | ENABLE_QUICK_EDIT_MODE);
+    inputMode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
+
+    if (SetConsoleMode(g_consoleInput, inputMode) == FALSE) {
+        g_error.type = TermErrType_errno;
+        return false;
+    }
+
     return true;
 }
 
