@@ -20,6 +20,8 @@ static DWORD g_origInputMode = 0;
 static DWORD g_origOutputMode = 0;
 static TermErr g_error = { 0 };
 
+static DWORD g_readTimeoutMs = 0;
+
 #define W_MSG_BUF_SIZE 4096
 #define MSG_BUF_SIZE 4096
 
@@ -68,9 +70,10 @@ bool termInit(void) {
     return true;
 }
 
-bool termEnableRawMode(void) {
+bool termEnableRawMode(uint8_t getKeyTimeoutDSec) {
     DWORD inputMode = g_origInputMode;
     DWORD outputMode = g_origOutputMode;
+    g_readTimeoutMs = getKeyTimeoutDSec * 100;
 
     inputMode &= ~(ENABLE_ECHO_INPUT
                  | ENABLE_LINE_INPUT
@@ -163,6 +166,21 @@ void termLogError(const char *msg) {
 // Input
 
 TermKey termGetKey(void) {
+    if (g_readTimeoutMs == 0) {
+        wchar_t ch;
+        DWORD charsRead;
+        if (ReadConsoleW(g_consoleInput, &ch, 1, &charsRead, NULL) == FALSE) {
+            g_error.type = TermErrType_errno;
+            return -1;
+        }
+
+        if (charsRead < 1) {
+            return 0;
+        } else {
+            return (TermKey)ch;
+        }
+    }
+
     while (g_eventIdx < g_eventsSize) {
         INPUT_RECORD *event = &g_inputEvents[g_eventIdx++];
         switch (event->EventType) {
@@ -214,4 +232,14 @@ TermKey termGetKey(void) {
     } else {
         return termGetKey();
     }
+}
+
+// Output
+
+bool termWrite(const void *buf, size_t size) {
+    if (WriteConsole(g_consoleOutput, buf, (DWORD)size, NULL, NULL) == FALSE) {
+        g_error.type = TermErrType_errno;
+        return false;
+    }
+    return true;
 }

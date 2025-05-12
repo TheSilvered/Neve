@@ -3,6 +3,8 @@
 #include <ctype.h> // iscntrl
 #include <stdio.h>
 
+#define CTRL(key) ((key) & 0x1f)
+
 int main(void) {
     if (!termInit()) {
         termLogError("failed to initialize the terminal");
@@ -14,7 +16,7 @@ int main(void) {
         return false;
     }
 
-    if (!termEnableRawMode()) {
+    if (!termEnableRawMode(0)) {
         termLogError("failed to enable raw mode");
         return 1;
     }
@@ -25,14 +27,7 @@ int main(void) {
             termLogError("failed to read the key");
             return 1;
         }
-        if (key == 0) {
-            continue;
-        } else if (iscntrl(key)) {
-            printf("%d\r\n", key);
-        } else {
-            printf("%d ('%c')\r\n", key, key);
-        }
-        if (key == 'q') {
+        if (key == CTRL('q')) {
             break;
         }
     }

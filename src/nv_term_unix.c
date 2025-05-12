@@ -23,14 +23,17 @@ bool termInit(void) {
     return true;
 }
 
-bool termEnableRawMode(void) {
+bool termEnableRawMode(uint8_t getKeyTimeoutDSec) {
     struct termios raw = g_origTermios;
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     raw.c_oflag &= ~(OPOST);
     raw.c_cflag |= (CS8);
     raw.c_lflag &= ~(ECHO | ISIG | ICANON | IEXTEN);
-    raw.c_cc[VMIN] = 0;
-    raw.c_cc[VTIME] = 1;
+
+    if (getKeyTimeoutDSec != 0) {
+        raw.c_cc[VMIN] = 0;
+        raw.c_cc[VTIME] = getKeyTimeoutDSec;
+    }
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) != 0) {
         g_error.type = TermErrType_errno;
@@ -96,4 +99,14 @@ TermKey termGetKey(void) {
         chBytes[i] = ch;
     }
     return (TermKey)ucdCh8ToCh32(chBytes);
+}
+
+// Output
+
+bool termWrite(const void *buf, size_t size) {
+    if (write(STDOUT_FILENO, buf, size) == -1) {
+        g_error.type = TermErrType_errno;
+        return false;
+    }
+    return true;
 }

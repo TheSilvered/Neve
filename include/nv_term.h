@@ -2,6 +2,8 @@
 #define NV_TERM_H_
 
 #include <stdbool.h>
+#include <string.h>
+#include <stdint.h>
 
 // Type of errors
 typedef enum TermErrType {
@@ -29,7 +31,9 @@ typedef int TermKey;
 // Initialize library
 bool termInit(void);
 // Enable raw mode
-bool termEnableRawMode(void);
+// `getKeyTimeoutDSec` sets the timeout for termGetKey in tenths of a second,
+// set to 0 disables timeout.
+bool termEnableRawMode(uint8_t getKeyTimeoutDSec);
 // Deinitialize library, restoring the terminal
 void termQuit(void);
 
@@ -40,5 +44,11 @@ void termLogError(const char *msg);
 
 // Get the pressed key
 TermKey termGetKey(void);
+
+// The beginning of an escape sequence
+#define TERM_ESC "\x1b["
+
+// Write to the terminal
+bool termWrite(const void *buf, size_t size);
 
 #endif // !NV_TERM_H_
