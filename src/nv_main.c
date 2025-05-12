@@ -28,6 +28,7 @@ int main(void) {
             return 1;
         }
         if (key == CTRL('q')) {
+            termClearScreen();
             break;
         }
     }

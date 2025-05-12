@@ -5,3 +5,7 @@
 #else
 #include "nv_term_unix.c"
 #endif
+
+bool termClearScreen(void) {
+    return termWrite(TERM_ESC "2J", 4) && termWrite(TERM_ESC "H", 3);
+}

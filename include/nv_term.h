@@ -50,5 +50,7 @@ TermKey termGetKey(void);
 
 // Write to the terminal
 bool termWrite(const void *buf, size_t size);
+// Clear the entire screen
+bool termClearScreen(void);
 
 #endif // !NV_TERM_H_
