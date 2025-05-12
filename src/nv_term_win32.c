@@ -78,7 +78,9 @@ bool termEnableRawMode(uint8_t getKeyTimeoutDSec) {
     inputMode &= ~(ENABLE_ECHO_INPUT
                  | ENABLE_LINE_INPUT
                  | ENABLE_PROCESSED_INPUT
-                 | ENABLE_QUICK_EDIT_MODE);
+                 | ENABLE_QUICK_EDIT_MODE
+                 | ENABLE_MOUSE_INPUT
+                 | ENABLE_WINDOW_INPUT);
     inputMode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
 
     outputMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING
@@ -151,7 +153,7 @@ void termLogError(const char *msg) {
         } else {
             ucdUTF16ToUTF8(
                 g_wMsgBuf, wcslen(g_wMsgBuf),
-                g_msgBuf, MSG_BUF_SIZE
+                (UcdCh8 *)g_msgBuf, MSG_BUF_SIZE
             );
             printErrMsg(msg, g_msgBuf);
         }
@@ -165,20 +167,14 @@ void termLogError(const char *msg) {
 
 // Input
 
-TermKey termGetKey(void) {
+static int getCh(UcdCh8 *outCh) {
     if (g_readTimeoutMs == 0) {
-        wchar_t ch;
         DWORD charsRead;
-        if (ReadConsoleW(g_consoleInput, &ch, 1, &charsRead, NULL) == FALSE) {
+        if (ReadConsoleA(g_consoleInput, outCh, 1, &charsRead, NULL) == FALSE) {
             g_error.type = TermErrType_errno;
             return -1;
         }
-
-        if (charsRead < 1) {
-            return 0;
-        } else {
-            return (TermKey)ch;
-        }
+        return (int)charsRead;
     }
 
     while (g_eventIdx < g_eventsSize) {
@@ -191,7 +187,8 @@ TermKey termGetKey(void) {
             continue;
         case KEY_EVENT:
             if (event->Event.KeyEvent.bKeyDown) {
-                return (TermKey)event->Event.KeyEvent.uChar.UnicodeChar;
+                *outCh = (UcdCh8)event->Event.KeyEvent.uChar.UnicodeChar;
+                return 1;
             } else {
                 continue;
             }
@@ -217,7 +214,7 @@ TermKey termGetKey(void) {
 
     DWORD eventsRead;
 
-    BOOL result = ReadConsoleInputW(
+    BOOL result = ReadConsoleInputA(
         g_consoleInput,
         g_inputEvents, INPUT_EVENTS_SIZE,
         &eventsRead
@@ -230,14 +227,43 @@ TermKey termGetKey(void) {
         // this should be unreachable but in any case avoids infinite recursion
         return 0;
     } else {
-        return termGetKey();
+        return getCh(outCh);
     }
+}
+
+TermKey termGetKey(void) {
+    // TODO: change input CP to UTF-16 because emojis don't work
+    UcdCh8 ch = 0;
+
+    if (getCh(&ch) < 0) {
+        g_error.type = TermErrType_errno;
+        return -1;
+    } else if (ch == 0) {
+        return 0;
+    }
+
+    // Read the full UTF-8 character
+    UcdCh8 chBytes[4] = { ch, 0, 0, 0 };
+    size_t chLen = ucdUTF8ByteLen(ch);
+
+    // Do one less iteration as we already have the first byte
+    for (size_t i = 1; i < chLen; i++) {
+        ch = 0; // reset ch value for possible timeout of getCh
+        if (getCh(&ch) < 0) {
+            return -1;
+        } else if (ch == 0) {
+            return (TermKey)chBytes[0];
+        }
+        chBytes[i] = ch;
+    }
+
+    return ucdCh8ToCh32(chBytes);
 }
 
 // Output
 
 bool termWrite(const void *buf, size_t size) {
-    if (WriteConsole(g_consoleOutput, buf, (DWORD)size, NULL, NULL) == FALSE) {
+    if (WriteConsoleA(g_consoleOutput, buf, (DWORD)size, NULL, NULL) == FALSE) {
         g_error.type = TermErrType_errno;
         return false;
     }

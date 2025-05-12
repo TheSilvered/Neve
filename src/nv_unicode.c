@@ -33,9 +33,7 @@ size_t ucdUTF16ToUTF8(
             if (strIdx == strLen) {
                 break;
             }
-            ch = ((wch & 0x3ff) << 10)
-                      + (str[strIdx++] & 0x3ff)
-                      + 0x10000;
+            ch = ((wch & 0x3ff) << 10) + (str[strIdx++] & 0x3ff) + 0x10000;
         }
 
         // ignore invalid characters
@@ -105,4 +103,14 @@ UcdCh32 ucdCh8ToCh32(UcdCh8 *bytes) {
     default:
         return 0;
     }
+}
+
+UcdCh32 ucdCh16ToCh32(UcdCh16 *bytes) {
+    if (
+        bytes[0] < UCD_HIGH_SURROGATE_FIRST
+        || bytes[0] > UCD_HIGH_SURROGATE_LAST
+    ) {
+        return bytes[0];
+    }
+    return ((bytes[0] & 0x3ff) << 10) + (bytes[1] & 0x3ff) + 0x10000;
 }

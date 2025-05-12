@@ -78,9 +78,12 @@ void termLogError(const char *msg) {
 
 TermKey termGetKey(void) {
     UcdCh8 ch = 0;
+
     if (read(STDIN_FILENO, &ch, 1) < 0) {
         g_error.type = TermErrType_errno;
         return -1;
+    } else if (ch == 0) {
+        return 0;
     }
 
     // Read the full UTF-8 character
@@ -89,15 +92,17 @@ TermKey termGetKey(void) {
 
     // Do one less iteration as we already have the first byte
     for (size_t i = 1; i < chLen; i++) {
-        ch = 0; // reset ch value for possible timeout of read
-        if (read(STDIN_FILENO, &ch, 1) < 0) {
+        ch = 0; // reset ch value for possible timeout of getCh
+        if (read(STDIN_FILENO, outCh, 1) < 0) {
             g_error.type = TermErrType_errno;
             return -1;
         }
-        if (ch == 0)
+        if (ch == 0) {
             return (TermKey)chBytes[0];
+        }
         chBytes[i] = ch;
     }
+
     return (TermKey)ucdCh8ToCh32(chBytes);
 }
 

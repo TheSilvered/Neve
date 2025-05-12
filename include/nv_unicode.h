@@ -4,6 +4,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define UCD_HIGH_SURROGATE_FIRST 0xD800
+#define UCD_HIGH_SURROGATE_LAST  0xDBFF
+
+#define UCD_LOW_SURROGATE_FIRST 0xDC00
+#define UCD_LOW_SURROGATE_LAST  0xDFFF
+
 // UTF8 encoded character, a single character may not be a full codepoint
 typedef uint8_t  UcdCh8;
 // UTF16 encoded character, a single character may not be a full codepoint
@@ -28,5 +34,8 @@ size_t ucdUTF8ByteLen(UcdCh8 byte0);
 size_t ucdUTF8ChLen(UcdCh32 ch);
 // Decode a character encoded in UTF-8.
 UcdCh32 ucdCh8ToCh32(UcdCh8 *bytes);
+
+// Decode a character encoded in UTF-16.
+UcdCh32 ucdCh16ToCh32(UcdCh16 *bytes);
 
 #endif // !NV_UNICODE_H_

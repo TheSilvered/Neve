@@ -21,13 +21,16 @@ int main(void) {
         return 1;
     }
 
+    termClearScreen();
+
     for (;;) {
         TermKey key = termGetKey();
         if (termKeyErr(key)) {
             termLogError("failed to read the key");
             return 1;
         }
-        if (key == CTRL('q')) {
+        printf("key = %d\r\n", key);
+        if (key == CTRL('c')) {
             termClearScreen();
             break;
         }
