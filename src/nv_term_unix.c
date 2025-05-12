@@ -6,6 +6,7 @@
 #include <termios.h>
 
 #include "nv_term.h"
+#include "nv_unicode.h"
 
 #define UNREACHABLE __builtin_unreachable()
 
@@ -72,39 +73,27 @@ void termLogError(const char *msg) {
 
 // Input
 
-static TermKey readFullKey(unsigned char ch0, size_t chLen) {
-    TermKey key = ch0 & ((1 << (6 - chLen)) - 1);
-    for (size_t i = 0; i < chLen; i++) {
-        unsigned char ch = 0;
-        if (read(STDIN_FILENO, &ch, 1) < 0) {
-            g_error.type = TermErrType_errno;
-            return -1;
-        }
-        if (ch == 0 || (ch & 0xc0) != 0x80)
-            return key;
-        key = (key << 6) | (ch & 0x3f);
-    }
-    return key;
-}
-
 TermKey termGetKey(void) {
-    unsigned char ch = 0;
+    UcdCh8 ch = 0;
     if (read(STDIN_FILENO, &ch, 1) < 0) {
         g_error.type = TermErrType_errno;
         return -1;
     }
 
-    if (ch < 128)
-        return (TermKey)ch;
-
     // Read the full UTF-8 character
-    if ((ch & 0xe0) == 0xc0) {
-        return readFullKey(ch, 1);
-    } else if ((ch & 0xf0) == 0xe0) {
-        return readFullKey(ch, 2);
-    } else if ((ch & 0xf8) == 0xf0) {
-        return readFullKey(ch, 3);
-    } else {
-        return (TermKey)ch;
+    UcdCh8 chBytes[4] = { ch, 0, 0, 0 };
+    size_t chLen = ucdUTF8ByteLen(ch);
+
+    // Do one less iteration as we already have the first byte
+    for (size_t i = 1; i < chLen; i++) {
+        ch = 0; // reset ch value for possible timeout of read
+        if (read(STDIN_FILENO, &ch, 1) < 0) {
+            g_error.type = TermErrType_errno;
+            return -1;
+        }
+        if (ch == 0)
+            return (TermKey)chBytes[0];
+        chBytes[i] = ch;
     }
+    return (TermKey)ucdCh8ToCh32(chBytes);
 }
