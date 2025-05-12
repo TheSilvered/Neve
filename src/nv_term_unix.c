@@ -72,6 +72,21 @@ void termLogError(const char *msg) {
 
 // Input
 
+static TermKey readFullKey(unsigned char ch0, size_t chLen) {
+    TermKey key = ch0 & ((1 << (6 - chLen)) - 1);
+    for (size_t i = 0; i < chLen; i++) {
+        unsigned char ch = 0;
+        if (read(STDIN_FILENO, &ch, 1) < 0) {
+            g_error.type = TermErrType_errno;
+            return -1;
+        }
+        if (ch == 0 || (ch & 0xc0) != 0x80)
+            return key;
+        key = (key << 6) | (ch & 0x3f);
+    }
+    return key;
+}
+
 TermKey termGetKey(void) {
     unsigned char ch = 0;
     if (read(STDIN_FILENO, &ch, 1) < 0) {
@@ -79,6 +94,17 @@ TermKey termGetKey(void) {
         return -1;
     }
 
-    // TODO: Read the full UTF8 character before returning
-    return (TermKey)ch;
+    if (ch < 128)
+        return (TermKey)ch;
+
+    // Read the full UTF-8 character
+    if ((ch & 0xe0) == 0xc0) {
+        return readFullKey(ch, 1);
+    } else if ((ch & 0xf0) == 0xe0) {
+        return readFullKey(ch, 2);
+    } else if ((ch & 0xf8) == 0xf0) {
+        return readFullKey(ch, 3);
+    } else {
+        return (TermKey)ch;
+    }
 }
