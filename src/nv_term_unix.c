@@ -26,7 +26,6 @@ bool termInit(void) {
 bool termEnableRawMode(uint8_t getKeyTimeoutDSec) {
     struct termios raw = g_origTermios;
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-    raw.c_oflag &= ~(OPOST);
     raw.c_cflag |= (CS8);
     raw.c_lflag &= ~(ECHO | ISIG | ICANON | IEXTEN);
 
@@ -88,12 +87,12 @@ TermKey termGetKey(void) {
 
     // Read the full UTF-8 character
     UcdCh8 chBytes[4] = { ch, 0, 0, 0 };
-    size_t chLen = ucdUTF8ByteLen(ch);
+    size_t chLen = ucdCh8RunLen(ch);
 
     // Do one less iteration as we already have the first byte
     for (size_t i = 1; i < chLen; i++) {
         ch = 0; // reset ch value for possible timeout of getCh
-        if (read(STDIN_FILENO, outCh, 1) < 0) {
+        if (read(STDIN_FILENO, &ch, 1) < 0) {
             g_error.type = TermErrType_errno;
             return -1;
         }

@@ -29,7 +29,7 @@ int main(void) {
             termLogError("failed to read the key");
             return 1;
         }
-        printf("key = %d\r\n", key);
+        printf("key = %x\r\n", key);
         if (key == CTRL('c')) {
             termClearScreen();
             break;

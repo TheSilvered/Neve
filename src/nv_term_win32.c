@@ -59,10 +59,6 @@ bool termInit(void) {
         return false;
     }
 
-    if (!SetConsoleCP(CP_UTF8)) {
-        g_error.type = TermErrType_errno;
-        return false;
-    }
     if (!SetConsoleOutputCP(CP_UTF8)) {
         g_error.type = TermErrType_errno;
         return false;
@@ -151,7 +147,7 @@ void termLogError(const char *msg) {
             );
             printErrMsg(msg, g_msgBuf);
         } else {
-            ucdUTF16ToUTF8(
+            ucdCh16StrToCh8Str(
                 g_wMsgBuf, wcslen(g_wMsgBuf),
                 (UcdCh8 *)g_msgBuf, MSG_BUF_SIZE
             );
@@ -167,10 +163,10 @@ void termLogError(const char *msg) {
 
 // Input
 
-static int getCh(UcdCh8 *outCh) {
+static int getCh(UcdCh16 *outCh) {
     if (g_readTimeoutMs == 0) {
         DWORD charsRead;
-        if (ReadConsoleA(g_consoleInput, outCh, 1, &charsRead, NULL) == FALSE) {
+        if (ReadConsoleW(g_consoleInput, outCh, 1, &charsRead, NULL) == FALSE) {
             g_error.type = TermErrType_errno;
             return -1;
         }
@@ -187,7 +183,7 @@ static int getCh(UcdCh8 *outCh) {
             continue;
         case KEY_EVENT:
             if (event->Event.KeyEvent.bKeyDown) {
-                *outCh = (UcdCh8)event->Event.KeyEvent.uChar.UnicodeChar;
+                *outCh = (UcdCh16)event->Event.KeyEvent.uChar.UnicodeChar;
                 return 1;
             } else {
                 continue;
@@ -214,7 +210,7 @@ static int getCh(UcdCh8 *outCh) {
 
     DWORD eventsRead;
 
-    BOOL result = ReadConsoleInputA(
+    BOOL result = ReadConsoleInputW(
         g_consoleInput,
         g_inputEvents, INPUT_EVENTS_SIZE,
         &eventsRead
@@ -232,8 +228,7 @@ static int getCh(UcdCh8 *outCh) {
 }
 
 TermKey termGetKey(void) {
-    // TODO: change input CP to UTF-16 because emojis don't work
-    UcdCh8 ch = 0;
+    UcdCh16 ch = 0;
 
     if (getCh(&ch) < 0) {
         g_error.type = TermErrType_errno;
@@ -242,22 +237,23 @@ TermKey termGetKey(void) {
         return 0;
     }
 
-    // Read the full UTF-8 character
-    UcdCh8 chBytes[4] = { ch, 0, 0, 0 };
-    size_t chLen = ucdUTF8ByteLen(ch);
-
-    // Do one less iteration as we already have the first byte
-    for (size_t i = 1; i < chLen; i++) {
-        ch = 0; // reset ch value for possible timeout of getCh
+    // Read the full UTF-16 character
+    UcdCh16 chBytes[2] = { ch, 0 };
+    size_t chLen = ucdCh16RunLen(ch);
+    if (chLen == 1) {
+        return ch;
+    } else if (chLen == 2) {
+        ch = 0;
         if (getCh(&ch) < 0) {
             return -1;
         } else if (ch == 0) {
             return (TermKey)chBytes[0];
         }
-        chBytes[i] = ch;
+        chBytes[1] = ch;
+        return ucdCh16ToCh32(chBytes);
+    } else {
+        return 0;
     }
-
-    return ucdCh8ToCh32(chBytes);
 }
 
 // Output

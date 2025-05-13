@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #define UCD_HIGH_SURROGATE_FIRST 0xD800
 #define UCD_HIGH_SURROGATE_LAST  0xDBFF
@@ -16,26 +17,38 @@ typedef uint8_t  UcdCh8;
 typedef uint16_t UcdCh16;
 // UTF32 encoded character
 typedef uint32_t UcdCh32;
+// Unicode Codepoint
+typedef UcdCh32 UcdCP;
+
+// Return if a codepoint is valid
+// A valid codepoint is not a high or low surrogate and is not above U+10FFFF
+bool ucdIsCPValid(UcdCP cp);
 
 // Translate a UTF16-encoded string to UTF8 adding a NUL character at the end.
 // Encoding errors in `str` are ignored.
 // Returns the length of the UTF8 string written to `buf`.
 // If `buf` is NULL returns the size needed for `buf`
-size_t ucdUTF16ToUTF8(
+size_t ucdCh16StrToCh8Str(
     UcdCh16 *str, size_t strLen,
     UcdCh8  *buf, size_t bufLen
 );
 
-// Get the total number of bytes of a UTF8 character given the first byte.
+// Get the total number of bytes of a UTF8 codepoint given the first byte.
 // Returns 0 if the byte is not the start of a UTF8 sequence.
-size_t ucdUTF8ByteLen(UcdCh8 byte0);
-// Get the total number of bytes needed to encode `ch` in UTF-8
-// Returns 0 if the character is not valid.
-size_t ucdUTF8ChLen(UcdCh32 ch);
-// Decode a character encoded in UTF-8.
+size_t ucdCh8RunLen(UcdCh8 firstCh);
+// Get the total number of bytes needed to encode a codepoint in UTF-8
+// Returns 0 if the codepoint is not valid.
+size_t ucdCh8CPLen(UcdCP cp);
+// Decode a codepoint encoded in UTF-8.
 UcdCh32 ucdCh8ToCh32(UcdCh8 *bytes);
 
-// Decode a character encoded in UTF-16.
+// Get the total number of units of a UTF16 codepoint given the first unit.
+// Returns 0 if the byte is not the start of a UTF8 sequence.
+size_t ucdCh16RunLen(UcdCh16 firstCh);
+// Get the total number of units needed to encode `cp` in UTF-16
+// Returns 0 if the codepoint is not valid.
+size_t ucdCh16CPLen(UcdCP cp);
+// Decode a codepoint encoded in UTF-16.
 UcdCh32 ucdCh16ToCh32(UcdCh16 *bytes);
 
 #endif // !NV_UNICODE_H_
