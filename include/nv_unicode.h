@@ -15,9 +15,9 @@
 typedef uint8_t  UcdCh8;
 // UTF16 encoded character, a single character may not be a full codepoint
 typedef uint16_t UcdCh16;
-// UTF32 encoded character
-typedef uint32_t UcdCh32;
-// Unicode Codepoint
+// UTF32 encoded character (signed integer)
+typedef int32_t UcdCh32;
+// Unicode Codepoint (signed integer)
 typedef UcdCh32 UcdCP;
 
 // Return if a codepoint is valid
@@ -40,7 +40,7 @@ size_t ucdCh8RunLen(UcdCh8 firstCh);
 // Returns 0 if the codepoint is not valid.
 size_t ucdCh8CPLen(UcdCP cp);
 // Decode a codepoint encoded in UTF-8.
-UcdCh32 ucdCh8ToCh32(UcdCh8 *bytes);
+UcdCP ucdCh8ToCP(UcdCh8 *bytes);
 
 // Get the total number of units of a UTF16 codepoint given the first unit.
 // Returns 0 if the byte is not the start of a UTF8 sequence.
@@ -49,6 +49,6 @@ size_t ucdCh16RunLen(UcdCh16 firstCh);
 // Returns 0 if the codepoint is not valid.
 size_t ucdCh16CPLen(UcdCP cp);
 // Decode a codepoint encoded in UTF-16.
-UcdCh32 ucdCh16ToCh32(UcdCh16 *bytes);
+UcdCP ucdCh16ToCP(UcdCh16 *bytes);
 
 #endif // !NV_UNICODE_H_

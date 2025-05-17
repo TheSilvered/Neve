@@ -17,25 +17,25 @@ static TermErr g_error = { 0 };
 
 bool termInit(void) {
     if (tcgetattr(STDIN_FILENO, &g_origTermios) != 0) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
     return true;
 }
 
-bool termEnableRawMode(uint8_t getKeyTimeoutDSec) {
+bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
     struct termios raw = g_origTermios;
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     raw.c_cflag |= (CS8);
     raw.c_lflag &= ~(ECHO | ISIG | ICANON | IEXTEN);
 
-    if (getKeyTimeoutDSec != 0) {
+    if (getInputTimeoutDSec != 0) {
         raw.c_cc[VMIN] = 0;
-        raw.c_cc[VTIME] = getKeyTimeoutDSec;
+        raw.c_cc[VTIME] = getInputTimeoutDSec;
     }
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) != 0) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
     return true;
@@ -62,10 +62,10 @@ static void printErrMsg(const char *msg, char *desc) {
 
 void termLogError(const char *msg) {
     switch (g_error.type) {
-    case TermErrType_none:
+    case TermErrType_None:
         printErrMsg(msg, (char *)"no error occurred");
         break;
-    case TermErrType_errno:
+    case TermErrType_Errno:
         printErrMsg(msg, strerror(errno));
         break;
     default:
@@ -75,11 +75,11 @@ void termLogError(const char *msg) {
 
 // Input
 
-TermKey termGetKey(void) {
+UcdCP termGetInput(void) {
     UcdCh8 ch = 0;
 
     if (read(STDIN_FILENO, &ch, 1) < 0) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return -1;
     } else if (ch == 0) {
         return 0;
@@ -93,23 +93,23 @@ TermKey termGetKey(void) {
     for (size_t i = 1; i < chLen; i++) {
         ch = 0; // reset ch value for possible timeout of getCh
         if (read(STDIN_FILENO, &ch, 1) < 0) {
-            g_error.type = TermErrType_errno;
+            g_error.type = TermErrType_Errno;
             return -1;
         }
         if (ch == 0) {
-            return (TermKey)chBytes[0];
+            return chBytes[0];
         }
         chBytes[i] = ch;
     }
 
-    return (TermKey)ucdCh8ToCh32(chBytes);
+    return ucdCh8ToCP(chBytes);
 }
 
 // Output
 
 bool termWrite(const void *buf, size_t size) {
     if (write(STDOUT_FILENO, buf, size) == -1) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
     return true;

@@ -39,37 +39,37 @@ static size_t g_eventsSize = 0;
 bool termInit(void) {
     g_consoleInput = GetStdHandle(STD_INPUT_HANDLE);
     if (g_consoleInput == INVALID_HANDLE_VALUE) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
 
     if (GetConsoleMode(g_consoleInput, &g_origInputMode) == FALSE) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
 
     g_consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     if (g_consoleOutput == INVALID_HANDLE_VALUE) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
 
     if (GetConsoleMode(g_consoleOutput, &g_origOutputMode) == FALSE) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
 
     if (!SetConsoleOutputCP(CP_UTF8)) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
     return true;
 }
 
-bool termEnableRawMode(uint8_t getKeyTimeoutDSec) {
+bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
     DWORD inputMode = g_origInputMode;
     DWORD outputMode = g_origOutputMode;
-    g_readTimeoutMs = getKeyTimeoutDSec * 100;
+    g_readTimeoutMs = getInputTimeoutDSec * 100;
 
     inputMode &= ~(ENABLE_ECHO_INPUT
                  | ENABLE_LINE_INPUT
@@ -83,17 +83,17 @@ bool termEnableRawMode(uint8_t getKeyTimeoutDSec) {
                | DISABLE_NEWLINE_AUTO_RETURN;
 
     if (SetConsoleMode(g_consoleInput, inputMode) == FALSE) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
 
     if (SetConsoleMode(g_consoleOutput, outputMode) == FALSE) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
 
     if (FlushConsoleInputBuffer(g_consoleInput) == FALSE) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
 
@@ -122,10 +122,10 @@ static void printErrMsg(const char *msg, char *desc) {
 
 void termLogError(const char *msg) {
     switch (g_error.type) {
-    case TermErrType_none:
+    case TermErrType_None:
         printErrMsg(msg, (char *)"no error occurred");
         break;
-    case TermErrType_errno: {
+    case TermErrType_Errno: {
         DWORD formatFlags = FORMAT_MESSAGE_FROM_SYSTEM
                           | FORMAT_MESSAGE_IGNORE_INSERTS;
         DWORD errId = GetLastError();
@@ -167,7 +167,7 @@ static int getCh(UcdCh16 *outCh) {
     if (g_readTimeoutMs == 0) {
         DWORD charsRead;
         if (ReadConsoleW(g_consoleInput, outCh, 1, &charsRead, NULL) == FALSE) {
-            g_error.type = TermErrType_errno;
+            g_error.type = TermErrType_Errno;
             return -1;
         }
         return (int)charsRead;
@@ -200,7 +200,7 @@ static int getCh(UcdCh16 *outCh) {
     case WAIT_TIMEOUT:
         return 0;
     case WAIT_FAILED:
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return -1;
     case WAIT_OBJECT_0:
         break;
@@ -217,7 +217,7 @@ static int getCh(UcdCh16 *outCh) {
     );
     g_eventsSize = eventsRead;
     if (result == FALSE) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return -1;
     } else if (g_eventsSize == 0) {
         // this should be unreachable but in any case avoids infinite recursion
@@ -227,11 +227,11 @@ static int getCh(UcdCh16 *outCh) {
     }
 }
 
-TermKey termGetKey(void) {
+UcdCP termGetInput(void) {
     UcdCh16 ch = 0;
 
     if (getCh(&ch) < 0) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return -1;
     } else if (ch == 0) {
         return 0;
@@ -247,10 +247,10 @@ TermKey termGetKey(void) {
         if (getCh(&ch) < 0) {
             return -1;
         } else if (ch == 0) {
-            return (TermKey)chBytes[0];
+            return (UcdCP)chBytes[0];
         }
         chBytes[1] = ch;
-        return ucdCh16ToCh32(chBytes);
+        return ucdCh16ToCP(chBytes);
     } else {
         return 0;
     }
@@ -260,7 +260,7 @@ TermKey termGetKey(void) {
 
 bool termWrite(const void *buf, size_t size) {
     if (WriteConsoleA(g_consoleOutput, buf, (DWORD)size, NULL, NULL) == FALSE) {
-        g_error.type = TermErrType_errno;
+        g_error.type = TermErrType_Errno;
         return false;
     }
     return true;

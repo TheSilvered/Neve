@@ -4,15 +4,16 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+#include "nv_unicode.h"
 
 // Type of errors
 typedef enum TermErrType {
-    TermErrType_none = 0, // No error occurred
-    TermErrType_errno, // An internal error set by a C function
-    TermErrType_customMsg // An error with a custom message in data.customMsg
+    TermErrType_None = 0, // No error occurred
+    TermErrType_Errno, // An internal error set by a C function
+    TermErrType_CustomMsg // An error with a custom message in data.customMsg
 } TermErrType;
 
-// The current error of the library
+// The error of a function call
 typedef struct TermErr {
     TermErrType type; // The type of the error
     union {
@@ -20,33 +21,70 @@ typedef struct TermErr {
     } data;
 } TermErr;
 
-// Key pressed
-typedef int TermKey;
+// Special keys
+typedef enum TermKey {
+    TermKey_None = 0,
+    TermKey_CtrlA,
+    TermKey_CtrlB,
+    TermKey_CtrlC,
+    TermKey_CtrlD,
+    TermKey_CtrlE,
+    TermKey_CtrlF,
+    TermKey_CtrlG,
+    TermKey_CtrlH,
+    TermKey_CtrlI,
+    TermKey_Tab = TermKey_CtrlI,
+    TermKey_CtrlJ,
+    TermKey_CtrlK,
+    TermKey_CtrlL,
+    TermKey_CtrlM,
+    TermKey_CtrlN,
+    TermKey_CtrlO,
+    TermKey_CtrlP,
+    TermKey_CtrlQ,
+    TermKey_CtrlR,
+    TermKey_CtrlS,
+    TermKey_CtrlT,
+    TermKey_CtrlU,
+    TermKey_CtrlV,
+    TermKey_CtrlW,
+    TermKey_CtrlX,
+    TermKey_CtrlY,
+    TermKey_CtrlZ,
+    TermKey_Escape = 0x1b,
+    TermKey_Backspace = 0x7f,
+    TermKey_ArrowLeft = 0x110000,
+    TermKey_ArrowRight,
+    TermKey_ArrowUp,
+    TermKey_ArrowDown
+} TermKey;
 
-// Check if a key is valid
-#define termKeyOk(key) ((key) >= 0)
-// Check if a key is an error
-#define termKeyErr(key) ((key) < 0)
+/******************** Initialization and deinitialization *********************/
 
 // Initialize library
 bool termInit(void);
 // Enable raw mode
-// `getKeyTimeoutDSec` sets the timeout for termGetKey in tenths of a second,
-// set to 0 disables timeout.
-bool termEnableRawMode(uint8_t getKeyTimeoutDSec);
+// `getInputTimeoutDSec` sets the timeout for `termGetInput` in tenths of a
+// second, set to 0 disables timeout (can cause issues with `termGetKey`).
+bool termEnableRawMode(uint8_t getInputTimeoutDSec);
 // Deinitialize library, restoring the terminal
 void termQuit(void);
+
+/*********************************** Errors ***********************************/
 
 // Get the current error of the library
 TermErr *termErr(void);
 // Print the current error to stderr
 void termLogError(const char *msg);
 
-// Get the pressed key
-TermKey termGetKey(void);
+/*********************************** Input ************************************/
 
-// The beginning of an escape sequence
-#define TERM_ESC "\x1b["
+// Get raw input characters, returns a negative value on error
+UcdCP termGetInput(void);
+// Get key press, returns a negative value on error
+int termGetKey(void);
+
+/*********************************** Output ***********************************/
 
 // Write to the terminal
 bool termWrite(const void *buf, size_t size);

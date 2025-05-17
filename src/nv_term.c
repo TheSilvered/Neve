@@ -6,8 +6,61 @@
 #include "nv_term_unix.c"
 #endif // !_WIN32
 
+static UcdCP g_keyQueue[4] = { 0 };
+
+static void queueKey(UcdCP key) {
+    if (g_keyQueue[0] == 0) {
+        g_keyQueue[0] = key;
+    } else if (g_keyQueue[1] == 0) {
+        g_keyQueue[1] = key;
+    } else if (g_keyQueue[2] == 0) {
+        g_keyQueue[2] = key;
+    } else {
+        g_keyQueue[3] = key;
+    }
+}
+
+static UcdCP getKey(void) {
+    if (g_keyQueue[0] != 0) {
+        UcdCP key = g_keyQueue[0];
+        g_keyQueue[0] = g_keyQueue[1];
+        g_keyQueue[1] = g_keyQueue[2];
+        g_keyQueue[2] = g_keyQueue[3];
+        g_keyQueue[3] = 0;
+        return key;
+    } else {
+        return termGetInput();
+    }
+}
+
+int termGetKey(void) {
+    UcdCP seq[4] = { 0 };
+    seq[0] = getKey();
+    if (seq[0] != TermKey_Escape) {
+        return seq[0];
+    }
+
+    seq[1] = getKey();
+    if (seq[1] != '[') {
+        queueKey(seq[1]);
+        return seq[0];
+    }
+
+    seq[3] = getKey();
+    switch (seq[3]) {
+    case 'A': return TermKey_ArrowUp;
+    case 'B': return TermKey_ArrowDown;
+    case 'C': return TermKey_ArrowRight;
+    case 'D': return TermKey_ArrowLeft;
+    default:
+        queueKey(seq[1]);
+        queueKey(seq[2]);
+        return seq[0];
+    }
+}
+
 bool termClearScreen(void) {
-    return termWrite(TERM_ESC "2J", 4)
-        && termWrite(TERM_ESC "3J", 4)
-        && termWrite(TERM_ESC "H", 3);
+    return termWrite("\033[2J", 4)
+        && termWrite("\033[3J", 4)
+        && termWrite("\033[H", 3);
 }

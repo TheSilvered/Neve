@@ -16,7 +16,7 @@ bool initTerminal(void) {
         return false;
     }
 
-    if (!termEnableRawMode(0)) {
+    if (!termEnableRawMode(1)) {
         termLogError("failed to enable raw mode");
         return false;
     }
@@ -34,13 +34,13 @@ int main(void) {
         return false;
 
     for (;;) {
-        TermKey key = termGetKey();
-        if (termKeyErr(key)) {
+        int key = termGetKey();
+        if (key < 0) {
             termLogError("failed to read the key");
             return 1;
         }
-        printf("key = %x\r\n", key);
-        if (key == CTRL('c')) {
+        printf("key = %#x\n", key);
+        if (key == TermKey_CtrlC) {
             termClearScreen();
             break;
         }

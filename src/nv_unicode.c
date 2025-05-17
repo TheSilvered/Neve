@@ -93,22 +93,22 @@ size_t ucdCh8CPLen(UcdCh32 ch) {
          + 4*(!!(ch >= 0x10000 && ch < 0x10ffff));
 }
 
-UcdCh32 ucdCh8ToCh32(UcdCh8 *bytes) {
+UcdCP ucdCh8ToCP(UcdCh8 *bytes) {
     switch (ucdCh8RunLen(bytes[0])) {
     case 1:
-        return (UcdCh32)bytes[0];
+        return (UcdCP)bytes[0];
     case 2:
-        return ((UcdCh32)(bytes[0] & UTF8_ByteMask2) << 6)
-             |  (UcdCh32)(bytes[1] & UTF8_ByteMaskX);
+        return ((UcdCP)(bytes[0] & UTF8_ByteMask2) << 6)
+             |  (UcdCP)(bytes[1] & UTF8_ByteMaskX);
     case 3:
-        return ((UcdCh32)(bytes[0] & UTF8_ByteMask3) << 12)
-             | ((UcdCh32)(bytes[1] & UTF8_ByteMaskX) << 6)
-             |  (UcdCh32)(bytes[2] & UTF8_ByteMaskX);
+        return ((UcdCP)(bytes[0] & UTF8_ByteMask3) << 12)
+             | ((UcdCP)(bytes[1] & UTF8_ByteMaskX) << 6)
+             |  (UcdCP)(bytes[2] & UTF8_ByteMaskX);
     case 4:
-        return ((UcdCh32)(bytes[0] & UTF8_ByteMask3) << 18)
-             | ((UcdCh32)(bytes[1] & UTF8_ByteMaskX) << 12)
-             | ((UcdCh32)(bytes[2] & UTF8_ByteMaskX) << 6)
-             |  (UcdCh32)(bytes[3] & UTF8_ByteMaskX);
+        return ((UcdCP)(bytes[0] & UTF8_ByteMask3) << 18)
+             | ((UcdCP)(bytes[1] & UTF8_ByteMaskX) << 12)
+             | ((UcdCP)(bytes[2] & UTF8_ByteMaskX) << 6)
+             |  (UcdCP)(bytes[3] & UTF8_ByteMaskX);
     default:
         return DECODING_ERROR_CH;
     }
@@ -130,7 +130,7 @@ size_t ucdCh16CPLen(UcdCP cp) {
     return (1 + (cp > 0xffff)) * ucdIsCPValid(cp);
 }
 
-UcdCh32 ucdCh16ToCh32(UcdCh16 *bytes) {
+UcdCh32 ucdCh16ToCP(UcdCh16 *bytes) {
     if (
         bytes[0] < UCD_HIGH_SURROGATE_FIRST
         || bytes[0] > UCD_HIGH_SURROGATE_LAST
