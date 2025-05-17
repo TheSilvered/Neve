@@ -5,10 +5,10 @@
 
 #define CTRL(key) ((key) & 0x1f)
 
-int main(void) {
+bool initTerminal(void) {
     if (!termInit()) {
         termLogError("failed to initialize the terminal");
-        return 1;
+        return false;
     }
 
     if (atexit(termQuit) != 0) {
@@ -18,10 +18,20 @@ int main(void) {
 
     if (!termEnableRawMode(0)) {
         termLogError("failed to enable raw mode");
-        return 1;
+        return false;
     }
 
-    termClearScreen();
+    if (!termClearScreen()) {
+        termLogError("failed to clear the screen");
+        return false;
+    }
+
+    return true;
+}
+
+int main(void) {
+    if (!initTerminal())
+        return false;
 
     for (;;) {
         TermKey key = termGetKey();
