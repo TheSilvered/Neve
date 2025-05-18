@@ -82,13 +82,16 @@ void termLogError(const char *msg);
 // Get raw input characters, returns a negative value on error
 UcdCP termGetInput(void);
 // Get key press, returns a negative value on error
-int termGetKey(void);
+int32_t termGetKey(void);
 
 /*********************************** Output ***********************************/
 
 // Write to the terminal
 bool termWrite(const void *buf, size_t size);
-// Clear the entire screen
-bool termClearScreen(void);
+
+/************************************ Size ************************************/
+
+// Get the size of the terminal
+bool termSize(size_t *outRows, size_t *outCols);
 
 #endif // !NV_TERM_H_

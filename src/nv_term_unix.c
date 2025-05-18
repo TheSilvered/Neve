@@ -2,6 +2,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <termios.h>
 
@@ -26,6 +27,7 @@ bool termInit(void) {
 bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
     struct termios raw = g_origTermios;
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    raw.c_oflag &= ~(OPOST);
     raw.c_cflag |= (CS8);
     raw.c_lflag &= ~(ECHO | ISIG | ICANON | IEXTEN);
 
@@ -111,6 +113,21 @@ bool termWrite(const void *buf, size_t size) {
     if (write(STDOUT_FILENO, buf, size) == -1) {
         g_error.type = TermErrType_Errno;
         return false;
+    }
+    return true;
+}
+
+bool termSize(size_t *outRows, size_t *outCols) {
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) {
+        g_error.type = TermErrType_Errno;
+        return false;
+    }
+    if (outRows != NULL) {
+        *outRows = ws.ws_row;
+    }
+    if (outCols != NULL) {
+        *outCols = ws.ws_col;
     }
     return true;
 }

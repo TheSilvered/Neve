@@ -1,4 +1,5 @@
 #include "nv_term.h"
+#include "nv_draw.h"
 #include <stdlib.h> // atexit
 #include <ctype.h> // iscntrl
 #include <stdio.h>
@@ -21,12 +22,20 @@ bool initTerminal(void) {
         return false;
     }
 
-    if (!termClearScreen()) {
-        termLogError("failed to clear the screen");
-        return false;
-    }
-
     return true;
+}
+
+void refreshScreen(void) {
+    drawClear();
+    drawRows();
+}
+
+int getKey(void) {
+    int key = termGetKey();
+    while (key == 0) {
+        key = termGetKey();
+    }
+    return key;
 }
 
 int main(void) {
@@ -34,14 +43,14 @@ int main(void) {
         return false;
 
     for (;;) {
-        int key = termGetKey();
+        refreshScreen();
+        int key = getKey();
         if (key < 0) {
             termLogError("failed to read the key");
             return 1;
         }
-        printf("key = %#x\n", key);
         if (key == TermKey_CtrlC) {
-            termClearScreen();
+            drawClear();
             break;
         }
     }

@@ -58,9 +58,3 @@ int termGetKey(void) {
         return seq[0];
     }
 }
-
-bool termClearScreen(void) {
-    return termWrite("\033[2J", 4)
-        && termWrite("\033[3J", 4)
-        && termWrite("\033[H", 3);
-}

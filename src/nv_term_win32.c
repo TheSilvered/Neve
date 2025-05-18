@@ -265,3 +265,18 @@ bool termWrite(const void *buf, size_t size) {
     }
     return true;
 }
+
+bool termSize(size_t *outRows, size_t *outCols) {
+    CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
+    if (GetConsoleScreenBufferInfo(g_consoleOutput, &bufferInfo) == FALSE) {
+        g_error.type = TermErrType_Errno;
+        return false;
+    }
+    if (outRows != NULL) {
+        *outRows = (size_t)bufferInfo.dwSize.Y;
+    }
+    if (outCols != NULL) {
+        *outCols = (size_t)bufferInfo.dwSize.X;
+    }
+    return true;
+}
