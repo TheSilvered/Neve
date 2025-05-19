@@ -79,8 +79,7 @@ bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
                  | ENABLE_WINDOW_INPUT);
     inputMode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
 
-    outputMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING
-               | DISABLE_NEWLINE_AUTO_RETURN;
+    outputMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
     if (SetConsoleMode(g_consoleInput, inputMode) == FALSE) {
         g_error.type = TermErrType_Errno;
@@ -270,6 +269,12 @@ bool termSize(size_t *outRows, size_t *outCols) {
     CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
     if (GetConsoleScreenBufferInfo(g_consoleOutput, &bufferInfo) == FALSE) {
         g_error.type = TermErrType_Errno;
+        if (outRows != NULL) {
+            *outRows = 0;
+        }
+        if (outCols != NULL) {
+            *outCols = 0;
+        }
         return false;
     }
     if (outRows != NULL) {
@@ -277,6 +282,27 @@ bool termSize(size_t *outRows, size_t *outCols) {
     }
     if (outCols != NULL) {
         *outCols = (size_t)bufferInfo.dwSize.X;
+    }
+    return true;
+}
+
+bool termCursorPos(size_t *outX, size_t *outY) {
+    CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
+    if (GetConsoleScreenBufferInfo(g_consoleOutput, &bufferInfo) == FALSE) {
+        g_error.type = TermErrType_Errno;
+        if (outX != NULL) {
+            *outX = 0;
+        }
+        if (outY != NULL) {
+            *outY = 0;
+        }
+        return false;
+    }
+    if (outX != NULL) {
+        *outX = (size_t)bufferInfo.dwCursorPosition.X;
+    }
+    if (outY != NULL) {
+        *outY = (size_t)bufferInfo.dwCursorPosition.Y;
     }
     return true;
 }

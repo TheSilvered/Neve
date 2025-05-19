@@ -4,6 +4,7 @@ project(Neve VERSION 0.0.1)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED true)
+set(CMAKE_BUILD_TYPE Debug)
 
 include_directories(Neve include)
 

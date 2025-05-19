@@ -1,8 +1,7 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include "nv_term.h"
 #include "nv_draw.h"
-#include <stdlib.h> // atexit
-#include <ctype.h> // iscntrl
-#include <stdio.h>
 
 #define CTRL(key) ((key) & 0x1f)
 

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <termios.h>
@@ -10,6 +11,7 @@
 #include "nv_unicode.h"
 
 #define UNREACHABLE __builtin_unreachable()
+#define CURSOR_POS_BUF_SIZE 12 // len(65535) + ';' + len(65535) + '\0'
 
 static struct termios g_origTermios = { 0 };
 static TermErr g_error = { 0 };
@@ -27,7 +29,6 @@ bool termInit(void) {
 bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
     struct termios raw = g_origTermios;
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-    raw.c_oflag &= ~(OPOST);
     raw.c_cflag |= (CS8);
     raw.c_lflag &= ~(ECHO | ISIG | ICANON | IEXTEN);
 
@@ -130,4 +131,82 @@ bool termSize(size_t *outRows, size_t *outCols) {
         *outCols = ws.ws_col;
     }
     return true;
+}
+
+bool termCursorPos(size_t *outX, size_t *outY) {
+
+    char buf[CURSOR_POS_BUF_SIZE];
+    if (!termWrite("\033[6n", 4)) {
+        goto failure;
+    }
+
+    // Read as few characters as possible
+
+    UcdCP ch = termGetInput();
+    if (ch < 0) {
+        goto failure;
+    } else if (ch != '\033') {
+        goto failure_msg;
+    }
+
+    ch = termGetInput();
+    if (ch < 0) {
+        goto failure;
+    } else if (ch != '[') {
+        goto failure_msg;
+    }
+
+    // In buf there will be <y>;<x>
+    for (size_t i = 0; i < CURSOR_POS_BUF_SIZE; i++) {
+        // Going over the buffer size should not be possible considering a max
+        // position of 16 bits (like the struct winsize fields).
+        if (i == CURSOR_POS_BUF_SIZE - 1) {
+            goto failure_msg;
+        }
+
+        ch = termGetInput();
+        if (ch < 0) {
+            goto failure;
+        } else if (ch == 0 || ch > 0x7f) {
+            goto failure_msg;
+        } else if (ch == 'R') {
+            buf[i + 1] = '\0';
+            break;
+        }
+        buf[i] = (char)ch;
+    }
+
+    // Always fully parse both the x and the y even if not requested to check
+    // for correctness.
+    char *xEnd = NULL;
+    long y = strtol(buf, &xEnd, 10);
+    if (*xEnd != ';' || y <= 0) {
+        goto failure_msg;
+    }
+    long x = strtol(xEnd + 1, NULL, 10);
+    if (x <= 0) {
+        goto failure_msg;
+    }
+
+    if (outX != NULL) {
+        *outX = (size_t)(x - 1);
+    }
+    if (outY != NULL) {
+        *outY = (size_t)(y - 1);
+    }
+
+    return true;
+
+failure_msg:
+    g_error.type = TermErrType_CustomMsg;
+    g_error.data.customMsg = "invalid sequence when reading cursor pos";
+
+failure:
+    if (outX != NULL) {
+        *outX = 0;
+    }
+    if (outY != NULL) {
+        *outY = 0;
+    }
+    return false;
 }

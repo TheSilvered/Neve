@@ -89,9 +89,11 @@ int32_t termGetKey(void);
 // Write to the terminal
 bool termWrite(const void *buf, size_t size);
 
-/************************************ Size ************************************/
+/************************************ Info ************************************/
 
 // Get the size of the terminal
 bool termSize(size_t *outRows, size_t *outCols);
+// Get the cursor position of the terminal, (0, 0) is the top left corner
+bool termCursorPos(size_t *outX, size_t *outY);
 
 #endif // !NV_TERM_H_
