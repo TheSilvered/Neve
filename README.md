@@ -2,10 +2,11 @@
 
 ## Building
 
-Build using CMake:
+Build using CMake and Ninja:
 
 ```sh
-cmake -S . -B build/
-cd build
-cmake --build .
+cmake -G Ninja -S . -B build/
+cmake --build build
 ```
+
+The executable will be in `build/bin`

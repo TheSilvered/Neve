@@ -2,6 +2,9 @@
 #include <string.h>
 #include "nv_str.h"
 
+// NOTE: The actual capacity of the string buffer is one more than Str::cap
+//       to allow for the NUL byte
+
 Str *strNew(size_t reserve) {
     Str *str = malloc(sizeof(Str));
     if (str == NULL) {
@@ -34,13 +37,13 @@ bool strInit(Str *str, size_t reserve) {
     if (reserve == 0) {
         str->buf = NULL;
     } else {
-        // Always keep the space for '\0'
+        // Keep the space for '\0'
         str->buf = calloc(reserve + 1, sizeof(*str->buf));
         if (str->buf == NULL) {
             str->cap = 0;
             return false;
         } else {
-            str->cap = reserve + 1;
+            str->cap = reserve;
             str->buf[0] = '\0';
         }
     }
@@ -50,7 +53,7 @@ bool strInit(Str *str, size_t reserve) {
 bool strInitFromC(Str *str, const char *cStr) {
     size_t len = strlen(cStr);
     str->len = len;
-    str->cap = len + 1;
+    str->cap = len;
     str->buf = malloc((len + 1) * sizeof(*cStr));
     if (str->buf == NULL) {
         str->len = 0;
@@ -58,17 +61,9 @@ bool strInitFromC(Str *str, const char *cStr) {
         str->buf = NULL;
         return false;
     }
-    // Also copy the NUL character
+    // Copy the NUL character
     memcpy(str->buf, cStr, (len + 1) * sizeof(*cStr));
     return true;
-}
-
-StrView strViewMakeC(const char *cStr) {
-    StrView sv = {
-        .buf = (const UcdCh8 *)cStr,
-        .len = strlen(cStr)
-    };
-    return sv;
 }
 
 void strFree(Str *str) {
@@ -94,16 +89,16 @@ void strDestroy(Str *str) {
 }
 
 bool strReserve(Str *str, size_t reserve) {
-    if (reserve == 0 || str->len + reserve + 1 < str->cap) {
+    if (reserve == 0 || str->len + reserve < str->cap) {
         return true;
     }
 
-    size_t newCap = (str->cap + reserve + 1) * 1.5;
+    size_t newCap = (str->cap + reserve) * 1.5;
     UcdCh8 *newBuf = NULL;
     if (str->buf == NULL) {
-        newBuf = malloc(newCap * sizeof(*str->buf));
+        newBuf = malloc((newCap + 1) * sizeof(*str->buf));
     } else {
-        newBuf = realloc(str->buf, newCap * sizeof(*str->buf));
+        newBuf = realloc(str->buf, (newCap + 1) * sizeof(*str->buf));
     }
     if (newBuf == NULL) {
         return false;
@@ -143,7 +138,9 @@ bool strClear(Str *str, size_t reserve) {
     }
 
     UcdCh8 *newBuf = NULL;
-    if (str->buf == NULL) {
+    if (reserve == str->cap) {
+        newBuf = str->buf;
+    } else if (str->buf == NULL) {
         newBuf = malloc((reserve + 1) * sizeof(*str->buf));
     } else {
         newBuf = realloc(str->buf, (reserve + 1)* sizeof(*str->buf));
@@ -154,9 +151,75 @@ bool strClear(Str *str, size_t reserve) {
 
     newBuf[0] = '\0';
     str->buf = newBuf;
-    str->cap = reserve + 1;
+    str->cap = reserve;
     str->len = 0;
 
     return true;
 }
 
+char *strAsC(Str *str) {
+    if (str->buf == NULL) {
+        return "";
+    } else {
+        return (char *)str->buf;
+    }
+}
+
+void strViewInitFromC(StrView *sv, const char *cStr) {
+    sv->buf = (const UcdCh8 *)cStr;
+    sv->len = strlen(cStr);
+}
+
+StrView strViewMakeFromC(const char *cStr) {
+    StrView sv = {
+        .buf = (const UcdCh8 *)cStr,
+        .len = strlen(cStr)
+    };
+    return sv;
+}
+
+void strBufInit(StrBuf *sb, UcdCh8 *buf, size_t bufSize) {
+    sb->buf = buf;
+    sb->len = 0;
+    sb->bufSize = bufSize;
+    if (bufSize != 0) {
+        buf[0] = '\0';
+    }
+}
+
+StrBuf strBufMake(UcdCh8 *buf, size_t bufSize) {
+    StrBuf sb = {
+        .buf = buf,
+        .len = 0,
+        .bufSize = bufSize
+    };
+    if (bufSize != 0) {
+        buf[0] = '\0';
+    }
+    return sb;
+}
+
+bool strBufAppendC(StrBuf *sb, const char *cStr) {
+    size_t len = strlen(cStr);
+    if (sb->len + len + 1 >= sb->bufSize) {
+        return false;
+    }
+    memcpy(sb->buf + sb->len, cStr, (len + 1) * sizeof(*cStr));
+    sb->len += len;
+    return true;
+}
+
+bool strBufAppend(StrBuf *sb, StrView *sv) {
+    if (sb->len + sv->len + 1 >= sb->bufSize) {
+        return false;
+    }
+    memcpy(sb->buf + sb->len, sv->buf, sv->len * sizeof(*sv->buf));
+    sb->len += sv->len;
+    sb->buf[sb->len] = '\0';
+    return true;
+}
+
+void strBufClear(StrBuf *sb) {
+    sb->buf[0] = '\0';
+    sb->len = 0;
+}

@@ -1,6 +1,11 @@
+.vscode/
+.cache/
+
 build/
 build_win32/
 build_linux/
-.vscode/
+
 ignore__*/
 ignore__*
+
+compile_commands.json
