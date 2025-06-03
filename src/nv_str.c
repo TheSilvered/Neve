@@ -2,7 +2,7 @@
 #include <string.h>
 #include "nv_str.h"
 
-// NOTE: The actual capacity of the string buffer is one more than Str::cap
+// NOTE: The actual capacity of the string buffer is one more than Str.cap
 //       to allow for the NUL byte
 
 Str *strNew(size_t reserve) {

@@ -2,10 +2,9 @@ cmake_minimum_required(VERSION 3.20)
 
 project(Neve VERSION 0.0.1)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED true)
+set(CMAKE_C_EXTENSIONS off)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
@@ -18,6 +17,10 @@ add_executable(Neve
     src/nv_term.c
     src/nv_unicode.c
 )
+
+enable_testing()
+
+add_subdirectory(tests)
 
 add_custom_command(
     TARGET Neve POST_BUILD
