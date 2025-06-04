@@ -33,7 +33,7 @@ void test_AppendFull(void) {
     testAssert(strcmp(strAsC(&str), "a") == 0);
 }
 
-void testAppendFullToExisting(void) {
+void test_AppendFullToExisting(void) {
     Str str;
     testAssertRequire(strInitFromC(&str, "a"));
     StrView fullView = strViewMakeFromC("b");
@@ -47,5 +47,5 @@ testList(
     testMake(test_AppendEmpty),
     testMake(test_AppendEmptyToExisting),
     testMake(test_AppendFull),
-    testMake(testAppendFullToExisting)
+    testMake(test_AppendFullToExisting)
 )

@@ -110,6 +110,10 @@ bool strReserve(Str *str, size_t reserve) {
 
 bool strAppendC(Str *str, const char *cStr) {
     size_t len = strlen(cStr);
+    if (len == 0) {
+        return true;
+    }
+
     if (!strReserve(str, len)) {
         return false;
     }
