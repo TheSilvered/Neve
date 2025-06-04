@@ -12,7 +12,15 @@
 #include "nv_term.h"
 #include "nv_unicode.h"
 
+#if defined(_MSC_VER) && !defined(__clang__)
+
 #define UNREACHABLE do { __assume(0); abort(); } while (0)
+
+#else
+
+#error "#define UNREACHABLE"
+
+#endif
 
 static HANDLE g_consoleInput = INVALID_HANDLE_VALUE;
 static HANDLE g_consoleOutput = INVALID_HANDLE_VALUE;
