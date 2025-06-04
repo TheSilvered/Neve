@@ -120,6 +120,10 @@ bool strAppendC(Str *str, const char *cStr) {
 }
 
 bool strAppend(Str *str, StrView *sv) {
+    if (sv->len == 0) {
+        return true;
+    }
+
     if (!strReserve(str, sv->len)) {
         return false;
     }

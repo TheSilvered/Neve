@@ -11,6 +11,9 @@ typedef struct Test {
     void (*callback)(void);
 } Test;
 
+// Initialize a test using `func` as the callback and the name
+#define testMake(func) { .callback = (func), .name = #func }
+
 // Assert that `expr` is true
 #define testAssert(expr) testAssert_((expr), #expr, __FILE__, __LINE__)
 // Assert that `expr` is true
@@ -19,7 +22,7 @@ typedef struct Test {
     if (testAssertWith_((expr), #expr, __FILE__, __LINE__))
 // Assert that `expr` is true, otherwise exit from the test
 #define testAssertRequire(expr) do { \
-    if (testAssertRequire_((expr), #expr, __FILE__, __LINE__)) return 1; \
+    if (testAssertRequire_((expr), #expr, __FILE__, __LINE__)) return; \
     } while (0)
 
 // Helper for `testAssert`
@@ -39,6 +42,16 @@ bool testAssertRequire_(
     int line
 );
 
-Test *fileTests(size_t *outTestCount);
+// Helper function for `testList`
+Test *testGetTests_(size_t *outTestCount);
+
+// Put the initializers of the tests defined in the file
+// Usage: testList(testMake(myTestFunc), { myFunc, "A name" })
+#define testList(...) \
+    static Test g_tests__[] = { __VA_ARGS__ }; \
+    Test *testGetTests_(size_t *outTestCount) { \
+        *outTestCount = sizeof(g_tests__) / sizeof(*g_tests__); \
+        return g_tests__; \
+    }
 
 #endif // !NV_TEST_H_
