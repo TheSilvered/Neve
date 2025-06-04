@@ -20,7 +20,7 @@ jobs:
         include:
           - os: windows-latest
             c_compiler: cl.exe
-          - os: windows-lates
+          - os: windows-latest
             c_compiler: clang
           - os: ubuntu-latest
             c_compiler: gcc
