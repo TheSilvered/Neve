@@ -10,6 +10,8 @@ void test_AppendCEmpty(void) {
     testAssert(strAppendC(&str, ""));
     testAssert(str.len == 0);
     testAssert(strcmp(strAsC(&str), "") == 0);
+
+    strDestroy(&str);
 }
 
 void test_AppendCEmptyToExisting(void) {
@@ -19,6 +21,8 @@ void test_AppendCEmptyToExisting(void) {
     testAssert(strAppendC(&str, ""));
     testAssert(str.len == 1);
     testAssert(strcmp(strAsC(&str), "a") == 0);
+
+    strDestroy(&str);
 }
 
 void test_AppendCFull(void) {
@@ -28,6 +32,8 @@ void test_AppendCFull(void) {
     testAssert(strAppendC(&str, "a"));
     testAssert(str.len == 1);
     testAssert(strcmp(strAsC(&str), "a") == 0);
+
+    strDestroy(&str);
 }
 
 void test_AppendCFullToExisting(void) {
@@ -37,6 +43,8 @@ void test_AppendCFullToExisting(void) {
     testAssert(strAppendC(&str, "b"));
     testAssert(str.len == 2);
     testAssert(strcmp(strAsC(&str), "ab") == 0);
+
+    strDestroy(&str);
 }
 
 testList(

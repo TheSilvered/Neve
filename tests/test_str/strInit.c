@@ -1,0 +1,31 @@
+#include <string.h>
+
+#include "nv_test.h"
+#include "nv_str.h"
+
+void test_strInitZeroReserve(void) {
+    Str str;
+
+    testAssertRequire(strInit(&str, 0));
+    testAssert(str.len == 0);
+    testAssert(strcmp(strAsC(&str), ""));
+
+    strDestroy(&str);
+}
+
+void test_strInitNonZeroReserve(void) {
+    size_t reserve = 10;
+    Str str;
+
+    testAssertRequire(strInit(&str, reserve));
+    testAssert(str.len == 0);
+    testAssert(str.cap >= reserve);
+    testAssert(strcmp(strAsC(&str), ""));
+
+    strDestroy(&str);
+}
+
+testList(
+    testMake(test_strInitZeroReserve),
+    testMake(test_strInitNonZeroReserve)
+)

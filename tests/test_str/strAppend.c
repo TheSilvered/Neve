@@ -11,6 +11,8 @@ void test_AppendEmpty(void) {
     testAssert(strAppend(&str, &emptyView));
     testAssert(str.len == 0);
     testAssert(strcmp(strAsC(&str), "") == 0);
+
+    strDestroy(&str);
 }
 
 void test_AppendEmptyToExisting(void) {
@@ -21,6 +23,8 @@ void test_AppendEmptyToExisting(void) {
     testAssert(strAppend(&str, &emptyView));
     testAssert(str.len == 1);
     testAssert(strcmp(strAsC(&str), "a") == 0);
+
+    strDestroy(&str);
 }
 
 void test_AppendFull(void) {
@@ -31,6 +35,8 @@ void test_AppendFull(void) {
     testAssert(strAppend(&str, &fullView));
     testAssert(str.len == 1);
     testAssert(strcmp(strAsC(&str), "a") == 0);
+
+    strDestroy(&str);
 }
 
 void test_AppendFullToExisting(void) {
@@ -41,6 +47,8 @@ void test_AppendFullToExisting(void) {
     testAssert(strAppend(&str, &fullView));
     testAssert(str.len == 2);
     testAssert(strcmp(strAsC(&str), "ab") == 0);
+
+    strDestroy(&str);
 }
 
 testList(
