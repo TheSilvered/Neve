@@ -85,7 +85,7 @@ void strDestroy(Str *str) {
     }
     str->len = 0;
     str->cap = 0;
-    str->buf = 0;
+    str->buf = NULL;
 }
 
 bool strReserve(Str *str, size_t reserve) {
@@ -153,7 +153,10 @@ bool strClear(Str *str, size_t reserve) {
     } else {
         newBuf = realloc(str->buf, (reserve + 1)* sizeof(*str->buf));
     }
-    if (newBuf == NULL) {
+    if (newBuf == NULL && str->cap > reserve) {
+        newBuf = str->buf;
+        reserve = str->cap;
+    } else if (newBuf == NULL) {
         return false;
     }
 

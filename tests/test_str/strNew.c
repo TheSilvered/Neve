@@ -13,7 +13,7 @@ void test_strNewZeroReserve(void) {
     strFree(str);
 }
 
-void test_strNewNonZeroReserve(void) {
+void test_strNewWithReserve(void) {
     size_t reserve = 10;
     Str *str = strNew(reserve);
 
@@ -27,5 +27,5 @@ void test_strNewNonZeroReserve(void) {
 
 testList(
     testMake(test_strNewZeroReserve),
-    testMake(test_strNewNonZeroReserve)
+    testMake(test_strNewWithReserve)
 )

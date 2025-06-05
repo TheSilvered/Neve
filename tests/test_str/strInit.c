@@ -13,7 +13,7 @@ void test_strInitZeroReserve(void) {
     strDestroy(&str);
 }
 
-void test_strInitNonZeroReserve(void) {
+void test_strInitWithReserve(void) {
     size_t reserve = 10;
     Str str;
 
@@ -27,5 +27,5 @@ void test_strInitNonZeroReserve(void) {
 
 testList(
     testMake(test_strInitZeroReserve),
-    testMake(test_strInitNonZeroReserve)
+    testMake(test_strInitWithReserve)
 )

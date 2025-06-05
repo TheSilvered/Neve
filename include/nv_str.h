@@ -63,7 +63,7 @@ StrBuf strBufMake(UcdCh8 *buf, size_t bufSize);
 bool strBufAppendC(StrBuf *sb, const char *cStr);
 // Append a string view to a string buffer
 bool strBufAppend(StrBuf *sb, StrView *sv);
-// Clear the contents of a string and keep a capacity of `reserve`
+// Clear the contents of a string buffer
 void strBufClear(StrBuf *sb);
 
 #endif // !NV_STR_H_
