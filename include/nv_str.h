@@ -5,7 +5,7 @@
 #include "nv_unicode.h"
 
 // A heap-allocated string
-// Any function that expects a StrView * also accepts a Str *
+// Any function that expects a `StrView *` also accepts a `Str *`
 typedef struct Str {
     UcdCh8 *buf;
     size_t len;
@@ -19,6 +19,7 @@ typedef struct StrView {
 } StrView;
 
 // A string that owns a block of memory but does not allocate/deallocate it
+// Any function that expects a `StrView *` also accepts a `StrBuf *`
 typedef struct StrBuf {
     UcdCh8 *buf;
     size_t len;
