@@ -1,5 +1,5 @@
 #include "nv_test.h"
-#include "nv_str.h"
+#include "nv_string.h"
 
 void test_strDestroyNullPtr(void) {
     strDestroy(NULL);

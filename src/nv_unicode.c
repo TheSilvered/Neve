@@ -22,7 +22,7 @@
 #define DECODING_ERROR_CH 0xfffd
 
 bool ucdIsCPValid(UcdCP cp) {
-    return cp < 0x10ffff
+    return cp <= 0x10ffff
         && (cp < UCD_HIGH_SURROGATE_FIRST || cp > UCD_LOW_SURROGATE_LAST);
 }
 

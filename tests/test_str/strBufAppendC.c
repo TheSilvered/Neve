@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "nv_test.h"
-#include "nv_str.h"
+#include "nv_string.h"
 
 #define BUF_SIZE 10
 

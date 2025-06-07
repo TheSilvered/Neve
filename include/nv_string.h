@@ -1,5 +1,5 @@
-#ifndef NV_STR_H_
-#define NV_STR_H_
+#ifndef NV_STRING_H_
+#define NV_STRING_H_
 
 #include <stddef.h>
 #include "nv_unicode.h"
@@ -67,4 +67,4 @@ bool strBufAppend(StrBuf *sb, StrView *sv);
 // Clear the contents of a string buffer
 void strBufClear(StrBuf *sb);
 
-#endif // !NV_STR_H_
+#endif // !NV_STRING_H_
