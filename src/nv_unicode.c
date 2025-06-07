@@ -23,6 +23,7 @@
 
 bool ucdIsCPValid(UcdCP cp) {
     return cp <= 0x10ffff
+        && cp >= 0
         && (cp < UCD_HIGH_SURROGATE_FIRST || cp > UCD_LOW_SURROGATE_LAST);
 }
 
@@ -105,7 +106,7 @@ UcdCP ucdCh8ToCP(UcdCh8 *bytes) {
              | ((UcdCP)(bytes[1] & UTF8_ByteMaskX) << 6)
              |  (UcdCP)(bytes[2] & UTF8_ByteMaskX);
     case 4:
-        return ((UcdCP)(bytes[0] & UTF8_ByteMask3) << 18)
+        return ((UcdCP)(bytes[0] & UTF8_ByteMask4) << 18)
              | ((UcdCP)(bytes[1] & UTF8_ByteMaskX) << 12)
              | ((UcdCP)(bytes[2] & UTF8_ByteMaskX) << 6)
              |  (UcdCP)(bytes[3] & UTF8_ByteMaskX);
@@ -116,8 +117,7 @@ UcdCP ucdCh8ToCP(UcdCh8 *bytes) {
 
 size_t ucdCh16RunLen(UcdCh16 firstCh) {
     return (
-        1
-        + (!!(
+        1 + (!!(
             firstCh >= UCD_HIGH_SURROGATE_FIRST
             && firstCh <= UCD_HIGH_SURROGATE_LAST
         ))
