@@ -3,7 +3,7 @@
 #include "nv_test.h"
 #include "nv_str.h"
 
-void test_AppendEmpty(void) {
+void test_strAppendEmpty(void) {
     Str str;
     strInit(&str, 0);
     StrView emptyView = strViewMakeFromC("");
@@ -15,7 +15,7 @@ void test_AppendEmpty(void) {
     strDestroy(&str);
 }
 
-void test_AppendEmptyToExisting(void) {
+void test_strAppendEmptyToExisting(void) {
     Str str;
     testAssertRequire(strInitFromC(&str, "a"));
     StrView emptyView = strViewMakeFromC("");
@@ -27,7 +27,7 @@ void test_AppendEmptyToExisting(void) {
     strDestroy(&str);
 }
 
-void test_AppendFull(void) {
+void test_strAppendFull(void) {
     Str str;
     strInit(&str, 0);
     StrView fullView = strViewMakeFromC("a");
@@ -39,7 +39,7 @@ void test_AppendFull(void) {
     strDestroy(&str);
 }
 
-void test_AppendFullToExisting(void) {
+void test_strAppendFullToExisting(void) {
     Str str;
     testAssertRequire(strInitFromC(&str, "a"));
     StrView fullView = strViewMakeFromC("b");
@@ -52,8 +52,8 @@ void test_AppendFullToExisting(void) {
 }
 
 testList(
-    testMake(test_AppendEmpty),
-    testMake(test_AppendEmptyToExisting),
-    testMake(test_AppendFull),
-    testMake(test_AppendFullToExisting)
+    testMake(test_strAppendEmpty),
+    testMake(test_strAppendEmptyToExisting),
+    testMake(test_strAppendFull),
+    testMake(test_strAppendFullToExisting)
 )

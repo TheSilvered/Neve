@@ -189,7 +189,7 @@ StrView strViewMakeFromC(const char *cStr) {
     return sv;
 }
 
-void strBufInit(StrBuf *sb, UcdCh8 *buf, size_t bufSize) {
+void strBufInit(StrBuf *sb, char *buf, size_t bufSize) {
     sb->buf = buf;
     sb->len = 0;
     sb->bufSize = bufSize;
@@ -198,7 +198,7 @@ void strBufInit(StrBuf *sb, UcdCh8 *buf, size_t bufSize) {
     }
 }
 
-StrBuf strBufMake(UcdCh8 *buf, size_t bufSize) {
+StrBuf strBufMake(char *buf, size_t bufSize) {
     StrBuf sb = {
         .buf = buf,
         .len = 0,

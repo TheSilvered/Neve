@@ -21,7 +21,7 @@ typedef struct StrView {
 // A string that owns a block of memory but does not allocate/deallocate it
 // Any function that expects a `StrView *` also accepts a `StrBuf *`
 typedef struct StrBuf {
-    UcdCh8 *buf;
+    char *buf;
     size_t len;
     size_t bufSize;
 } StrBuf;
@@ -57,9 +57,9 @@ void strViewInitFromC(StrView *sv, const char *cStr);
 StrView strViewMakeFromC(const char *cStr);
 
 // Initialize a new string buffer
-void strBufInit(StrBuf *sb, UcdCh8 *buf, size_t bufSize);
+void strBufInit(StrBuf *sb, char *buf, size_t bufSize);
 // Make a new string buffer
-StrBuf strBufMake(UcdCh8 *buf, size_t bufSize);
+StrBuf strBufMake(char *buf, size_t bufSize);
 // Append a C string to a string buffer
 bool strBufAppendC(StrBuf *sb, const char *cStr);
 // Append a string view to a string buffer

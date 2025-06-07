@@ -3,7 +3,7 @@
 #include "nv_test.h"
 #include "nv_str.h"
 
-void test_AppendCEmpty(void) {
+void test_strAppendCEmpty(void) {
     Str str;
     strInit(&str, 0);
 
@@ -14,7 +14,7 @@ void test_AppendCEmpty(void) {
     strDestroy(&str);
 }
 
-void test_AppendCEmptyToExisting(void) {
+void test_strAppendCEmptyToExisting(void) {
     Str str;
     testAssertRequire(strInitFromC(&str, "a"));
 
@@ -25,7 +25,7 @@ void test_AppendCEmptyToExisting(void) {
     strDestroy(&str);
 }
 
-void test_AppendCFull(void) {
+void test_strAppendCFull(void) {
     Str str;
     strInit(&str, 0);
 
@@ -36,7 +36,7 @@ void test_AppendCFull(void) {
     strDestroy(&str);
 }
 
-void test_AppendCFullToExisting(void) {
+void test_strAppendCFullToExisting(void) {
     Str str;
     testAssertRequire(strInitFromC(&str, "a"));
 
@@ -48,8 +48,8 @@ void test_AppendCFullToExisting(void) {
 }
 
 testList(
-    testMake(test_AppendCEmpty),
-    testMake(test_AppendCEmptyToExisting),
-    testMake(test_AppendCFull),
-    testMake(test_AppendCFullToExisting)
+    testMake(test_strAppendCEmpty),
+    testMake(test_strAppendCEmptyToExisting),
+    testMake(test_strAppendCFull),
+    testMake(test_strAppendCFullToExisting)
 )
