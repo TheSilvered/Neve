@@ -5,7 +5,7 @@
 ### Integers
 
 Prefer integers defined in `stdint.h` with a known width and signedness. Use
-regular types only if they are passed to a system function.
+regular types only if they are passed to or a the result of a system function.
 
 ### Strings
 
