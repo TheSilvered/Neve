@@ -8,7 +8,6 @@
 // |   U+0080 |   U+07FF | 110xxxxx | 10xxxxxx |          |          |
 // |   U+0800 |   U+FFFF | 1110xxxx | 10xxxxxx | 10xxxxxx |          |
 // |  U+10000 | U+10FFFF | 11110xxx | 10xxxxxx | 10xxxxxx | 10xxxxxx |
-//
 
 // Mask for the data of the first byte of a 2-byte character sequence
 #define UTF8_ByteMask2 0b00011111
@@ -82,11 +81,14 @@ size_t ucdCh16StrToCh8Str(
 size_t ucdCh8RunLen(UcdCh8 byte0) {
     return (byte0 < 0x80)
          + 2*((byte0 & ~UTF8_ByteMask2) == 0b11000000)
+            *(!!(byte0 & UTF8_ByteMask2))
          + 3*((byte0 & ~UTF8_ByteMask3) == 0b11100000)
-         + 4*((byte0 & ~UTF8_ByteMask4) == 0b11110000);
+            *(!!(byte0 & UTF8_ByteMask3))
+         + 4*((byte0 & ~UTF8_ByteMask4) == 0b11110000)
+            *(!!(byte0 & UTF8_ByteMask4));
 }
 
-size_t ucdCh8CPLen(UcdCh32 ch) {
+size_t ucdCh8CPLen(UcdCP ch) {
     return (ch < 0x80)
          + 2*(!!(ch >= 0x80 && ch < 0x800))
          + 3*(!!(ch >= 0x800 && ch < UCD_HIGH_SURROGATE_FIRST))

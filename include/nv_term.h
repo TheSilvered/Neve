@@ -10,7 +10,7 @@
 typedef enum TermErrType {
     TermErrType_None = 0, // No error occurred
     TermErrType_Errno, // An internal error set by a C function
-    TermErrType_CustomMsg // An error with a custom message in data.customMsg
+    TermErrType_CustomMsg // An error with a custom message in `data.customMsg`
 } TermErrType;
 
 // The error of a function call
@@ -61,39 +61,39 @@ typedef enum TermKey {
 
 /******************** Initialization and deinitialization *********************/
 
-// Initialize library
+// Initialize the library.
 bool termInit(void);
-// Enable raw mode
+// Enable raw mode.
 // `getInputTimeoutDSec` sets the timeout for `termGetInput` in tenths of a
 // second, set to 0 disables timeout (can cause issues with `termGetKey`).
 bool termEnableRawMode(uint8_t getInputTimeoutDSec);
-// Deinitialize library, restoring the terminal
+// Deinitialize the library, restoring the terminal to its previous state.
 void termQuit(void);
 
 /*********************************** Errors ***********************************/
 
-// Get the current error of the library
+// Get the current error of the library.
 TermErr *termErr(void);
-// Print the current error to stderr
+// Print the current error to stderr.
 void termLogError(const char *msg);
 
 /*********************************** Input ************************************/
 
-// Get raw input characters, returns a negative value on error
+// Get raw input characters, returns a negative value on error.
 UcdCP termGetInput(void);
-// Get key press, returns a negative value on error
+// Get key press, returns a negative value on error.
 int32_t termGetKey(void);
 
 /*********************************** Output ***********************************/
 
-// Write to the terminal
+// Write to the terminal.
 bool termWrite(const void *buf, size_t size);
 
 /************************************ Info ************************************/
 
-// Get the size of the terminal
+// Get the size of the terminal.
 bool termSize(size_t *outRows, size_t *outCols);
-// Get the cursor position of the terminal, (0, 0) is the top left corner
+// Get the cursor position of the terminal, (0, 0) is the top left corner.
 bool termCursorPos(size_t *outX, size_t *outY);
 
 #endif // !NV_TERM_H_

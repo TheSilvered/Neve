@@ -4,67 +4,69 @@
 #include <stddef.h>
 #include "nv_unicode.h"
 
-// A heap-allocated string
-// Any function that expects a `StrView *` also accepts a `Str *`
+// A heap-allocated string.
+// Any function that expects a `StrView *` also accepts a `Str *`.
+// Use `strAsC` instead of reading the contents of `buf` directly.
 typedef struct Str {
     UcdCh8 *buf;
     size_t len;
     size_t cap;
 } Str;
 
-// A string view (does not own the memory)
+// A string view (does not own the memory).
+// `buf` is not guaranteed to end with a NUL character.
 typedef struct StrView {
     const UcdCh8 *buf;
     size_t len;
 } StrView;
 
-// A string that owns a block of memory but does not allocate/deallocate it
-// Any function that expects a `StrView *` also accepts a `StrBuf *`
+// A string that owns a block of memory but does not allocate/deallocate it.
+// Any function that expects a `StrView *` also accepts a `StrBuf *`.
 typedef struct StrBuf {
     char *buf;
     size_t len;
     size_t bufSize;
 } StrBuf;
 
-// Allocate a new empty string
-// Set `reserve` to avoid reallocations
+// Allocate a new empty string.
+// Set `reserve` to avoid reallocations.
 Str *strNew(size_t reserve);
-// Allocate a new string from a C string
+// Allocate a new string from a C string.
 Str *strNewFromC(const char *cStr);
-// Initialize a new empty string
-// Set `reserve` to avoid reallcations, a reserve=0 will not allocate memory
+// Initialize a new empty string.
+// Set `reserve` to avoid reallcations, a reserve=0 will not allocate memory.
 bool strInit(Str *str, size_t reserve);
-// Initialize a new string from a C string
+// Initialize a new string from a C string.
 bool strInitFromC(Str *str, const char *cStr);
-// Free a heap allocated string
+// Free a heap allocated string.
 void strFree(Str *str);
-// Destroy the contents of a string
+// Destroy the contents of a string.
 void strDestroy(Str *str);
-// Reserve some bytes to the end of the string to avoid excessive reallocations
+// Reserve some bytes to the end of the string to avoid excessive reallocations.
 bool strReserve(Str *str, size_t reserve);
-// Append a C string to a string
+// Append a C string to a string.
 bool strAppendC(Str *str, const char *cStr);
-// Append a string view to a string
+// Append a string view to a string.
 bool strAppend(Str *str, StrView *sv);
-// Clear the contents of a string and keep a capacity of `reserve`
+// Clear the contents of a string and keep a capacity of `reserve`.
 bool strClear(Str *str, size_t reserve);
-// Get the contents of a string as a NUL terminated string
+// Get the contents of a string as a NUL terminated string.
 char *strAsC(Str *str);
 
-// Initialize a new string view from a C string
+// Initialize a new string view from a C string.
 void strViewInitFromC(StrView *sv, const char *cStr);
-// Make a new StrView from a C string
+// Make a new StrView from a C string.
 StrView strViewMakeFromC(const char *cStr);
 
-// Initialize a new string buffer
+// Initialize a new string buffer.
 void strBufInit(StrBuf *sb, char *buf, size_t bufSize);
-// Make a new string buffer
+// Make a new string buffer.
 StrBuf strBufMake(char *buf, size_t bufSize);
-// Append a C string to a string buffer
+// Append a C string to a string buffer.
 bool strBufAppendC(StrBuf *sb, const char *cStr);
-// Append a string view to a string buffer
+// Append a string view to a string buffer.
 bool strBufAppend(StrBuf *sb, StrView *sv);
-// Clear the contents of a string buffer
+// Clear the contents of a string buffer.
 void strBufClear(StrBuf *sb);
 
 #endif // !NV_STRING_H_
