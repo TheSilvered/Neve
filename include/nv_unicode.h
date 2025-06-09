@@ -29,8 +29,8 @@ bool ucdIsCPValid(UcdCP cp);
 // Returns the length of the UTF8 string written to `buf`.
 // If `buf` is NULL returns the size needed for `buf`.
 size_t ucdCh16StrToCh8Str(
-    UcdCh16 *str, size_t strLen,
-    UcdCh8  *buf, size_t bufLen
+    const UcdCh16 *str, size_t strLen,
+    UcdCh8 *buf, size_t bufLen
 );
 
 // Get the total number of bytes of a UTF8 codepoint given the first byte.
@@ -40,7 +40,7 @@ size_t ucdCh8RunLen(UcdCh8 firstCh);
 // Returns 0 if the codepoint is not valid.
 size_t ucdCh8CPLen(UcdCP cp);
 // Decode a codepoint encoded in UTF-8.
-UcdCP ucdCh8ToCP(UcdCh8 *bytes);
+UcdCP ucdCh8ToCP(const UcdCh8 *bytes);
 
 // Get the total number of units of a UTF16 codepoint given the first unit.
 // Returns 0 if the byte is not the start of a UTF8 sequence.
@@ -49,6 +49,6 @@ size_t ucdCh16RunLen(UcdCh16 firstCh);
 // Returns 0 if the codepoint is not valid.
 size_t ucdCh16CPLen(UcdCP cp);
 // Decode a codepoint encoded in UTF-16.
-UcdCP ucdCh16ToCP(UcdCh16 *bytes);
+UcdCP ucdCh16ToCP(const UcdCh16 *bytes);
 
 #endif // !NV_UNICODE_H_

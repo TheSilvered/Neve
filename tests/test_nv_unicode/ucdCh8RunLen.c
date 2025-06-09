@@ -7,25 +7,26 @@ void test_ucdCh8RunLen1Byte(void) {
 }
 
 void test_ucdCh8RunLen2Bytes(void) {
-    testAssert(ucdCh8RunLen(0xc1) == 2);
+    testAssert(ucdCh8RunLen(0xc2) == 2);
     testAssert(ucdCh8RunLen(0xdf) == 2);
 }
 
 void test_ucdCh8RunLen3Bytes(void) {
-    testAssert(ucdCh8RunLen(0xe1) == 3);
+    testAssert(ucdCh8RunLen(0xe0) == 3);
     testAssert(ucdCh8RunLen(0xef) == 3);
 }
 
 void test_ucdCh8RunLen4Bytes(void) {
-    testAssert(ucdCh8RunLen(0xf1) == 4);
-    testAssert(ucdCh8RunLen(0xf7) == 4);
+    testAssert(ucdCh8RunLen(0xf0) == 4);
+    testAssert(ucdCh8RunLen(0xf4) == 4);
 }
 
 void test_ucdCh8RunLenInvalid(void) {
     testAssert(ucdCh8RunLen(0x80) == 0);
     testAssert(ucdCh8RunLen(0xc0) == 0);
-    testAssert(ucdCh8RunLen(0xe0) == 0);
-    testAssert(ucdCh8RunLen(0xf0) == 0);
+    testAssert(ucdCh8RunLen(0xc1) == 0);
+    testAssert(ucdCh8RunLen(0xf5) == 0);
+    testAssert(ucdCh8RunLen(0xf8) == 0);
     testAssert(ucdCh8RunLen(0xff) == 0);
 }
 

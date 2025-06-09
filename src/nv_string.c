@@ -123,7 +123,7 @@ bool strAppendC(Str *str, const char *cStr) {
     return true;
 }
 
-bool strAppend(Str *str, StrView *sv) {
+bool strAppend(Str *str, const StrView *sv) {
     if (sv->len == 0) {
         return true;
     }
@@ -220,7 +220,7 @@ bool strBufAppendC(StrBuf *sb, const char *cStr) {
     return true;
 }
 
-bool strBufAppend(StrBuf *sb, StrView *sv) {
+bool strBufAppend(StrBuf *sb, const StrView *sv) {
     if (sb->len + sv->len + 1 >= sb->bufSize) {
         return false;
     }

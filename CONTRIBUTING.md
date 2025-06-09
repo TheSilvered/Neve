@@ -19,6 +19,20 @@ Strings other than `char *` may contain `NUL` characters.
 Prefer `Str`, `StrView` and `StrBuf` to raw C strings. C strings should be used
 only in static string literals.
 
+### Constants
+
+If a function does not modify the contents of a pointer they should be marked
+as constant.
+
+```c
+// CORRECT
+// `strAppend` only reads `sv`, it does not modify it
+bool strAppend(Str *str, const StrView *sv)
+
+// INCORRECT
+bool strAppend(Str *str, StrView *sv)
+```
+
 ## Explicit ignore of return values
 
 Any return value that is ignored must be marked with a `void` cast.

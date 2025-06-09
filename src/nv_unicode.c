@@ -27,8 +27,8 @@ bool ucdIsCPValid(UcdCP cp) {
 }
 
 size_t ucdCh16StrToCh8Str(
-    UcdCh16 *str, size_t strLen,
-    UcdCh8  *buf, size_t bufLen
+    const UcdCh16 *str, size_t strLen,
+    UcdCh8 *buf, size_t bufLen
 ) {
     size_t bufIdx = 0;
     for (size_t strIdx = 0; strIdx < strLen;) {
@@ -80,12 +80,9 @@ size_t ucdCh16StrToCh8Str(
 
 size_t ucdCh8RunLen(UcdCh8 byte0) {
     return (byte0 < 0x80)
-         + 2*((byte0 & ~UTF8_ByteMask2) == 0b11000000)
-            *(!!(byte0 & UTF8_ByteMask2))
+         + 2*((byte0 & ~UTF8_ByteMask2) == 0b11000000)*(byte0 >= 0xc2)
          + 3*((byte0 & ~UTF8_ByteMask3) == 0b11100000)
-            *(!!(byte0 & UTF8_ByteMask3))
-         + 4*((byte0 & ~UTF8_ByteMask4) == 0b11110000)
-            *(!!(byte0 & UTF8_ByteMask4));
+         + 4*((byte0 & ~UTF8_ByteMask4) == 0b11110000)*(byte0 <= 0xf4);
 }
 
 size_t ucdCh8CPLen(UcdCP ch) {
@@ -96,7 +93,7 @@ size_t ucdCh8CPLen(UcdCP ch) {
          + 4*(!!(ch >= 0x10000 && ch <= 0x10ffff));
 }
 
-UcdCP ucdCh8ToCP(UcdCh8 *bytes) {
+UcdCP ucdCh8ToCP(const UcdCh8 *bytes) {
     switch (ucdCh8RunLen(bytes[0])) {
     case 1:
         return (UcdCP)bytes[0];
@@ -132,7 +129,7 @@ size_t ucdCh16CPLen(UcdCP cp) {
     return (1 + (cp > 0xffff)) * ucdIsCPValid(cp);
 }
 
-UcdCh32 ucdCh16ToCP(UcdCh16 *bytes) {
+UcdCh32 ucdCh16ToCP(const UcdCh16 *bytes) {
     if (
         bytes[0] < UCD_HIGH_SURROGATE_FIRST
         || bytes[0] > UCD_HIGH_SURROGATE_LAST

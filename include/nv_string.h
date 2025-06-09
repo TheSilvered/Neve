@@ -47,7 +47,7 @@ bool strReserve(Str *str, size_t reserve);
 // Append a C string to a string.
 bool strAppendC(Str *str, const char *cStr);
 // Append a string view to a string.
-bool strAppend(Str *str, StrView *sv);
+bool strAppend(Str *str, const StrView *sv);
 // Clear the contents of a string and keep a capacity of `reserve`.
 bool strClear(Str *str, size_t reserve);
 // Get the contents of a string as a NUL terminated string.
@@ -65,7 +65,7 @@ StrBuf strBufMake(char *buf, size_t bufSize);
 // Append a C string to a string buffer.
 bool strBufAppendC(StrBuf *sb, const char *cStr);
 // Append a string view to a string buffer.
-bool strBufAppend(StrBuf *sb, StrView *sv);
+bool strBufAppend(StrBuf *sb, const StrView *sv);
 // Clear the contents of a string buffer.
 void strBufClear(StrBuf *sb);
 
