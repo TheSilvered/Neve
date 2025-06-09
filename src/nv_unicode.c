@@ -89,11 +89,11 @@ size_t ucdCh8RunLen(UcdCh8 byte0) {
 }
 
 size_t ucdCh8CPLen(UcdCP ch) {
-    return (ch < 0x80)
+    return (ch >= 0 && ch < 0x80)
          + 2*(!!(ch >= 0x80 && ch < 0x800))
          + 3*(!!(ch >= 0x800 && ch < UCD_HIGH_SURROGATE_FIRST))
          + 3*(!!(ch > UCD_LOW_SURROGATE_LAST && ch < 0x10000))
-         + 4*(!!(ch >= 0x10000 && ch < 0x10ffff));
+         + 4*(!!(ch >= 0x10000 && ch <= 0x10ffff));
 }
 
 UcdCP ucdCh8ToCP(UcdCh8 *bytes) {
