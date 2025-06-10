@@ -25,7 +25,7 @@ bool initTerminal(void) {
 }
 
 void refreshScreen(void) {
-    if (!strClear(&g_screenBuf, 1024)) {
+    if (!strClear(&g_screenBuf, g_screenBuf.len)) {
         return;
     }
 
