@@ -22,7 +22,7 @@ typedef struct Test {
     if (testAssertWith_((expr), #expr, __FILE__, __LINE__))
 // Assert that `expr` is true, otherwise exit from the test
 #define testAssertRequire(expr) do { \
-    if (testAssertRequire_((expr), #expr, __FILE__, __LINE__)) return; \
+    if (!testAssertRequire_((expr), #expr, __FILE__, __LINE__)) return; \
     } while (0)
 
 // Helper for `testAssert`

@@ -34,7 +34,7 @@ size_t ucdCh16StrToCh8Str(
     for (size_t strIdx = 0; strIdx < strLen;) {
         UcdCh16 wch = str[strIdx++];
         UcdCP ch = 0;
-        if (wch < UCD_HIGH_SURROGATE_FIRST || wch > UCD_LOW_SURROGATE_LAST) {
+        if (wch < UCD_HIGH_SURROGATE_FIRST || wch > UCD_HIGH_SURROGATE_LAST) {
             ch = wch;
         } else if (strIdx == strLen) {
             ch = DECODING_ERROR_CH;
