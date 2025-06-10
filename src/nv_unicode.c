@@ -34,14 +34,12 @@ size_t ucdCh16StrToCh8Str(
     for (size_t strIdx = 0; strIdx < strLen;) {
         UcdCh16 wch = str[strIdx++];
         UcdCP ch = 0;
-        if (wch < 0xd800 || wch > 0xdfff) {
+        if (wch < UCD_HIGH_SURROGATE_FIRST || wch > UCD_LOW_SURROGATE_LAST) {
             ch = wch;
+        } else if (strIdx == strLen) {
+            ch = DECODING_ERROR_CH;
         } else {
-            if (strIdx == strLen) {
-                ch = DECODING_ERROR_CH;
-            } else {
-                ch = ((wch & 0x3ff) << 10) + (str[strIdx++] & 0x3ff) + 0x10000;
-            }
+            ch = ((wch & 0x3ff) << 10) + (str[strIdx++] & 0x3ff) + 0x10000;
         }
 
         // replace invalid characters with U+FFFD

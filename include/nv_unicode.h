@@ -43,7 +43,7 @@ size_t ucdCh8CPLen(UcdCP cp);
 UcdCP ucdCh8ToCP(const UcdCh8 *bytes);
 
 // Get the total number of units of a UTF16 codepoint given the first unit.
-// Returns 0 if the byte is not the start of a UTF8 sequence.
+// Returns 0 if the character is not the start of a UTF16 sequence.
 size_t ucdCh16RunLen(UcdCh16 firstCh);
 // Get the total number of units needed to encode `cp` in UTF-16
 // Returns 0 if the codepoint is not valid.
