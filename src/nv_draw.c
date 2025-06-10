@@ -1,21 +1,43 @@
 #include "nv_draw.h"
 #include "nv_term.h"
 
-void drawClear(void) {
-    (void)termWrite("\033[2J\033[3J\033[H", 11);
+#include <stdio.h>
+
+bool drawClear(Str *screenBuf) {
+    const StrView clrSeq = {
+        .buf = "\033[2J\033[3J\033[H",
+        .len = 11
+    };
+    return strAppend(screenBuf, &clrSeq);
 }
 
-void drawRows(void) {
-    size_t rows = 0;
+bool drawRows(Str *screenBuf) {
+    size_t rows;
     if (!termSize(&rows, NULL)) {
-        return;
+        return false;
+    }
+
+    const StrView hideCursor = strViewMakeFromC("\x1b[?25l");
+    const StrView showCursorAndGoHome = strViewMakeFromC("\x1b[?25h\033[H");
+    const StrView tilde = strViewMakeFromC("~");
+    const StrView tildeLF = strViewMakeFromC("~\r\n");
+
+    if (!strAppend(screenBuf, &hideCursor)) {
+        return false;
     }
     for (int i = 0; i < rows; i++) {
         if (i == rows - 1) {
-            (void)termWrite("~", 1);
+            if (!strAppend(screenBuf, &tilde)) {
+                return false;
+            }
         } else {
-            termWrite("~\r\n", 3);
+            if (!strAppend(screenBuf, &tildeLF)) {
+                return false;
+            }
         }
     }
-    (void)termWrite("\033[H", 3);
+    if (!strAppend(screenBuf, &showCursorAndGoHome)) {
+        return false;
+    }
+    return true;
 }

@@ -1,9 +1,12 @@
 #ifndef NV_DRAW_H_
 #define NV_DRAW_H_
 
-// Clear the screen
-void drawClear(void);
+#include "nv_string.h"
 
-void drawRows(void);
+// Clear the screen
+bool drawClear(Str *screenBuf);
+
+// Draw the rows
+bool drawRows(Str *screenBuf);
 
 #endif // !NV_DRAW_H_

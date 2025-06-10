@@ -3,7 +3,7 @@
 #include "nv_term.h"
 #include "nv_draw.h"
 
-#define CTRL(key) ((key) & 0x1f)
+static Str g_screenBuf = { 0 };
 
 bool initTerminal(void) {
     if (!termInit()) {
@@ -25,8 +25,20 @@ bool initTerminal(void) {
 }
 
 void refreshScreen(void) {
-    drawClear();
-    drawRows();
+    if (!strClear(&g_screenBuf, 1024)) {
+        return;
+    }
+
+    drawClear(&g_screenBuf);
+    drawRows(&g_screenBuf);
+
+    termWrite(g_screenBuf.buf, g_screenBuf.len);
+}
+
+void clearScreen(void) {
+    strClear(&g_screenBuf, 10);
+    drawClear(&g_screenBuf);
+    termWrite(g_screenBuf.buf, g_screenBuf.len);
 }
 
 int getKey(void) {
@@ -38,8 +50,9 @@ int getKey(void) {
 }
 
 int main(void) {
-    if (!initTerminal())
-        return false;
+    if (!initTerminal()) {
+        return 1;
+    }
 
     for (;;) {
         refreshScreen();
@@ -49,7 +62,7 @@ int main(void) {
             return 1;
         }
         if (key == TermKey_CtrlC) {
-            drawClear();
+            clearScreen();
             break;
         }
     }
