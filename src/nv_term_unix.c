@@ -3,10 +3,12 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <termios.h>
 
+#include "nv_escapes.h"
 #include "nv_term.h"
 #include "nv_unicode.h"
 
@@ -108,6 +110,15 @@ UcdCP termGetInput(void) {
     return ucdCh8ToCP(chBytes);
 }
 
+int64_t termRead(UcdCh8 *buf, size_t bufSize) {
+    ssize_t res = read(STDIN_FILENO, buf, bufSize);
+    if (res < 0) {
+        g_error.type = TermErrType_Errno;
+        return -1;
+    }
+    return res;
+}
+
 // Output
 
 bool termWrite(const void *buf, size_t size) {
@@ -133,10 +144,9 @@ bool termSize(size_t *outRows, size_t *outCols) {
     return true;
 }
 
-bool termCursorPos(size_t *outX, size_t *outY) {
-
+bool termCursorGetPos(size_t *outX, size_t *outY) {
     char buf[CURSOR_POS_BUF_SIZE];
-    if (!termWrite("\033[6n", 4)) {
+    if (!termWrite(escCursorGetPos, 4)) {
         goto failure;
     }
 
@@ -145,7 +155,7 @@ bool termCursorPos(size_t *outX, size_t *outY) {
     UcdCP ch = termGetInput();
     if (ch < 0) {
         goto failure;
-    } else if (ch != '\033') {
+    } else if (ch != '\x1b') {
         goto failure_msg;
     }
 
@@ -209,4 +219,33 @@ failure:
         *outY = 0;
     }
     return false;
+}
+
+bool termCursorSetPos(size_t x, size_t y) {
+    char buf[CURSOR_POS_BUF_SIZE + 3];
+    x++;
+    y++;
+
+    if (x > UINT16_MAX) {
+        x = UINT16_MAX;
+    }
+    if (y > UINT16_MAX) {
+        y = UINT16_MAX;
+    }
+
+    size_t bufLen = snprintf(
+        buf, CURSOR_POS_BUF_SIZE + 3,
+        escCursorSetPos("%zi", "%zi") , y, x
+    );
+
+    if (bufLen == 0) {
+        g_error.type = TermErrType_Errno;
+        return false;
+    }
+
+    if (!termWrite(buf, bufLen)) {
+        return false;
+    }
+
+    return true;
 }

@@ -8,7 +8,7 @@ void test_strNewZeroReserve(void) {
 
     testAssertRequire(str != NULL);
     testAssert(str->len == 0);
-    testAssert(strcmp(strAsC(str), ""));
+    testAssert(strcmp(strAsC(str), "") == 0);
 
     strFree(str);
 }
@@ -20,7 +20,7 @@ void test_strNewWithReserve(void) {
     testAssertRequire(str != NULL);
     testAssert(str->len == 0);
     testAssert(str->cap >= reserve);
-    testAssert(strcmp(strAsC(str), ""));
+    testAssert(strcmp(strAsC(str), "") == 0);
 
     strFree(str);
 }

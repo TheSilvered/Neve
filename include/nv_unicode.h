@@ -5,11 +5,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define UCD_HIGH_SURROGATE_FIRST 0xD800
-#define UCD_HIGH_SURROGATE_LAST  0xDBFF
+#define ucdHighSurrogateFirst 0xD800
+#define ucdHighSurrogateLast  0xDBFF
 
-#define UCD_LOW_SURROGATE_FIRST 0xDC00
-#define UCD_LOW_SURROGATE_LAST  0xDFFF
+#define ucdLowSurrogateFirst 0xDC00
+#define ucdLowSurrogateLast  0xDFFF
 
 // UTF8 encoded character, a single character may not be a full codepoint.
 typedef uint8_t  UcdCh8;

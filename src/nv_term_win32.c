@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <limits.h>
 #define WIN32_LEAN_AND_MEAN
 #define UNICODE
 #define _UNICODE
@@ -261,6 +262,59 @@ UcdCP termGetInput(void) {
     }
 }
 
+int64_t termRead(UcdCh8 *buf, size_t bufSize) {
+    size_t toRead = min(bufSize, W_MSG_BUF_SIZE);
+    size_t idx = 0;
+    uint8_t offsetOutBuf = 0;
+
+    while (toRead) {
+        DWORD charsRead;
+        BOOL readResult = ReadConsoleW(
+            g_consoleInput,
+            g_wMsgBuf + offsetOutBuf,
+            toRead,
+            &charsRead,
+            NULL
+        );
+        if (readResult == FALSE) {
+            g_error.type = TermErrType_Errno;
+            return -1;
+        }
+        charsRead += offsetOutBuf;
+
+        // If the read happened to stop in the middle of a code point
+        if (charsRead > 1 && ucdCh16RunLen(g_wMsgBuf[charsRead - 1]) == 2) {
+            offsetOutBuf = 1;
+            charsRead -= 1;
+        } else {
+            offsetOutBuf = 0;
+        }
+
+        idx += ucdCh16StrToCh8Str(
+            g_wMsgBuf,
+            charsRead,
+            buf + idx,
+            bufSize - idx
+        );
+
+        if (offsetOutBuf) {
+            g_wMsgBuf[0] = g_wMsgBuf[charsRead - 1];
+        }
+
+        if (charsRead < toRead) {
+            toRead = 0;
+        } else {
+            toRead = min(bufSize - idx, W_MSG_BUF_SIZE - offsetOutBuf);
+        }
+    }
+
+    if (offsetOutBuf) {
+        idx += ucdCh16StrToCh8Str(g_wMsgBuf, 1, buf + idx, bufSize - idx);
+    }
+
+    return idx;
+}
+
 // Output
 
 bool termWrite(const void *buf, size_t size) {
@@ -292,7 +346,7 @@ bool termSize(size_t *outRows, size_t *outCols) {
     return true;
 }
 
-bool termCursorPos(size_t *outX, size_t *outY) {
+bool termCursorGetPos(size_t *outX, size_t *outY) {
     CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
     if (GetConsoleScreenBufferInfo(g_consoleOutput, &bufferInfo) == FALSE) {
         g_error.type = TermErrType_Errno;
@@ -309,6 +363,21 @@ bool termCursorPos(size_t *outX, size_t *outY) {
     }
     if (outY != NULL) {
         *outY = (size_t)bufferInfo.dwCursorPosition.Y;
+    }
+    return true;
+}
+
+bool termCursorSetPos(size_t x, size_t y) {
+    if (x > INT16_MAX) {
+        x = INT16_MAX;
+    }
+    if (y > INT16_MAX) {
+        y = INT16_MAX;
+    }
+    COORD cursorPos = { .X = (SHORT)x, .Y = (SHORT)y };
+    if (SetConsoleCursorPosition(g_consoleOutput, cursorPos) == FALSE) {
+        g_error.type = TermErrType_Errno;
+        return false;
     }
     return true;
 }

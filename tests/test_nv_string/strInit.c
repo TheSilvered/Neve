@@ -8,7 +8,7 @@ void test_strInitZeroReserve(void) {
 
     testAssertRequire(strInit(&str, 0));
     testAssert(str.len == 0);
-    testAssert(strcmp(strAsC(&str), ""));
+    testAssert(strcmp(strAsC(&str), "") == 0);
 
     strDestroy(&str);
 }
@@ -20,7 +20,7 @@ void test_strInitWithReserve(void) {
     testAssertRequire(strInit(&str, reserve));
     testAssert(str.len == 0);
     testAssert(str.cap >= reserve);
-    testAssert(strcmp(strAsC(&str), ""));
+    testAssert(strcmp(strAsC(&str), "") == 0);
 
     strDestroy(&str);
 }

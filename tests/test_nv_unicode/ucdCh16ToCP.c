@@ -11,12 +11,12 @@ void test_ucdCh16ToCPBMP(void) {
 
 void test_ucdCh16ToCPBMPSupplementaryPlanes(void) {
     const UcdCh16 arr0[2] = {
-        UCD_HIGH_SURROGATE_FIRST,
-        UCD_LOW_SURROGATE_FIRST
+        ucdHighSurrogateFirst,
+        ucdLowSurrogateFirst
     };
     const UcdCh16 arr1[2] = {
-        UCD_HIGH_SURROGATE_LAST,
-        UCD_LOW_SURROGATE_LAST
+        ucdHighSurrogateLast,
+        ucdLowSurrogateLast
     };
 
     testAssert(ucdCh16ToCP(arr0) == 0x10000);

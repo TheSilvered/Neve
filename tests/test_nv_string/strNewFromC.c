@@ -9,7 +9,7 @@ void test_strNewFromCEmpty(void) {
 
     testAssertRequire(str != NULL);
     testAssert(str->len == 0);
-    testAssert(strcmp(strAsC(str), cStr));
+    testAssert(strcmp(strAsC(str), cStr) == 0);
 
     strFree(str);
 }
@@ -19,8 +19,8 @@ void test_strNewFromCFull(void) {
     Str *str = strNewFromC(cStr);
 
     testAssertRequire(str != NULL);
-    testAssert(str->len == 0);
-    testAssert(strcmp(strAsC(str), cStr));
+    testAssert(str->len == 1);
+    testAssert(strcmp(strAsC(str), cStr) == 0);
 
     strFree(str);
 }

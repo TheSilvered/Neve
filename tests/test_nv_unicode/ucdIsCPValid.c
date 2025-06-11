@@ -18,19 +18,19 @@ void test_ucdIsCPValidNegative(void) {
 }
 
 void test_ucdIsCPValidFirstHighSurrogate(void) {
-    testAssert(!ucdIsCPValid(UCD_HIGH_SURROGATE_FIRST));
+    testAssert(!ucdIsCPValid(ucdHighSurrogateFirst));
 }
 
 void test_ucdIsCPValidLastHighSurrogate(void) {
-    testAssert(!ucdIsCPValid(UCD_HIGH_SURROGATE_LAST));
+    testAssert(!ucdIsCPValid(ucdHighSurrogateLast));
 }
 
 void test_ucdIsCPValidFirstLowSurrogate(void) {
-    testAssert(!ucdIsCPValid(UCD_LOW_SURROGATE_FIRST));
+    testAssert(!ucdIsCPValid(ucdLowSurrogateFirst));
 }
 
 void test_ucdIsCPValidLastLowSurrogate(void) {
-    testAssert(!ucdIsCPValid(UCD_LOW_SURROGATE_LAST));
+    testAssert(!ucdIsCPValid(ucdLowSurrogateLast));
 }
 
 testList(

@@ -9,7 +9,7 @@ void test_strInitFromCEmpty(void) {
 
     testAssertRequire(strInitFromC(&str, cStr));
     testAssert(str.len == 0);
-    testAssert(strcmp(strAsC(&str), cStr));
+    testAssert(strcmp(strAsC(&str), cStr) == 0);
 
     strDestroy(&str);
 }
@@ -19,8 +19,8 @@ void test_strInitFromCFull(void) {
     Str str;
 
     testAssertRequire(strInitFromC(&str, cStr));
-    testAssert(str.len == 0);
-    testAssert(strcmp(strAsC(&str), cStr));
+    testAssert(str.len == 1);
+    testAssert(strcmp(strAsC(&str), cStr) == 0);
 
     strDestroy(&str);
 }

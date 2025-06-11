@@ -83,6 +83,8 @@ void termLogError(const char *msg);
 UcdCP termGetInput(void);
 // Get key press, returns a negative value on error.
 int32_t termGetKey(void);
+// Read from the terminal.
+int64_t termRead(UcdCh8 *buf, size_t bufSize);
 
 /*********************************** Output ***********************************/
 
@@ -93,7 +95,9 @@ bool termWrite(const void *buf, size_t size);
 
 // Get the size of the terminal.
 bool termSize(size_t *outRows, size_t *outCols);
-// Get the cursor position of the terminal, (0, 0) is the top left corner.
-bool termCursorPos(size_t *outX, size_t *outY);
+// Get the cursor position, (0, 0) is the top left corner.
+bool termCursorGetPos(size_t *outX, size_t *outY);
+// Set the cursor position, (0, 0) is the top left corner.
+bool termCursorSetPos(size_t x, size_t y);
 
 #endif // !NV_TERM_H_

@@ -14,10 +14,10 @@ void test_ucdCh16CPLenSupplementaryPlanes(void) {
 void test_ucdCh16CPLenInvalid(void) {
     testAssert(ucdCh16CPLen(-1) == 0);
     testAssert(ucdCh16CPLen(0x110000) == 0);
-    testAssert(ucdCh16CPLen(UCD_HIGH_SURROGATE_FIRST) == 0);
-    testAssert(ucdCh16CPLen(UCD_HIGH_SURROGATE_LAST) == 0);
-    testAssert(ucdCh16CPLen(UCD_LOW_SURROGATE_FIRST) == 0);
-    testAssert(ucdCh16CPLen(UCD_LOW_SURROGATE_LAST) == 0);
+    testAssert(ucdCh16CPLen(ucdHighSurrogateFirst) == 0);
+    testAssert(ucdCh16CPLen(ucdHighSurrogateLast) == 0);
+    testAssert(ucdCh16CPLen(ucdLowSurrogateFirst) == 0);
+    testAssert(ucdCh16CPLen(ucdLowSurrogateLast) == 0);
 }
 
 testList(

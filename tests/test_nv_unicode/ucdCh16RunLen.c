@@ -7,13 +7,13 @@ void test_ucdCh16RunLenBMP(void) {
 }
 
 void test_ucdCh16RunLenHighSurrogate(void) {
-    testAssert(ucdCh16RunLen(UCD_HIGH_SURROGATE_FIRST) == 2);
-    testAssert(ucdCh16RunLen(UCD_HIGH_SURROGATE_LAST) == 2);
+    testAssert(ucdCh16RunLen(ucdHighSurrogateFirst) == 2);
+    testAssert(ucdCh16RunLen(ucdHighSurrogateLast) == 2);
 }
 
 void test_ucdCh16RunLenLowSurrogate(void) {
-    testAssert(ucdCh16RunLen(UCD_LOW_SURROGATE_FIRST) == 0);
-    testAssert(ucdCh16RunLen(UCD_LOW_SURROGATE_LAST) == 0);
+    testAssert(ucdCh16RunLen(ucdLowSurrogateFirst) == 0);
+    testAssert(ucdCh16RunLen(ucdLowSurrogateLast) == 0);
 }
 
 testList(

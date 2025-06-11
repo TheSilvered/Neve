@@ -23,7 +23,7 @@
 bool ucdIsCPValid(UcdCP cp) {
     return cp <= 0x10ffff
         && cp >= 0
-        && (cp < UCD_HIGH_SURROGATE_FIRST || cp > UCD_LOW_SURROGATE_LAST);
+        && (cp < ucdHighSurrogateFirst || cp > ucdLowSurrogateLast);
 }
 
 size_t ucdCh16StrToCh8Str(
@@ -34,7 +34,7 @@ size_t ucdCh16StrToCh8Str(
     for (size_t strIdx = 0; strIdx < strLen;) {
         UcdCh16 wch = str[strIdx++];
         UcdCP ch = 0;
-        if (wch < UCD_HIGH_SURROGATE_FIRST || wch > UCD_HIGH_SURROGATE_LAST) {
+        if (wch < ucdHighSurrogateFirst || wch > ucdHighSurrogateLast) {
             ch = wch;
         } else if (strIdx == strLen) {
             ch = DECODING_ERROR_CH;
@@ -86,8 +86,8 @@ size_t ucdCh8RunLen(UcdCh8 byte0) {
 size_t ucdCh8CPLen(UcdCP ch) {
     return (ch >= 0 && ch < 0x80)
          + 2*(!!(ch >= 0x80 && ch < 0x800))
-         + 3*(!!(ch >= 0x800 && ch < UCD_HIGH_SURROGATE_FIRST))
-         + 3*(!!(ch > UCD_LOW_SURROGATE_LAST && ch < 0x10000))
+         + 3*(!!(ch >= 0x800 && ch < ucdHighSurrogateFirst))
+         + 3*(!!(ch > ucdLowSurrogateLast && ch < 0x10000))
          + 4*(!!(ch >= 0x10000 && ch <= 0x10ffff));
 }
 
@@ -115,11 +115,11 @@ UcdCP ucdCh8ToCP(const UcdCh8 *bytes) {
 size_t ucdCh16RunLen(UcdCh16 firstCh) {
     return (
         1 + (!!(
-            firstCh >= UCD_HIGH_SURROGATE_FIRST
-            && firstCh <= UCD_HIGH_SURROGATE_LAST
+            firstCh >= ucdHighSurrogateFirst
+            && firstCh <= ucdHighSurrogateLast
         ))
     ) * (!!(
-        firstCh < UCD_LOW_SURROGATE_FIRST || firstCh > UCD_LOW_SURROGATE_LAST
+        firstCh < ucdLowSurrogateFirst || firstCh > ucdLowSurrogateLast
     ));
 }
 
@@ -129,15 +129,15 @@ size_t ucdCh16CPLen(UcdCP cp) {
 
 UcdCh32 ucdCh16ToCP(const UcdCh16 *bytes) {
     if (
-        bytes[0] < UCD_HIGH_SURROGATE_FIRST
-        || bytes[0] > UCD_HIGH_SURROGATE_LAST
+        bytes[0] < ucdHighSurrogateFirst
+        || bytes[0] > ucdHighSurrogateLast
     ) {
         return bytes[0];
     }
 
     if (
-        bytes[0] >= UCD_LOW_SURROGATE_FIRST
-        && bytes[0] <= UCD_LOW_SURROGATE_LAST
+        bytes[0] >= ucdLowSurrogateFirst
+        && bytes[0] <= ucdLowSurrogateLast
     ) {
         return DECODING_ERROR_CH;
     }

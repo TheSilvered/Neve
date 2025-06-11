@@ -91,13 +91,13 @@ void test_ucdCh16StrToCh8StrU0800(void) {
 }
 
 void test_ucdCh16StrToCh8StrSizeHighSurrogateFirst(void) {
-    const UcdCh16 str[1] = { UCD_HIGH_SURROGATE_FIRST };
+    const UcdCh16 str[1] = { ucdHighSurrogateFirst };
     testAssert(ucdCh16StrToCh8Str(str, 1, NULL, 0) == 4);
 }
 
 void test_ucdCh16StrToCh8StrHighSurrogateFirst(void) {
     UcdCh8 buf[4] = { 0xff, 0xff, 0xff, 0xff };
-    const UcdCh16 str[1] = { UCD_HIGH_SURROGATE_FIRST };
+    const UcdCh16 str[1] = { ucdHighSurrogateFirst };
     // invalid UTF16, U+FFFD (invalid character) is encoded
     testAssertRequire(ucdCh16StrToCh8Str(str, 1, buf, 4) == 3);
     testAssert(buf[0] == 0xef);
@@ -107,13 +107,13 @@ void test_ucdCh16StrToCh8StrHighSurrogateFirst(void) {
 }
 
 void test_ucdCh16StrToCh8StrSizeHighSurrogateLast(void) {
-    const UcdCh16 str[1] = { UCD_HIGH_SURROGATE_LAST };
+    const UcdCh16 str[1] = { ucdHighSurrogateLast };
     testAssert(ucdCh16StrToCh8Str(str, 1, NULL, 0) == 4);
 }
 
 void test_ucdCh16StrToCh8StrHighSurrogateLast(void) {
     UcdCh8 buf[4] = { 0xff, 0xff, 0xff, 0xff };
-    const UcdCh16 str[1] = { UCD_HIGH_SURROGATE_LAST };
+    const UcdCh16 str[1] = { ucdHighSurrogateLast };
     // invalid UTF16, U+FFFD (invalid character) is encoded
     testAssertRequire(ucdCh16StrToCh8Str(str, 1, buf, 4) == 3);
     testAssert(buf[0] == 0xef);
@@ -123,13 +123,13 @@ void test_ucdCh16StrToCh8StrHighSurrogateLast(void) {
 }
 
 void test_ucdCh16StrToCh8StrSizeLowSurrogateFirst(void) {
-    const UcdCh16 str[1] = { UCD_LOW_SURROGATE_FIRST };
+    const UcdCh16 str[1] = { ucdLowSurrogateFirst };
     testAssert(ucdCh16StrToCh8Str(str, 1, NULL, 0) == 4);
 }
 
 void test_ucdCh16StrToCh8StrLowSurrogateFirst(void) {
     UcdCh8 buf[4] = { 0xff, 0xff, 0xff, 0xff };
-    const UcdCh16 str[1] = { UCD_LOW_SURROGATE_FIRST };
+    const UcdCh16 str[1] = { ucdLowSurrogateFirst };
     // invalid UTF16, U+FFFD (invalid character) is encoded
     testAssertRequire(ucdCh16StrToCh8Str(str, 1, buf, 4) == 3);
     testAssert(buf[0] == 0xef);
@@ -139,13 +139,13 @@ void test_ucdCh16StrToCh8StrLowSurrogateFirst(void) {
 }
 
 void test_ucdCh16StrToCh8StrSizeLowSurrogateLast(void) {
-    const UcdCh16 str[1] = { UCD_LOW_SURROGATE_LAST };
+    const UcdCh16 str[1] = { ucdLowSurrogateLast };
     testAssert(ucdCh16StrToCh8Str(str, 1, NULL, 0) == 4);
 }
 
 void test_ucdCh16StrToCh8StrLowSurrogateLast(void) {
     UcdCh8 buf[4] = { 0xff, 0xff, 0xff, 0xff };
-    const UcdCh16 str[1] = { UCD_LOW_SURROGATE_LAST };
+    const UcdCh16 str[1] = { ucdLowSurrogateLast };
     // invalid UTF16, U+FFFD (invalid character) is encoded
     testAssertRequire(ucdCh16StrToCh8Str(str, 1, buf, 4) == 3);
     testAssert(buf[0] == 0xef);
@@ -172,8 +172,8 @@ void test_ucdCh16StrToCh8StrUffff(void) {
 
 void test_ucdCh16StrToCh8StrSizeU10000(void) {
     const UcdCh16 str[2] = {
-        UCD_HIGH_SURROGATE_FIRST,
-        UCD_LOW_SURROGATE_FIRST
+        ucdHighSurrogateFirst,
+        ucdLowSurrogateFirst
     };
     testAssert(ucdCh16StrToCh8Str(str, 2, NULL, 0) == 5);
 }
@@ -181,8 +181,8 @@ void test_ucdCh16StrToCh8StrSizeU10000(void) {
 void test_ucdCh16StrToCh8StrU10000(void) {
     UcdCh8 buf[5] = { 0xff, 0xff, 0xff, 0xff, 0xff };
     const UcdCh16 str[2] = {
-        UCD_HIGH_SURROGATE_FIRST,
-        UCD_LOW_SURROGATE_FIRST
+        ucdHighSurrogateFirst,
+        ucdLowSurrogateFirst
     };
 
     testAssertRequire(ucdCh16StrToCh8Str(str, 2, buf, 5) == 4);
@@ -195,8 +195,8 @@ void test_ucdCh16StrToCh8StrU10000(void) {
 
 void test_ucdCh16StrToCh8StrSizeU10ffff(void) {
     const UcdCh16 str[2] = {
-        UCD_HIGH_SURROGATE_LAST,
-        UCD_LOW_SURROGATE_LAST
+        ucdHighSurrogateLast,
+        ucdLowSurrogateLast
     };
     testAssert(ucdCh16StrToCh8Str(str, 2, NULL, 0) == 5);
 }
@@ -204,8 +204,8 @@ void test_ucdCh16StrToCh8StrSizeU10ffff(void) {
 void test_ucdCh16StrToCh8StrU10ffff(void) {
     UcdCh8 buf[5] = { 0xff, 0xff, 0xff, 0xff, 0xff };
     const UcdCh16 str[2] = {
-        UCD_HIGH_SURROGATE_LAST,
-        UCD_LOW_SURROGATE_LAST
+        ucdHighSurrogateLast,
+        ucdLowSurrogateLast
     };
 
     testAssertRequire(ucdCh16StrToCh8Str(str, 2, buf, 5) == 4);
@@ -224,8 +224,8 @@ void test_ucdCh16StrToCh8StrSizeMix(void) {
         0x07ff,
         0x0800,
         0xffff,
-        UCD_HIGH_SURROGATE_FIRST, UCD_LOW_SURROGATE_FIRST,
-        UCD_HIGH_SURROGATE_LAST, UCD_LOW_SURROGATE_LAST
+        ucdHighSurrogateFirst, ucdLowSurrogateFirst,
+        ucdHighSurrogateLast, ucdLowSurrogateLast
     };
     testAssert(ucdCh16StrToCh8Str(str, 10, NULL, 0) == 21);
 }
@@ -243,8 +243,8 @@ void test_ucdCh16StrToCh8StrMix(void) {
         0x07ff,
         0x0800,
         0xffff,
-        UCD_HIGH_SURROGATE_FIRST, UCD_LOW_SURROGATE_FIRST,
-        UCD_HIGH_SURROGATE_LAST, UCD_LOW_SURROGATE_LAST
+        ucdHighSurrogateFirst, ucdLowSurrogateFirst,
+        ucdHighSurrogateLast, ucdLowSurrogateLast
     };
     testAssertRequire(ucdCh16StrToCh8Str(str, 10, buf, 21) == 20);
     testAssert(buf[ 0] == 0x00);

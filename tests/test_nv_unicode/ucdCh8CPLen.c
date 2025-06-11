@@ -36,10 +36,10 @@ void test_ucdCh8CPLenU10ffff(void) {
 void test_ucdCh8CPLenInvalid(void) {
     testAssert(ucdCh8CPLen(0x110000) == 0);
     testAssert(ucdCh8CPLen(-1) == 0);
-    testAssert(ucdCh8CPLen(UCD_HIGH_SURROGATE_FIRST) == 0);
-    testAssert(ucdCh8CPLen(UCD_HIGH_SURROGATE_LAST) == 0);
-    testAssert(ucdCh8CPLen(UCD_LOW_SURROGATE_FIRST) == 0);
-    testAssert(ucdCh8CPLen(UCD_LOW_SURROGATE_LAST) == 0);
+    testAssert(ucdCh8CPLen(ucdHighSurrogateFirst) == 0);
+    testAssert(ucdCh8CPLen(ucdHighSurrogateLast) == 0);
+    testAssert(ucdCh8CPLen(ucdLowSurrogateFirst) == 0);
+    testAssert(ucdCh8CPLen(ucdLowSurrogateLast) == 0);
 }
 
 testList(
