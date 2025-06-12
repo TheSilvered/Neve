@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <limits.h>
 #define WIN32_LEAN_AND_MEAN
 #define UNICODE
 #define _UNICODE
@@ -29,13 +28,10 @@ static TermErr g_error = { 0 };
 
 static DWORD g_readTimeoutMs = 0;
 
-#define W_MSG_BUF_SIZE 4096
-#define MSG_BUF_SIZE 4096
-
-static TCHAR g_wMsgBuf[MSG_BUF_SIZE];
-static char g_msgBuf[MSG_BUF_SIZE];
-
 #define INPUT_EVENTS_SIZE 512
+
+#define msgBufSize 512
+#define readChunkSize 4096
 
 static INPUT_RECORD g_inputEvents[INPUT_EVENTS_SIZE];
 static size_t g_eventIdx = 0;
@@ -132,6 +128,8 @@ void termLogError(const char *msg) {
         printErrMsg(msg, (char *)"no error occurred");
         break;
     case TermErrType_Errno: {
+        static char msgBuf[msgBufSize];
+        static TCHAR wMsgBuf[msgBufSize];
         DWORD formatFlags = FORMAT_MESSAGE_FROM_SYSTEM
                           | FORMAT_MESSAGE_IGNORE_INSERTS;
         DWORD errId = GetLastError();
@@ -141,29 +139,28 @@ void termLogError(const char *msg) {
             NULL,
             errId,
             0,
-            g_wMsgBuf, W_MSG_BUF_SIZE,
+            wMsgBuf, msgBufSize,
             NULL
         );
 
         if (fmtResult == FALSE) {
             snprintf(
-                g_msgBuf,
-                MSG_BUF_SIZE,
+                msgBuf,
+                msgBufSize,
                 "failed to format message, error 0x%04lX", errId
             );
-            printErrMsg(msg, g_msgBuf);
+            printErrMsg(msg, msgBuf);
         } else {
             ucdCh16StrToCh8Str(
-                g_wMsgBuf, wcslen(g_wMsgBuf),
-                (UcdCh8 *)g_msgBuf, MSG_BUF_SIZE
+                wMsgBuf, wcslen(wMsgBuf),
+                (UcdCh8 *)msgBuf, msgBufSize
             );
-            printErrMsg(msg, g_msgBuf);
+            printErrMsg(msg, msgBuf);
         }
         break;
     }
     default:
         UNREACHABLE;
-
     }
 }
 
@@ -263,7 +260,8 @@ UcdCP termGetInput(void) {
 }
 
 int64_t termRead(UcdCh8 *buf, size_t bufSize) {
-    size_t toRead = min(bufSize, W_MSG_BUF_SIZE);
+    TCHAR readBuf[readChunkSize] = { 0 };
+    size_t toRead = min(bufSize, readChunkSize);
     size_t idx = 0;
     uint8_t offsetOutBuf = 0;
 
@@ -271,7 +269,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
         DWORD charsRead;
         BOOL readResult = ReadConsoleW(
             g_consoleInput,
-            g_wMsgBuf + offsetOutBuf,
+            readBuf + offsetOutBuf,
             toRead,
             &charsRead,
             NULL
@@ -283,7 +281,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
         charsRead += offsetOutBuf;
 
         // If the read happened to stop in the middle of a code point
-        if (charsRead > 1 && ucdCh16RunLen(g_wMsgBuf[charsRead - 1]) == 2) {
+        if (charsRead > 1 && ucdCh16RunLen(readBuf[charsRead - 1]) == 2) {
             offsetOutBuf = 1;
             charsRead -= 1;
         } else {
@@ -291,25 +289,25 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
         }
 
         idx += ucdCh16StrToCh8Str(
-            g_wMsgBuf,
+            readBuf,
             charsRead,
             buf + idx,
             bufSize - idx
         );
 
         if (offsetOutBuf) {
-            g_wMsgBuf[0] = g_wMsgBuf[charsRead - 1];
+            readBuf[0] = readBuf[charsRead - 1];
         }
 
         if (charsRead < toRead) {
             toRead = 0;
         } else {
-            toRead = min(bufSize - idx, W_MSG_BUF_SIZE - offsetOutBuf);
+            toRead = min(bufSize - idx, readChunkSize - offsetOutBuf);
         }
     }
 
     if (offsetOutBuf) {
-        idx += ucdCh16StrToCh8Str(g_wMsgBuf, 1, buf + idx, bufSize - idx);
+        idx += ucdCh16StrToCh8Str(readBuf, 1, buf + idx, bufSize - idx);
     }
 
     return idx;

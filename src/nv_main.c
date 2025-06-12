@@ -1,30 +1,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "nv_term.h"
-#include "nv_string.h"
+#include "nv_editor.h"
 #include "nv_escapes.h"
 
-#define prevScreenSize 16384
+void quitNeve(void);
 
-static Str g_screenBuf = { 0 };
-
-static void screenWrite(const char *buf, size_t len) {
-    StrView sv = {
-        .buf = (const UcdCh8 *)buf,
-        .len = len
-    };
-    (void)strAppend(&g_screenBuf, &sv);
-}
-
-void quitTerminal(void);
-
-bool initTerminal(void) {
+bool initNeve(void) {
     if (!termInit()) {
         termLogError("failed to initialize the terminal");
         return false;
     }
 
-    if (atexit(quitTerminal) != 0) {
+    if (atexit(quitNeve) != 0) {
         perror("failed to configure exit function");
         return false;
     }
@@ -34,15 +22,19 @@ bool initTerminal(void) {
         return false;
     }
 
+    editorInit(&g_ed);
     return true;
 }
 
-void quitTerminal(void) {
-    strClear(&g_screenBuf, 10);
-    screenWrite(escWithLen(escScreenClear escCursorShow escCursorShapeDefault));
-    termWrite(g_screenBuf.buf, g_screenBuf.len);
+void quitNeve(void) {
+    termWrite(escWithLen(
+        escScreenClear
+        escCursorShow
+        escCursorShapeDefault
+    ));
 
-    strDestroy(&g_screenBuf);
+    editorQuit(&g_ed);
+    termQuit();
 }
 
 void refreshScreen(void) {
@@ -51,31 +43,36 @@ void refreshScreen(void) {
         return;
     }
 
-    if (!strClear(&g_screenBuf, g_screenBuf.len)) {
-        return;
-    }
-
-    screenWrite(escWithLen(escCursorHide escScreenClear));
+    editorDraw(
+        &g_ed,
+        escWithLen(
+            escCursorHide
+            escScreenClear
+            escCursorSetPos("", "")
+        )
+    );
     for (size_t i = 0; i < rows; i++) {
         if (i == rows - 1) {
-            screenWrite("~", 1);
+            editorDraw(&g_ed, "~", 1);
         } else {
-            screenWrite("~\r\n", 3);
+            editorDraw(&g_ed, "~\r\n", 3);
         }
     }
-    screenWrite(escWithLen(escCursorShow escCursorSetPos("", "")));
-
-    termWrite(g_screenBuf.buf, g_screenBuf.len);
+    editorDraw(&g_ed, escWithLen(escCursorShow escCursorSetPos("", "")));
+    editorFlipScreen(&g_ed);
 }
 
 int main(void) {
-    if (!initTerminal()) {
+    if (!initNeve()) {
         return 1;
     }
 
     for (;;) {
         refreshScreen();
         int key = termGetKey();
+        while (key == 0) {
+            key = termGetKey();
+        }
         if (key < 0) {
             termLogError("failed to read the key");
             return 1;

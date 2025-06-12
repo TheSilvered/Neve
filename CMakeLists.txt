@@ -11,6 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 include_directories(Neve include)
 
 add_executable(Neve
+    src/nv_editor.c
     src/nv_main.c
     src/nv_string.c
     src/nv_term.c

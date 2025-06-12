@@ -10,6 +10,9 @@
 // Clear the screen
 #define escScreenClear "\x1b[2J\x1b[3J\x1b[H"
 
+// Clear the line the cursor is on
+#define escLineClear "\x1b[2K\x1b[G"
+
 /***************************** Cursor positioning *****************************/
 
 // Move cursor up
