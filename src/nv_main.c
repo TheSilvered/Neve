@@ -38,28 +38,50 @@ void quitNeve(void) {
 }
 
 void refreshScreen(void) {
-    size_t rows, cols;
-    if (!termSize(&rows, &cols)) {
-        return;
+    editorDrawBegin(&g_ed);
+
+    if (editorRowsChanged(&g_ed)) {
+        editorDraw(
+            &g_ed,
+            escWithLen(
+                escCursorHide
+                escScreenClear
+                escCursorSetPos("", "")
+            )
+        );
     }
 
-    editorDraw(
-        &g_ed,
-        escWithLen(
-            escCursorHide
-            escScreenClear
-            escCursorSetPos("", "")
-        )
-    );
-    for (size_t i = 0; i < rows; i++) {
-        if (i == rows - 1) {
+    for (size_t i = 0; i < g_ed.rows; i++) {
+        // clear line by line if the number of rows remains the same
+        if (!editorRowsChanged(&g_ed)) {
+            editorDraw(&g_ed, escWithLen(escLineClear));
+        }
+
+        if (i == g_ed.rows / 2) {
+            editorDraw(&g_ed, "~", 2);
+            StrView msg = {
+                (const UcdCh8 *)escWithLen("Neve editor prototype")
+            };
+
+            for (
+                size_t pad = 1, tot = (g_ed.cols - msg.len) >> 1;
+                pad < tot;
+                pad++
+            ) {
+                editorDraw(&g_ed, " ", 1);
+            }
+            editorDraw(&g_ed, (char *)msg.buf, msg.len);
+            editorDraw(&g_ed, "\r\n", 2);
+
+        } else if (i == g_ed.rows - 1) {
             editorDraw(&g_ed, "~", 1);
         } else {
             editorDraw(&g_ed, "~\r\n", 3);
         }
     }
     editorDraw(&g_ed, escWithLen(escCursorShow escCursorSetPos("", "")));
-    editorFlipScreen(&g_ed);
+
+    editorDrawEnd(&g_ed);
 }
 
 int main(void) {
@@ -70,9 +92,6 @@ int main(void) {
     for (;;) {
         refreshScreen();
         int key = termGetKey();
-        while (key == 0) {
-            key = termGetKey();
-        }
         if (key < 0) {
             termLogError("failed to read the key");
             return 1;
