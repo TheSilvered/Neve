@@ -38,25 +38,17 @@ void quitNeve(void) {
 }
 
 void refreshScreen(void) {
-    editorDrawBegin(&g_ed);
+    bool rowsChanged, colsChanged;
+    editorUpdateSize(&g_ed, &rowsChanged, &colsChanged);
 
-    if (editorRowsChanged(&g_ed)) {
-        editorDraw(
-            &g_ed,
-            escWithLen(
-                escCursorHide
-                escScreenClear
-                escCursorSetPos("", "")
-            )
-        );
+    if (!rowsChanged && !colsChanged) {
+        goto skipPaint;
     }
 
-    for (size_t i = 0; i < g_ed.rows; i++) {
-        // clear line by line if the number of rows remains the same
-        if (!editorRowsChanged(&g_ed)) {
-            editorDraw(&g_ed, escWithLen(escLineClear));
-        }
+    editorDraw(&g_ed, escWithLen(escCursorHide escCursorSetPos("", "")));
+    editorDraw(&g_ed, escWithLen(escScreenClear));
 
+    for (size_t i = 0; i < g_ed.rows; i++) {
         if (i == g_ed.rows / 2) {
             editorDraw(&g_ed, "~", 2);
             StrView msg = {
@@ -79,8 +71,9 @@ void refreshScreen(void) {
             editorDraw(&g_ed, "~\r\n", 3);
         }
     }
-    editorDraw(&g_ed, escWithLen(escCursorShow escCursorSetPos("", "")));
+    editorDraw(&g_ed, escWithLen(escCursorShow));
 
+skipPaint:
     editorDrawEnd(&g_ed);
 }
 
@@ -89,14 +82,39 @@ int main(void) {
         return 1;
     }
 
-    for (;;) {
+    bool running = true;
+    while (running) {
         refreshScreen();
         int key = termGetKey();
         if (key < 0) {
             termLogError("failed to read the key");
             return 1;
         }
-        if (key == TermKey_CtrlC) {
+        switch (key) {
+        case TermKey_CtrlC:
+            running = false;
+            break;
+        case TermKey_ArrowUp:
+            if (g_ed.curY != 0) {
+                g_ed.curY--;
+            }
+            break;
+        case TermKey_ArrowDown:
+            if (g_ed.curY < g_ed.rows - 1) {
+                g_ed.curY++;
+            }
+            break;
+        case TermKey_ArrowLeft:
+            if (g_ed.curX != 0) {
+                g_ed.curX--;
+            }
+            break;
+        case TermKey_ArrowRight:
+            if (g_ed.curX < g_ed.cols - 1) {
+                g_ed.curX++;
+            }
+            break;
+        default:
             break;
         }
     }

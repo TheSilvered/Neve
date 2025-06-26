@@ -38,6 +38,7 @@ typedef enum TermKey {
     TermKey_CtrlK,
     TermKey_CtrlL,
     TermKey_CtrlM,
+    TermKey_Enter = TermKey_CtrlM,
     TermKey_CtrlN,
     TermKey_CtrlO,
     TermKey_CtrlP,
