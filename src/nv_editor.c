@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #include "nv_editor.h"
 #include "nv_term.h"
@@ -12,12 +14,52 @@ Editor g_ed;
 void editorInit(Editor *ed) {
     ed->curX = 0;
     ed->curY = 0;
-    (void)strInit(&ed->screenBuf, 0); // success guaranteed with reserve=0
+    ed->rows = 0;
+    ed->cols = 0;
+    ed->rowBuffers = NULL;
+    (void)strInit(&ed->screenBuf, 0);
     termWrite(escWithLen(escCursorShapeStillBlock));
 }
 
 void editorQuit(Editor *ed) {
     strDestroy(&ed->screenBuf);
+
+    if (ed->rowBuffers == NULL) {
+        return;
+    }
+
+    for (uint16_t row = 0; row < ed->rows; row++) {
+        strDestroy(&ed->rowBuffers[row].buf);
+    }
+    free(ed->rowBuffers);
+}
+
+bool editorSetRowCount_(Editor *ed, uint16_t count) {
+    if (count == ed->rows) {
+        return true;
+    } else if (count < ed->rows) {
+        for (uint16_t row = count; row < ed->rows; row++) {
+            strDestroy(&ed->rowBuffers[row].buf);
+        }
+        Row *newRows = realloc(ed->rowBuffers, count * sizeof(*ed->rowBuffers));
+        if (newRows != NULL) {
+            ed->rowBuffers = newRows;
+        }
+        ed->rows = count;
+        return true;
+    } else {
+        Row *newRows = realloc(ed->rowBuffers, count * sizeof(*ed->rowBuffers));
+        if (newRows == NULL) {
+            return false;
+        }
+        ed->rowBuffers = newRows;
+        for (uint16_t row = ed->rows; row < count; row++) {
+            strInit(&ed->rowBuffers[row].buf, 0);
+            ed->rowBuffers[row].changed = true;
+        }
+        ed->rows = count;
+        return true;
+    }
 }
 
 bool editorUpdateSize(Editor *ed, bool *outRowsChanged, bool *outColsChanged) {
@@ -37,25 +79,26 @@ bool editorUpdateSize(Editor *ed, bool *outRowsChanged, bool *outColsChanged) {
     if (outColsChanged != NULL) {
         *outColsChanged = cols != ed->cols;
     }
-    ed->rows = rows;
     ed->cols = cols;
+    editorSetRowCount_(ed, rows);
+
     return true;
 }
 
-bool editorDraw(Editor *ed, const char *buf, size_t len) {
-    StrView sv = {
-        .buf = (const UcdCh8 *)buf,
-        .len = len
-    };
-    return strAppend(&ed->screenBuf, &sv);
+bool editorDraw(Editor *ed, uint16_t rowIdx, const char *buf, size_t len) {
+    assert(rowIdx < ed->rows);
+    StrView sv = { .buf = (const UcdCh8 *)buf, .len = len };
+    strAppend(&ed->rowBuffers[rowIdx].buf, &sv);
+    ed->rowBuffers[rowIdx].changed = true;
+    return true;
 }
 
-bool editorDrawFmt(Editor *ed, const char *fmt, ...) {
+bool editorDrawFmt(Editor *ed, uint16_t rowIdx, const char *fmt, ...) {
     char buf[FmtBufSize] = { 0 };
     va_list args;
     va_start(args, fmt);
     int len = vsnprintf(buf, FmtBufSize, fmt, args);
-    return editorDraw(ed, buf, len);
+    return editorDraw(ed, rowIdx, buf, len);
 }
 
 bool editorDrawEnd(Editor *ed) {
@@ -66,12 +109,35 @@ bool editorDrawEnd(Editor *ed) {
         ed->curY = ed->rows - 1;
     }
 
-    editorDrawFmt(
-        ed,
-        escCursorSetPos("%zi", "%zi"),
-        ed->curY + 1,
-        ed->curX + 1
+    char posBuf[32] = { 0 };
+    for (uint16_t rowIdx = 0; rowIdx < ed->rows; rowIdx++) {
+        if (!ed->rowBuffers[rowIdx].changed) {
+            continue;
+        }
+        snprintf(posBuf, 32, escCursorSetPos("%u", "%u"), rowIdx + 1, 1);
+        if (!strAppendC(&ed->screenBuf, posBuf)) {
+            return false;
+        }
+
+        if (
+            !strAppend(
+                &ed->screenBuf,
+                (StrView *)&ed->rowBuffers[rowIdx].buf)
+            )
+        {
+            return false;
+        }
+        strClear(&ed->rowBuffers[rowIdx].buf, ed->rowBuffers[rowIdx].buf.len);
+        ed->rowBuffers[rowIdx].changed = false;
+    }
+    snprintf(
+        posBuf, 32,
+        escCursorSetPos("%u", "%u"),
+        ed->curY + 1, ed->curX + 1
     );
+    if (!strAppendC(&ed->screenBuf, posBuf)) {
+        return false;
+    }
 
     if (!termWrite(ed->screenBuf.buf, ed->screenBuf.len)) {
         return false;

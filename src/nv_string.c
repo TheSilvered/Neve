@@ -36,6 +36,7 @@ bool strInit(Str *str, size_t reserve) {
     str->cap = reserve + 1;
     if (reserve == 0) {
         str->buf = NULL;
+        str->cap = 0;
     } else {
         // Keep the space for '\0'
         str->buf = calloc(reserve + 1, sizeof(*str->buf));

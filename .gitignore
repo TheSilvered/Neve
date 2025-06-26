@@ -2,8 +2,7 @@
 .cache/
 
 build/
-build_win32/
-build_linux/
+build_*/
 
 ignore__*/
 ignore__*

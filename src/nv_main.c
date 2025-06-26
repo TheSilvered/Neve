@@ -45,12 +45,18 @@ void refreshScreen(void) {
         goto skipPaint;
     }
 
-    editorDraw(&g_ed, escWithLen(escCursorHide escCursorSetPos("", "")));
-    editorDraw(&g_ed, escWithLen(escScreenClear));
+    editorDraw(
+        &g_ed, 0,
+        escWithLen(
+            escScreenClear
+            escCursorHide
+            escCursorSetPos("", "")
+        )
+    );
 
-    for (size_t i = 0; i < g_ed.rows; i++) {
+    for (uint16_t i = 0; i < g_ed.rows; i++) {
         if (i == g_ed.rows / 2) {
-            editorDraw(&g_ed, "~", 2);
+            editorDraw(&g_ed, i, "~", 2);
             StrView msg = {
                 (const UcdCh8 *)escWithLen("Neve editor prototype")
             };
@@ -60,18 +66,14 @@ void refreshScreen(void) {
                 pad < tot;
                 pad++
             ) {
-                editorDraw(&g_ed, " ", 1);
+                editorDraw(&g_ed, i, " ", 1);
             }
-            editorDraw(&g_ed, (char *)msg.buf, msg.len);
-            editorDraw(&g_ed, "\r\n", 2);
-
-        } else if (i == g_ed.rows - 1) {
-            editorDraw(&g_ed, "~", 1);
+            editorDraw(&g_ed, i, (char *)msg.buf, msg.len);
         } else {
-            editorDraw(&g_ed, "~\r\n", 3);
+            editorDraw(&g_ed, i, "~", 1);
         }
     }
-    editorDraw(&g_ed, escWithLen(escCursorShow));
+    editorDraw(&g_ed, g_ed.rows - 1, escWithLen(escCursorShow));
 
 skipPaint:
     editorDrawEnd(&g_ed);

@@ -21,6 +21,8 @@ typedef struct TermErr {
     } data;
 } TermErr;
 
+// TODO: improve key management
+
 // Special keys
 typedef enum TermKey {
     TermKey_None = 0,
@@ -33,12 +35,10 @@ typedef enum TermKey {
     TermKey_CtrlG,
     TermKey_CtrlH,
     TermKey_CtrlI,
-    TermKey_Tab = TermKey_CtrlI,
     TermKey_CtrlJ,
     TermKey_CtrlK,
     TermKey_CtrlL,
     TermKey_CtrlM,
-    TermKey_Enter = TermKey_CtrlM,
     TermKey_CtrlN,
     TermKey_CtrlO,
     TermKey_CtrlP,
@@ -52,6 +52,8 @@ typedef enum TermKey {
     TermKey_CtrlX,
     TermKey_CtrlY,
     TermKey_CtrlZ,
+    TermKey_Tab = TermKey_CtrlI,
+    TermKey_Enter = TermKey_CtrlM,
     TermKey_Escape = 0x1b,
     TermKey_Backspace = 0x7f,
     TermKey_ArrowLeft = 0x110000,
