@@ -70,6 +70,8 @@ def main():
     east_asian_width = load_east_asian_width()
     # special_casing = load_special_casing()
     # unicode_data = load_unicode_data()
+    for width in PropIterator(east_asian_width, "range"):
+        print(width)
 
 if __name__ == "__main__":
     main()

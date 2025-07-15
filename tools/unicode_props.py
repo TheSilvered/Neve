@@ -85,6 +85,9 @@ class CodePoint(int):
     def __new__(cls, val: int | str):
         return super().__new__(cls, val if isinstance(val, int) else int(val, 16))
 
+    def __add__(self, other: CodePoint | int) -> CodePoint:
+        return CodePoint(super().__add__(other))
+
     def __repr__(self):
         return f"{self:04X}"
 
@@ -155,13 +158,26 @@ class PropIterator:
         prop = self.prop_list[self.prop_idx]
         if self.curr_cp is None:
             self.curr_cp = prop[self.cp_range_name].first
-        elif self.curr_cp not in prop[self.cp_range_name]:
+        elif self.curr_cp + 1 not in prop[self.cp_range_name]:
             self.prop_idx += 1
             if self.prop_idx >= len(self.prop_list):
                 raise StopIteration
             prop = self.prop_list[self.prop_idx]
             self.curr_cp = prop[self.cp_range_name].first
+        else:
+            self.curr_cp += 1
 
         new_prop = deepcopy(prop)
         new_prop[self.cp_range_name] = self.curr_cp
         return new_prop
+
+
+if __name__ == "__main__":
+    # Test iterator
+    props = [
+        {"range": CodePointRange(CodePoint(0), CodePoint(3))},
+        {"range": CodePointRange(CodePoint(5), CodePoint(8))}
+    ]
+
+    for prop in PropIterator(props, "range"):
+        print(prop)
