@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from pprint import pprint
-
 from unicode_props import *
 from unicode_parser import *
 
 
-def load_east_asian_width() -> list[list[CodePointRange, EastAsianWidth]]:
+def load_east_asian_width() -> list[dict[str, Any]]:
     parser = Parser(
         range=CodePointRangeField(),
         width=UnicodeEnumPropField(EastAsianWidth)
@@ -16,7 +14,7 @@ def load_east_asian_width() -> list[list[CodePointRange, EastAsianWidth]]:
     return east_asian_width
 
 
-def load_special_casing() -> list[list[CodePoint, list[CodePoint], list[CodePoint], list[CodePoint]]]:
+def load_special_casing() -> list[dict[str, Any]]:
     parser = Parser(
         cp=CodePointField(),
         lower=CodePointSequenceField(),
@@ -30,9 +28,9 @@ def load_special_casing() -> list[list[CodePoint, list[CodePoint], list[CodePoin
     return [(line.pop("condition"), line)[1] for line in special_casing if not line["condition"]]
 
 
-def load_unicode_data() -> list[list[Any]]:
+def load_unicode_data() -> list[dict[str, Any]]:
     parser = Parser(
-        cp=CodePointField(),
+        cp=CodePointRangeField(),
         name=StrField(),
         category=UnicodeEnumPropField(GeneralCategory),
         combining_class=IntField(),
@@ -49,15 +47,29 @@ def load_unicode_data() -> list[list[Any]]:
         simple_titlecase=OptionalField(CodePointField())
     )
     with open("ucd-16.0.0/UnicodeData.txt", encoding="utf8") as f:
-        unicode_data = parser.parse(f)
+        data = parser.parse(f)
+
+    unicode_data: list[dict[str, Any]] = []
+    range_start = None
+
+    # Normalize ranges
+    for line in data:
+        if ", First" in line["name"]:
+            range_start = line
+        elif ", Last" in line["name"] and range_start is not None:
+            range_start["cp"].last = line["cp"].first
+            unicode_data.append(range_start)
+            range_start = None
+        else:
+            unicode_data.append(line)
+
     return unicode_data
 
 
 def main():
     east_asian_width = load_east_asian_width()
-    special_casing = load_special_casing()
-    unicode_data = load_unicode_data()
-
+    # special_casing = load_special_casing()
+    # unicode_data = load_unicode_data()
 
 if __name__ == "__main__":
     main()

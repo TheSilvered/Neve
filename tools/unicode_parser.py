@@ -12,8 +12,8 @@ class Field(ABC):
 
 
 class Parser:
-    def __init__(self, **fields: Field | None):
-        self.fields: dict[str, Field | None] = fields
+    def __init__(self, **fields: Field):
+        self.fields: dict[str, Field] = fields
 
     def parse(self, file: TextIO) -> list[dict[str, Any]]:
         content = file.read()
@@ -43,7 +43,9 @@ class Parser:
 
 
 class CodePointField(Field):
-    def parse(self, content: str | None):
+    def parse(self, content: str | None) -> CodePoint:
+        if content is None:
+            raise ValueError("content required")
         return CodePoint(content)
 
 
@@ -59,12 +61,14 @@ class CodePointRangeField(Field):
 
 
 class CodePointSequenceField(Field):
-    def parse(self, content: str | None) -> CodePointRange:
+    def parse(self, content: str | None) -> list[CodePoint]:
+        if content is None:
+            raise ValueError("content required")
         return [CodePoint(x) for x in content.split()]
 
 
 class UnicodeEnumPropField(Field):
-    def __init__(self, prop: UnicodeEnumProp):
+    def __init__(self, prop: type[UnicodeEnumProp]):
         self.prop_map = prop.map()
 
     def parse(self, content: str | None) -> UnicodeEnumProp:
@@ -76,28 +80,36 @@ class UnicodeEnumPropField(Field):
 
 class StrField(Field):
     def parse(self, content: str | None) -> str:
+        if content is None:
+            raise ValueError("content required")
         return content
 
 
 class IntField(Field):
     def parse(self, content: str | None) -> int:
+        if content is None:
+            raise ValueError("content required")
         return int(content)
 
 
 class FractionField(Field):
     def parse(self, content: str | None) -> Fraction:
+        if content is None:
+            raise ValueError("content required")
         return Fraction(content)
 
 
 class DecompositionField(Field):
-    def parse(self, content: str | None) -> Decomposition | None:
+    def parse(self, content: str | None) -> Decomposition:
+        if content is None:
+            raise ValueError("content required")
         if "<" in content:
             tag, mapping = content.split(maxsplit=1)
         else:
             tag = None
             mapping = content
         return Decomposition(
-            DecompositionTag.map().get(tag),
+            DecompositionTag.map().get(tag) if tag is not None else None,
             [CodePoint(x) for x in mapping.split()]
         )
 
@@ -129,5 +141,5 @@ class OptionalField(Field):
 
 
 class IgnoreField(Field):
-    def parse(self, _) -> None:
+    def parse(self, content: str | None) -> None:
         return None
