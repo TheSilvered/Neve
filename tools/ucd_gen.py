@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from unicode_props import *
 from unicode_parser import *
+from table_generator import TableGenerator
 
 
 def load_east_asian_width() -> list[dict[str, Any]]:
@@ -11,6 +12,37 @@ def load_east_asian_width() -> list[dict[str, Any]]:
     )
     with open("ucd-16.0.0/EastAsianWidth.txt", encoding="utf8") as f:
         east_asian_width = parser.parse(f)
+
+#   - The unassigned code points in the following blocks default to "W":
+#         CJK Unified Ideographs Extension A: U+3400..U+4DBF
+#         CJK Unified Ideographs:             U+4E00..U+9FFF
+#         CJK Compatibility Ideographs:       U+F900..U+FAFF
+#  - All undesignated code points in Planes 2 and 3, whether inside or
+#      outside of allocated blocks, default to "W":
+#         Plane 2:                            U+20000..U+2FFFD
+#         Plane 3:                            U+30000..U+3FFFD
+    # Adding default Wide codepoints
+    east_asian_width.insert(0, {
+        "range": CodePointRange(CodePoint(0x3400), CodePoint(0x4dbf)),
+        "width": EastAsianWidth.WIDE
+    })
+    east_asian_width.insert(0, {
+        "range": CodePointRange(CodePoint(0x4e00), CodePoint(0x9fff)),
+        "width": EastAsianWidth.WIDE
+    })
+    east_asian_width.insert(0, {
+        "range": CodePointRange(CodePoint(0xf900), CodePoint(0xfaff)),
+        "width": EastAsianWidth.WIDE
+    })
+    east_asian_width.insert(0, {
+        "range": CodePointRange(CodePoint(0x20000), CodePoint(0x2fffd)),
+        "width": EastAsianWidth.WIDE
+    })
+    east_asian_width.insert(0, {
+        "range": CodePointRange(CodePoint(0x30000), CodePoint(0x3fffd)),
+        "width": EastAsianWidth.WIDE
+    })
+
     return east_asian_width
 
 
@@ -66,12 +98,60 @@ def load_unicode_data() -> list[dict[str, Any]]:
     return unicode_data
 
 
+type UdbCPInfo = tuple[EastAsianWidth]
+
+
+def udb_cp_info_formatter(data: UdbCPInfo):
+    return f"{{ UdbWidth_{data[0]!r} }}"
+
+
+def create_cp_info_list(east_asian_width: list[dict[str, Any]]) -> tuple[list[int], list[UdbCPInfo]]:
+    unique_values: dict[UdbCPInfo, int] = {
+        (EastAsianWidth.NEUTRAL,): 0  # default value
+    }
+    print("Generating default list")
+    indices: list[int] = [0] * 0x10ffff
+
+    print("Adding indices")
+    for prop in PropIterator(east_asian_width, "range"):
+        cp: CodePoint = prop["range"]
+        value: UdbCPInfo = (prop["width"],)
+        idx = unique_values.get(value)
+        if idx is None:
+            idx = len(unique_values)
+            unique_values[value] = len(unique_values)
+        indices[cp] = idx
+
+    return indices, list(unique_values.keys())
+
+
+def indices_datatype(max_idx):
+    if max_idx < 2**8:
+        return "uint8_t"
+    elif max_idx < 2**16:
+        return "uint16_t"
+    elif max_idx < 2**32:
+        return "uint32_t"
+    else:
+        return "uint64_t"
+
+
 def main():
     east_asian_width = load_east_asian_width()
     # special_casing = load_special_casing()
     # unicode_data = load_unicode_data()
-    for width in PropIterator(east_asian_width, "range"):
-        print(width)
+
+    indices, data = create_cp_info_list(east_asian_width)
+
+    generator = TableGenerator("../src/nv_udb_tables.c")
+    generator.writeln('#include "nv_udb.h"')
+    generator.writeln()
+
+    generator.add_array("g_CPInfo", "UdbCPInfo", data, udb_cp_info_formatter)
+    generator.add_array("g_infoIndices", indices_datatype(len(data)), indices)
+
+    generator.save_file()
+
 
 if __name__ == "__main__":
     main()

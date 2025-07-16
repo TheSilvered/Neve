@@ -1,4 +1,5 @@
 #include "nv_unicode.h"
+#include "nv_udb.h"
 
 // UTF-8 encoding table
 //
