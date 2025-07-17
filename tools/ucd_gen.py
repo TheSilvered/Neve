@@ -148,7 +148,7 @@ def main():
     generator.writeln('#include "nv_udb.h"')
     generator.writeln()
 
-    generator.add_array("g_CPInfo", "UdbCPInfo", data, udb_cp_info_formatter)
+    generator.add_array("g_cpInfo", "UdbCPInfo", data, udb_cp_info_formatter)
     generator.add_array("g_infoIndices", indices_datatype(len(data)), indices)
 
     generator.save_file()

@@ -5,5 +5,5 @@
 
 UdbCPInfo udbGetCPInfo(UcdCP cp) {
     assert(cp <= 0x10ffff);
-    return g_CPInfo[g_infoIndices[cp]];
+    return g_cpInfo[g_infoIndices[cp]];
 }
