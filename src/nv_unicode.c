@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "nv_unicode.h"
 #include "nv_udb.h"
 
@@ -37,7 +39,11 @@ size_t ucdCh16StrToCh8Str(
         UcdCP ch = 0;
         if (wch < ucdHighSurrogateFirst || wch > ucdHighSurrogateLast) {
             ch = wch;
-        } else if (strIdx == strLen) {
+        } else if (
+            strIdx == strLen
+            || str[strIdx] < ucdLowSurrogateFirst
+            || str[strIdx] > ucdLowSurrogateLast
+        ) {
             ch = DECODING_ERROR_CH;
         } else {
             ch = ((wch & 0x3ff) << 10) + (str[strIdx++] & 0x3ff) + 0x10000;
@@ -74,6 +80,93 @@ size_t ucdCh16StrToCh8Str(
         return bufIdx + 1;
 
     buf[bufIdx] = '\0';
+    return bufIdx;
+}
+
+size_t ucdCh8StrToCh16Str(
+    const UcdCh8 *str, size_t strLen,
+    UcdCh16 *buf, size_t bufLen
+) {
+    size_t bufIdx = 0;
+    for (size_t strIdx = 0; strIdx < strLen;) {
+        UcdCh8 ch8 = str[strIdx++];
+        UcdCP ch = 0;
+
+        switch (ucdCh8RunLen(ch8)) {
+        case 0: // invalid byte
+            ch = DECODING_ERROR_CH;
+            break;
+        case 1:
+            ch = ch8;
+            break;
+        case 2:
+            if (
+                strIdx == strLen
+                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0b10000000
+            ) {
+                ch = DECODING_ERROR_CH;
+                break;
+            }
+            ch = ((ch8 & UTF8_ByteMask2) << 6)
+               | (str[strIdx++] & UTF8_ByteMaskX);
+            break;
+        case 3:
+            if (
+                strIdx >= strLen - 1
+                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0b10000000
+                || (str[strIdx + 1] & (~UTF8_ByteMaskX)) != 0b10000000
+            ) {
+                ch = DECODING_ERROR_CH;
+                break;
+            }
+
+            ch = ((ch8 & UTF8_ByteMask3) << 12);
+            ch |= ((str[strIdx++] & UTF8_ByteMaskX) << 6);
+            ch |= (str[strIdx++] & UTF8_ByteMaskX);
+            break;
+        case 4:
+            if (
+                strIdx >= strLen - 2
+                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0b10000000
+                || (str[strIdx + 1] & (~UTF8_ByteMaskX)) != 0b10000000
+                || (str[strIdx + 2] & (~UTF8_ByteMaskX)) != 0b10000000
+            ) {
+                ch = DECODING_ERROR_CH;
+                break;
+            }
+
+            ch = ((ch8 & UTF8_ByteMask4) << 18);
+            ch |= ((str[strIdx++] & UTF8_ByteMaskX) << 12);
+            ch |= ((str[strIdx++] & UTF8_ByteMaskX) << 6);
+            ch |= (str[strIdx++] & UTF8_ByteMaskX);
+            break;
+        default:
+            assert(false);
+        }
+
+        // replace invalid characters with U+FFFD
+        if (!ucdIsCPValid(ch)) {
+            ch = DECODING_ERROR_CH;
+        }
+
+        // all lenth checks use '>' instead of '>=' because an extra NUL
+        // character is added at the end
+
+        if (buf == NULL) {
+            bufIdx += ucdCh16CPLen(ch);
+        } else if (ch <= 0xffff && bufLen - bufIdx > 1) {
+            buf[bufIdx++] = (UcdCh8)ch;
+        } else if (ch <= 0x10ffff && bufLen - bufIdx > 2) {
+            ch -= 0x10000;
+            buf[bufIdx++] = ucdHighSurrogateFirst | (UcdCh16)(ch >> 10);
+            buf[bufIdx++] = ucdLowSurrogateFirst | (UcdCh8)(ch & 0x3ff);
+        } else
+            break;
+    }
+    if (buf == NULL)
+        return bufIdx + 1;
+
+    buf[bufIdx] = 0;
     return bufIdx;
 }
 

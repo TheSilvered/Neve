@@ -69,4 +69,14 @@ bool strBufAppend(StrBuf *sb, const StrView *sv);
 // Clear the contents of a string buffer.
 void strBufClear(StrBuf *sb);
 
+#ifdef _WIN32
+// Windows only. Temporary wchar_t string from char.
+// The string is valid until the next call of the funcion.
+const wchar_t *tempWStr(const char *str);
+
+// Windows only. Temporary char string from wchar_t.
+// The string is valid until the next call of the funcion.
+const char *tempStr(const wchar_t *str);
+#endif // !_WIN32
+
 #endif // !NV_STRING_H_

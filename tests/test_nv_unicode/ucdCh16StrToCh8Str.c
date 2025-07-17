@@ -216,6 +216,22 @@ void test_ucdCh16StrToCh8StrU10ffff(void) {
     testAssert(buf[4] == 0x00);
 }
 
+void test_ucdCh16StrToCh8StrSizeIncompleteSurrogate(void) {
+    const UcdCh16 str[2] = { ucdHighSurrogateFirst, 1 };
+    testAssert(ucdCh16StrToCh8Str(str, 2, NULL, 0) == 4);
+}
+
+void test_ucdCh16StrToCh8StrIncompleteSurrogate(void) {
+    UcdCh8 buf[4] = { 0xff, 0xff, 0xff, 0xff };
+    const UcdCh16 str[2] = { ucdHighSurrogateFirst, 1 };
+    // invalid UTF16, U+FFFD (invalid character) is encoded
+    testAssertRequire(ucdCh16StrToCh8Str(str, 2, buf, 4) == 3);
+    testAssert(buf[0] == 0xef);
+    testAssert(buf[1] == 0xbf);
+    testAssert(buf[2] == 0xbd);
+    testAssert(buf[3] == 0x00);
+}
+
 void test_ucdCh16StrToCh8StrSizeMix(void) {
     const UcdCh16 str[10] = {
         0x0000,

@@ -235,3 +235,22 @@ void strBufClear(StrBuf *sb) {
     sb->buf[0] = '\0';
     sb->len = 0;
 }
+
+#ifdef _WIN32
+#include "nv_unicode.h"
+
+#define bufSize_ 512
+
+static char g_chBuf[bufSize_];
+static wchar_t g_wchBuf[bufSize_];
+
+const wchar_t *tempWStr(const char *str) {
+    (void)ucdCh8StrToCh16Str(str, strlen(str), g_wchBuf, bufSize_);
+    return g_wchBuf;
+}
+
+const char *tempStr(const wchar_t *str) {
+    (void)ucdCh16StrToCh8Str(str, wcslen(str), g_chBuf, bufSize_);
+    return g_chBuf;
+}
+#endif // !_WIN32
