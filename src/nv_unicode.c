@@ -155,11 +155,11 @@ size_t ucdCh8StrToCh16Str(
         if (buf == NULL) {
             bufIdx += ucdCh16CPLen(ch);
         } else if (ch <= 0xffff && bufLen - bufIdx > 1) {
-            buf[bufIdx++] = (UcdCh8)ch;
+            buf[bufIdx++] = (UcdCh16)ch;
         } else if (ch <= 0x10ffff && bufLen - bufIdx > 2) {
             ch -= 0x10000;
             buf[bufIdx++] = ucdHighSurrogateFirst | (UcdCh16)(ch >> 10);
-            buf[bufIdx++] = ucdLowSurrogateFirst | (UcdCh8)(ch & 0x3ff);
+            buf[bufIdx++] = ucdLowSurrogateFirst | (UcdCh16)(ch & 0x3ff);
         } else
             break;
     }
