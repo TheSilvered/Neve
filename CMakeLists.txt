@@ -8,10 +8,13 @@ set(CMAKE_C_EXTENSIONS off)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
+add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
 include_directories(Neve include)
 
 add_executable(Neve
     src/nv_editor.c
+    src/nv_file.c
     src/nv_main.c
     src/nv_string.c
     src/nv_term.c

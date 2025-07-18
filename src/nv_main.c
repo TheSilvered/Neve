@@ -3,6 +3,7 @@
 #include "nv_term.h"
 #include "nv_editor.h"
 #include "nv_escapes.h"
+#include "nv_file.h"
 
 void quitNeve(void);
 
