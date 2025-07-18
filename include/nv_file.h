@@ -1,12 +1,13 @@
 #ifndef NV_FILE_H_
 #define NV_FILE_H_
 
-#include <stdio.h>
 #include "nv_string.h"
 
+// A file opened in the editor.
+// `lines` is an array of indices in `content` of the start of each line.
 typedef struct File {
     Str path;
-    Str content;
+    Str content; // TODO: manual content management (not Str)
     size_t *lines;
     size_t lineCount;
     bool saved;
@@ -14,8 +15,8 @@ typedef struct File {
 
 // Create a new file without any contents
 void fileInitEmpty(File *file);
-// TODO: Load a file from disk (in UTF-8)
-// bool fileInitOpen(File *file, const char *path);
+// Load a file from disk (in UTF-8)
+bool fileInitOpen(File *file, const char *path);
 
 // TODO: Save the contents of a file to the disk
 // void fileSave(File *file);

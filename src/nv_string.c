@@ -239,7 +239,7 @@ void strBufClear(StrBuf *sb) {
 #ifdef _WIN32
 #include "nv_unicode.h"
 
-#define bufSize_ 512
+#define bufSize_ 4096
 
 static char g_chBuf[bufSize_];
 static wchar_t g_wchBuf[bufSize_];
