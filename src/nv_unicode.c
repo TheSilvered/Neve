@@ -109,6 +109,7 @@ size_t ucdCh8StrToCh16Str(
             }
             ch = ((ch8 & UTF8_ByteMask2) << 6)
                | (str[strIdx++] & UTF8_ByteMaskX);
+            // ch cannot be < 0x80 (see ucdCh8RunLen)
             break;
         case 3:
             if (
@@ -123,6 +124,9 @@ size_t ucdCh8StrToCh16Str(
             ch = ((ch8 & UTF8_ByteMask3) << 12);
             ch |= ((str[strIdx++] & UTF8_ByteMaskX) << 6);
             ch |= (str[strIdx++] & UTF8_ByteMaskX);
+            if (ch < 0x800) {
+                ch = DECODING_ERROR_CH;
+            }
             break;
         case 4:
             if (
@@ -139,6 +143,9 @@ size_t ucdCh8StrToCh16Str(
             ch |= ((str[strIdx++] & UTF8_ByteMaskX) << 12);
             ch |= ((str[strIdx++] & UTF8_ByteMaskX) << 6);
             ch |= (str[strIdx++] & UTF8_ByteMaskX);
+            if (ch < 0x10000) {
+                ch = DECODING_ERROR_CH;
+            }
             break;
         default:
             assert(false);
