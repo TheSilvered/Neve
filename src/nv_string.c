@@ -245,12 +245,25 @@ static char g_chBuf[bufSize_];
 static wchar_t g_wchBuf[bufSize_];
 
 const wchar_t *tempWStr(const char *str) {
-    (void)ucdCh8StrToCh16Str(str, strlen(str), g_wchBuf, bufSize_);
+    (void)ucdCh8StrToCh16Str(
+        (const UcdCh8 *)str,
+        strlen(str),
+        (UcdCh16 *)g_wchBuf,
+        bufSize_
+    );
     return g_wchBuf;
 }
 
 const char *tempStr(const wchar_t *str) {
-    (void)ucdCh16StrToCh8Str(str, wcslen(str), g_chBuf, bufSize_);
+    (void)ucdCh16StrToCh8Str(
+        (const UcdCh16 *)str,
+        wcslen(str),
+        (UcdCh8 *)g_chBuf,
+        bufSize_
+    );
     return g_chBuf;
 }
+
+#undef bufSize_
+
 #endif // !_WIN32
