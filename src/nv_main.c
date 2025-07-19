@@ -1,9 +1,12 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "nv_term.h"
+
 #include "nv_editor.h"
 #include "nv_escapes.h"
 #include "nv_file.h"
+#include "nv_term.h"
+#include "nv_udb.h"
 
 void quitNeve(void);
 
@@ -29,13 +32,52 @@ bool initNeve(void) {
 
 void quitNeve(void) {
     termWrite(escWithLen(
-        escScreenClear
         escCursorShow
         escCursorShapeDefault
     ));
 
     editorQuit(&g_ed);
     termQuit();
+}
+
+void printLine(size_t fileLine, uint16_t termRow) {
+    StrView line = fileGetLine(&g_ed.file, fileLine);
+    size_t visualWidth = 0;
+    UcdCP cp;
+    for (
+        ptrdiff_t i = strViewNext(&line, -1, &cp);
+        i != -1;
+        i = strViewNext(&line, i, &cp)
+    ) {
+        if (cp == '\n') {
+            line.len = i;
+            break;
+        }
+
+        UdbCPInfo info = udbGetCPInfo(cp);
+        uint8_t cpVisualWidth = 0;
+        switch (info.width) {
+        case UdbWidth_Fullwidth:
+        case UdbWidth_Wide:
+            cpVisualWidth = 2;
+            break;
+        case UdbWidth_Ambiguous:
+        case UdbWidth_Neutral:
+        case UdbWidth_Narrow:
+        case UdbWidth_Halfwidth:
+            cpVisualWidth = 1;
+            break;
+        default:
+            assert(false);
+        }
+
+        if (visualWidth + cpVisualWidth > g_ed.cols) {
+            line.len = i;
+            break;
+        }
+        visualWidth += cpVisualWidth;
+    }
+    editorDraw(&g_ed, termRow, (const char *)line.buf, line.len);
 }
 
 void refreshScreen(void) {
@@ -56,7 +98,9 @@ void refreshScreen(void) {
     );
 
     for (uint16_t i = 0; i < g_ed.rows; i++) {
-        if (i == g_ed.rows / 2) {
+        if (i < fileLineCount(&g_ed.file)) {
+            printLine(i, i);
+        } else if (g_ed.file.contentLen == 0 && i == g_ed.rows / 2) {
             editorDraw(&g_ed, i, "~", 2);
             StrView msg = {
                 (const UcdCh8 *)escWithLen("Neve editor prototype")
@@ -85,6 +129,17 @@ int main(void) {
         return 1;
     }
 
+    switch (fileInitOpen(&g_ed.file, "../README.md")) {
+    case FileIOResult_FileNotFound:
+        printf("File not found.");
+        return 1;
+    case FileIOResult_OutOfMemory:
+        printf("Out of memory.");
+        return 1;
+    case FileIOResult_Success:
+        break;
+    }
+
     bool running = true;
     while (running) {
         refreshScreen();
@@ -96,6 +151,7 @@ int main(void) {
         switch (key) {
         case TermKey_CtrlC:
             running = false;
+            termWrite(escWithLen(escScreenClear));
             break;
         case TermKey_ArrowUp:
             if (g_ed.curY != 0) {

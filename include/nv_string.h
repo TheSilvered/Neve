@@ -69,6 +69,19 @@ bool strBufAppend(StrBuf *sb, const StrView *sv);
 // Clear the contents of a string buffer.
 void strBufClear(StrBuf *sb);
 
+// TODO: add strViewNext tests
+
+// Iterate through the codepoints of a `StrView`
+// Usage:
+// ```c
+// for (
+//     ptrdiff_t i = strViewNext(&sv, -1, &cp);
+//     i != -1;
+//     i = strViewNext(&sv, i, &cp)
+// ) { ... }
+// ```
+ptrdiff_t strViewNext(StrView *sv, ptrdiff_t idx, UcdCP *outCP);
+
 #ifdef _WIN32
 // Windows only. Temporary wchar_t string from char.
 // The string is valid until the next call of the funcion.

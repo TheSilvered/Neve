@@ -4,8 +4,9 @@
 #include <assert.h>
 
 #include "nv_editor.h"
-#include "nv_term.h"
 #include "nv_escapes.h"
+#include "nv_file.h"
+#include "nv_term.h"
 
 #define FmtBufSize 2048
 
@@ -19,6 +20,7 @@ void editorInit(Editor *ed) {
     ed->rowBuffers = NULL;
     (void)strInit(&ed->screenBuf, 0);
     termWrite(escWithLen(escCursorShapeStillBlock));
+    fileInitEmpty(&ed->file);
 }
 
 void editorQuit(Editor *ed) {

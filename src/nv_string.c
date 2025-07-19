@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "nv_string.h"
@@ -234,6 +235,30 @@ bool strBufAppend(StrBuf *sb, const StrView *sv) {
 void strBufClear(StrBuf *sb) {
     sb->buf[0] = '\0';
     sb->len = 0;
+}
+
+ptrdiff_t strViewNext(StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
+    if (idx >= (ptrdiff_t)sv->len) {
+        return -1;
+    } else if (idx < 0) {
+        idx = 0;
+    } else {
+        idx += ucdCh8RunLen(sv->buf[idx]);
+    }
+
+    if (idx >= (ptrdiff_t)sv->len) {
+        return -1;
+    }
+    size_t runLen = ucdCh8RunLen(sv->buf[idx]);
+
+    if (runLen == 0 || idx + runLen > sv->len) {
+        return -1;
+    }
+
+    if (outCP != NULL) {
+        *outCP = ucdCh8ToCP(sv->buf + idx);
+    }
+    return idx;
 }
 
 #ifdef _WIN32
