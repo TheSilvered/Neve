@@ -239,7 +239,7 @@ void strBufClear(StrBuf *sb) {
 
 ptrdiff_t strViewNext(StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
     if (idx >= (ptrdiff_t)sv->len) {
-        return -1;
+        goto endReached;
     } else if (idx < 0) {
         idx = 0;
     } else {
@@ -247,18 +247,24 @@ ptrdiff_t strViewNext(StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
     }
 
     if (idx >= (ptrdiff_t)sv->len) {
-        return -1;
+        goto endReached;
     }
     size_t runLen = ucdCh8RunLen(sv->buf[idx]);
 
     if (runLen == 0 || idx + runLen > sv->len) {
-        return -1;
+        goto endReached;
     }
 
     if (outCP != NULL) {
         *outCP = ucdCh8ToCP(sv->buf + idx);
     }
     return idx;
+
+endReached:
+    if (outCP != NULL) {
+        *outCP = -1;
+    }
+    return -1;
 }
 
 #ifdef _WIN32
