@@ -38,7 +38,7 @@
     } \
     return true; \
 
-bool fileInitEmpty(File *file) {
+void fileInitEmpty(File *file) {
     (void)strInit(&file->path, 0);
     file->content = NULL;
     file->contentLen = 0;
@@ -47,10 +47,9 @@ bool fileInitEmpty(File *file) {
     file->linesLen = 0;
     file->linesCap = 0;
     file->saved = false;
-    return true;
 }
 
-bool fileInitOpen(File *file, const char *path) {
+FileIOResult fileInitOpen(File *file, const char *path) {
     // Guarantee a valid file even on failure.
     fileInitEmpty(file);
 
@@ -61,28 +60,28 @@ bool fileInitOpen(File *file, const char *path) {
     FILE *fp = fopen(path, "rb");
 #endif // !_WIN32
     if (fp == NULL) {
-        return false;
+        return FileIOResult_FileNotFound;
     }
 
     if (!strInitFromC(&file->path, path)) {
-        return false;
+        return FileIOResult_OutOfMemory;
     }
 
-#define bufSize_ 10
+#define bufSize_ 4096
     UcdCh8 buf[bufSize_];
     size_t bytesRead = 0;
 
     do {
         bytesRead = fread(buf, 1, bufSize_, fp);
         if (!fileInsertData(file, file->contentLen, buf, bytesRead)) {
-            fclose(fp);
-            return false;
+            (void)fclose(fp);
+            return FileIOResult_OutOfMemory;
         }
     } while (bytesRead == bufSize_);
-    fclose(fp);
+    (void)fclose(fp);
 #undef bufSize_
     file->saved = true;
-    return true;
+    return FileIOResult_Success;
 }
 
 void fileDestroy(File *file) {
@@ -101,6 +100,10 @@ void fileDestroy(File *file) {
     file->linesLen = 0;
     file->linesCap = 0;
     file->saved = false;
+}
+
+size_t fileLineCount(File *file) {
+    return file->linesLen + 1;
 }
 
 StrView fileGetLine(File *file, size_t lineIdx) {

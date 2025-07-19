@@ -18,13 +18,22 @@ typedef struct File {
     bool saved;
 } File;
 
+typedef enum FileIOResult {
+    FileIOResult_FileNotFound,
+    FileIOResult_OutOfMemory,
+    FileIOResult_Success
+} FileIOResult;
+
 // Create a new file without any contents
-bool fileInitEmpty(File *file);
+void fileInitEmpty(File *file);
 // Load a file from disk (in UTF-8)
-bool fileInitOpen(File *file, const char *path);
+FileIOResult fileInitOpen(File *file, const char *path);
 
 // Destroy the contents of a file
 void fileDestroy(File *file);
+
+// Get the number of lines in a file
+size_t fileLineCount(File *file);
 
 // Get the line of a file.
 // `lineIdx == 0` is the first line.
