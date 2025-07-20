@@ -19,9 +19,14 @@ typedef struct File {
 } File;
 
 typedef enum FileIOResult {
+    FileIOResult_Success,
     FileIOResult_FileNotFound,
     FileIOResult_OutOfMemory,
-    FileIOResult_Success
+    FileIOResult_PermissionDenied,
+    FileIOResult_OperationNotAllowed,
+    FileIOResult_FileTooBig,
+    FileIOResult_BadPath,
+    FileIOResult_OtherIOError,
 } FileIOResult;
 
 // Create a new file without any contents

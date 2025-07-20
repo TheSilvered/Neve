@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,10 +61,29 @@ FileIOResult fileInitOpen(File *file, const char *path) {
     FILE *fp = fopen(path, "rb");
 #endif // !_WIN32
     if (fp == NULL) {
-        return FileIOResult_FileNotFound;
+        switch (errno) {
+        case ENOMEM:
+            return FileIOResult_OutOfMemory;
+        case EACCES:
+            return FileIOResult_PermissionDenied;
+        case EFBIG:
+        case EOVERFLOW:
+            return FileIOResult_FileTooBig;
+        case EINVAL:
+        case ENAMETOOLONG:
+            return FileIOResult_BadPath;
+        case ELOOP:
+        case ENOENT:
+            return FileIOResult_FileNotFound;
+        case EPERM:
+            return FileIOResult_OperationNotAllowed;
+        default:
+            return FileIOResult_OtherIOError;
+        }
     }
 
     if (!strInitFromC(&file->path, path)) {
+        (void)fclose(fp);
         return FileIOResult_OutOfMemory;
     }
 
