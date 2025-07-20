@@ -16,11 +16,6 @@ bool initNeve(void) {
         return false;
     }
 
-    if (atexit(quitNeve) != 0) {
-        perror("failed to configure exit function");
-        return false;
-    }
-
     if (!termEnableRawMode(1)) {
         termLogError("failed to enable raw mode");
         return false;
@@ -124,20 +119,37 @@ skipPaint:
     editorDrawEnd(&g_ed);
 }
 
-int main(void) {
+bool loadOrCreateFile(const char *path) {
+    // Stop execution if out of memory.
+    // Set the path of the empty file to `path` if the file does not exist.
+    // Otherwise keep the empty file (on failure) or the loaded file.
+    switch (fileInitOpen(&g_ed.file, path)) {
+    case FileIOResult_OutOfMemory:
+        printf("Out of memory.");
+        return false;
+    case FileIOResult_FileNotFound:
+        return strInitFromC(&g_ed.file.path, path);
+    default:
+        return true;
+    }
+}
+
+// TODO: use wmain on Windows
+int main(int argc, char **argv) {
+    if (argc > 2) {
+        printf("Usage: Neve [file]\n");
+        return 1;
+    }
+
     if (!initNeve()) {
         return 1;
     }
 
-    switch (fileInitOpen(&g_ed.file, "../README.md")) {
-    case FileIOResult_FileNotFound:
-        printf("File not found.");
-        return 1;
-    case FileIOResult_OutOfMemory:
-        printf("Out of memory.");
-        return 1;
-    case FileIOResult_Success:
-        break;
+    if (argc == 2) {
+        if (!loadOrCreateFile(argv[1])) {
+            quitNeve();
+            return 1;
+        }
     }
 
     bool running = true;
@@ -146,6 +158,7 @@ int main(void) {
         int key = termGetKey();
         if (key < 0) {
             termLogError("failed to read the key");
+            quitNeve();
             return 1;
         }
         switch (key) {
@@ -177,5 +190,7 @@ int main(void) {
             break;
         }
     }
+
+    quitNeve();
     return 0;
 }
