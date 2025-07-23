@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(Neve VERSION 0.0.1)
+project(neve VERSION 0.0.1)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED true)
@@ -10,9 +10,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
-include_directories(Neve include)
+include_directories(neve include)
 
-add_executable(Neve
+add_executable(neve
     src/nv_editor.c
     src/nv_file.c
     src/nv_main.c
@@ -27,6 +27,6 @@ enable_testing()
 add_subdirectory(tests)
 
 add_custom_command(
-    TARGET Neve POST_BUILD
+    TARGET neve POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_SOURCE_DIR}/compile_commands.json
 )
