@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include <stdlib.h>
 #include <assert.h>
 
 #include "nv_editor.h"
 #include "nv_escapes.h"
 #include "nv_file.h"
+#include "nv_mem.h"
 #include "nv_term.h"
 
 #define FmtBufSize 2048
@@ -33,7 +33,7 @@ void editorQuit(Editor *ed) {
     for (uint16_t row = 0; row < ed->rows; row++) {
         strDestroy(&ed->rowBuffers[row].buf);
     }
-    free(ed->rowBuffers);
+    memFree(ed->rowBuffers);
 }
 
 bool editorSetRowCount_(Editor *ed, uint16_t count) {
@@ -43,18 +43,19 @@ bool editorSetRowCount_(Editor *ed, uint16_t count) {
         for (uint16_t row = count; row < ed->rows; row++) {
             strDestroy(&ed->rowBuffers[row].buf);
         }
-        Row *newRows = realloc(ed->rowBuffers, count * sizeof(*ed->rowBuffers));
-        if (newRows != NULL) {
-            ed->rowBuffers = newRows;
-        }
+        ed->rowBuffers = memShrink(
+            ed->rowBuffers,
+            count,
+            sizeof(*ed->rowBuffers)
+        );
         ed->rows = count;
         return true;
     } else {
-        Row *newRows = realloc(ed->rowBuffers, count * sizeof(*ed->rowBuffers));
-        if (newRows == NULL) {
-            return false;
-        }
-        ed->rowBuffers = newRows;
+        ed->rowBuffers = memChange(
+            ed->rowBuffers,
+            count,
+            sizeof(*ed->rowBuffers)
+        );
         for (uint16_t row = ed->rows; row < count; row++) {
             strInit(&ed->rowBuffers[row].buf, 0);
             ed->rowBuffers[row].changed = true;
@@ -117,18 +118,8 @@ bool editorDrawEnd(Editor *ed) {
             continue;
         }
         snprintf(posBuf, 32, escCursorSetPos("%u", "%u"), rowIdx + 1, 1);
-        if (!strAppendC(&ed->screenBuf, posBuf)) {
-            return false;
-        }
-
-        if (
-            !strAppend(
-                &ed->screenBuf,
-                (StrView *)&ed->rowBuffers[rowIdx].buf)
-            )
-        {
-            return false;
-        }
+        strAppendC(&ed->screenBuf, posBuf);
+        strAppend(&ed->screenBuf, (StrView *)&ed->rowBuffers[rowIdx].buf);
         strClear(&ed->rowBuffers[rowIdx].buf, ed->rowBuffers[rowIdx].buf.len);
         ed->rowBuffers[rowIdx].changed = false;
     }
@@ -137,9 +128,7 @@ bool editorDrawEnd(Editor *ed) {
         escCursorSetPos("%u", "%u"),
         ed->curY + 1, ed->curX + 1
     );
-    if (!strAppendC(&ed->screenBuf, posBuf)) {
-        return false;
-    }
+    strAppendC(&ed->screenBuf, posBuf);
 
     if (!termWrite(ed->screenBuf.buf, ed->screenBuf.len)) {
         return false;

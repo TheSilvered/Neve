@@ -64,14 +64,16 @@ typedef enum TermKey {
 
 /******************** Initialization and deinitialization *********************/
 
-// Initialize the library.
+// Initialize the terminal.
 bool termInit(void);
 // Enable raw mode.
 // `getInputTimeoutDSec` sets the timeout for `termGetInput` in tenths of a
 // second, set to 0 disables timeout (can cause issues with `termGetKey`).
 bool termEnableRawMode(uint8_t getInputTimeoutDSec);
-// Deinitialize the library, restoring the terminal to its previous state.
+// Deinitialize the terminal, restoring its previous state.
 void termQuit(void);
+// Check if the terminal is initialized.
+bool termIsInit(void);
 
 /*********************************** Errors ***********************************/
 

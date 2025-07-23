@@ -6,6 +6,10 @@
 #include "nv_term_unix.c"
 #endif // !_WIN32
 
+bool termIsInit(void) {
+    return g_initialized;
+}
+
 static UcdCP g_keyQueue[4] = { 0 };
 
 static void queueKey(UcdCP key) {

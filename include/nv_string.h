@@ -35,21 +35,21 @@ Str *strNew(size_t reserve);
 Str *strNewFromC(const char *cStr);
 // Initialize a new empty string.
 // Set `reserve` to avoid reallcations, a reserve=0 will not allocate memory.
-bool strInit(Str *str, size_t reserve);
+void strInit(Str *str, size_t reserve);
 // Initialize a new string from a C string.
-bool strInitFromC(Str *str, const char *cStr);
+void strInitFromC(Str *str, const char *cStr);
 // Free a heap allocated string.
 void strFree(Str *str);
 // Destroy the contents of a string.
 void strDestroy(Str *str);
 // Reserve some bytes to the end of the string to avoid excessive reallocations.
-bool strReserve(Str *str, size_t reserve);
+void strReserve(Str *str, size_t reserve);
 // Append a C string to a string.
-bool strAppendC(Str *str, const char *cStr);
+void strAppendC(Str *str, const char *cStr);
 // Append a string view to a string.
-bool strAppend(Str *str, const StrView *sv);
+void strAppend(Str *str, const StrView *sv);
 // Clear the contents of a string and keep a capacity of `reserve`.
-bool strClear(Str *str, size_t reserve);
+void strClear(Str *str, size_t reserve);
 // Get the contents of a string as a NUL terminated string.
 char *strAsC(Str *str);
 

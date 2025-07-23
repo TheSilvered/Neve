@@ -21,7 +21,6 @@ typedef struct File {
 typedef enum FileIOResult {
     FileIOResult_Success,
     FileIOResult_FileNotFound,
-    FileIOResult_OutOfMemory,
     FileIOResult_PermissionDenied,
     FileIOResult_OperationNotAllowed,
     FileIOResult_FileTooBig,
@@ -56,7 +55,7 @@ UcdCh8 *fileGetLinePtr(File *file, size_t lineIdx);
 ptrdiff_t fileGetLineChIdx(File *file, size_t lineIdx);
 
 // Insert data into the file at position `idx`.
-bool fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len);
+void fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len);
 
 // TODO: Save the contents of a file to the disk
 // void fileSave(File *file);

@@ -6,7 +6,7 @@
 void test_strInitZeroReserve(void) {
     Str str;
 
-    testAssertRequire(strInit(&str, 0));
+    strInit(&str, 0);
     testAssert(str.len == 0);
     testAssert(strcmp(strAsC(&str), "") == 0);
 
@@ -17,7 +17,7 @@ void test_strInitWithReserve(void) {
     size_t reserve = 10;
     Str str;
 
-    testAssertRequire(strInit(&str, reserve));
+    strInit(&str, reserve);
     testAssert(str.len == 0);
     testAssert(str.cap >= reserve);
     testAssert(strcmp(strAsC(&str), "") == 0);

@@ -7,13 +7,13 @@ void test_strDestroyNullPtr(void) {
 
 void test_strDestroyEmpty(void) {
     Str str;
-    testAssertRequire(strInit(&str, 0));
+    strInit(&str, 0);
     strDestroy(&str);
 }
 
 void test_strDestroyFull(void) {
     Str str;
-    testAssertRequire(strInitFromC(&str, "a"));
+    strInitFromC(&str, "a");
     strDestroy(&str);
 }
 

@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdlib.h>
 #include <stdio.h>
 
 #include "nv_editor.h"
@@ -7,8 +6,6 @@
 #include "nv_file.h"
 #include "nv_term.h"
 #include "nv_udb.h"
-
-void quitNeve(void);
 
 bool initNeve(void) {
     if (!termInit()) {
@@ -27,6 +24,7 @@ bool initNeve(void) {
 
 void quitNeve(void) {
     termWrite(escWithLen(
+        escScreenClear
         escCursorShow
         escCursorShapeDefault
     ));
@@ -119,25 +117,22 @@ skipPaint:
     editorDrawEnd(&g_ed);
 }
 
-bool loadOrCreateFile(const char *path) {
+void loadOrCreateFile(const char *path) {
     // Stop execution if out of memory.
     // Set the path of the empty file to `path` if the file does not exist.
     // Otherwise keep the empty file (on failure) or the loaded file.
     switch (fileInitOpen(&g_ed.file, path)) {
-    case FileIOResult_OutOfMemory:
-        printf("Out of memory.");
-        return false;
     case FileIOResult_FileNotFound:
-        return strInitFromC(&g_ed.file.path, path);
+        strInitFromC(&g_ed.file.path, path);
     default:
-        return true;
+        return;
     }
 }
 
 // TODO: use wmain on Windows
 int main(int argc, char **argv) {
     if (argc > 2) {
-        printf("Usage: Neve [file]\n");
+        printf("Usage: neve [file]\n");
         return 1;
     }
 
@@ -146,10 +141,7 @@ int main(int argc, char **argv) {
     }
 
     if (argc == 2) {
-        if (!loadOrCreateFile(argv[1])) {
-            quitNeve();
-            return 1;
-        }
+        loadOrCreateFile(argv[1]);
     }
 
     bool running = true;
@@ -158,7 +150,6 @@ int main(int argc, char **argv) {
         int key = termGetKey();
         if (key < 0) {
             termLogError("failed to read the key");
-            quitNeve();
             return 1;
         }
         switch (key) {

@@ -7,7 +7,7 @@ void test_strClearEmptyZeroReserve(void) {
     Str str;
     strInit(&str, 0);
 
-    testAssert(strClear(&str, 0));
+    strClear(&str, 0);
     testAssert(strcmp(strAsC(&str), "") == 0);
     testAssert(str.len == 0);
 
@@ -17,8 +17,8 @@ void test_strClearEmptyZeroReserve(void) {
 void test_strClearFullZeroReserve(void) {
     Str str;
 
-    testAssertRequire(strInitFromC(&str, "a"));
-    testAssert(strClear(&str, 0));
+    strInitFromC(&str, "a");
+    strClear(&str, 0);
     testAssert(strcmp(strAsC(&str), "") == 0);
     testAssert(str.len == 0);
 
@@ -30,7 +30,7 @@ void test_strClearEmptyWithReserve(void) {
     Str str;
     strInit(&str, 0);
 
-    testAssert(strClear(&str, reserve));
+    strClear(&str, reserve);
     testAssert(strcmp(strAsC(&str), "") == 0);
     testAssert(str.len == 0);
     testAssert(str.cap >= reserve);
@@ -42,8 +42,8 @@ void test_strClearFullWithReserve(void) {
     size_t reserve = 10;
     Str str;
 
-    testAssertRequire(strInitFromC(&str, "a"));
-    testAssert(strClear(&str, reserve));
+    strInitFromC(&str, "a");
+    strClear(&str, reserve);
     testAssert(strcmp(strAsC(&str), "") == 0);
     testAssert(str.len == 0);
     testAssert(str.cap >= reserve);

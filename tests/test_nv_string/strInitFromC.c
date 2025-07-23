@@ -7,7 +7,7 @@ void test_strInitFromCEmpty(void) {
     const char *cStr = "";
     Str str;
 
-    testAssertRequire(strInitFromC(&str, cStr));
+    strInitFromC(&str, cStr);
     testAssert(str.len == 0);
     testAssert(strcmp(strAsC(&str), cStr) == 0);
 
@@ -18,7 +18,7 @@ void test_strInitFromCFull(void) {
     const char *cStr = "a";
     Str str;
 
-    testAssertRequire(strInitFromC(&str, cStr));
+    strInitFromC(&str, cStr);
     testAssert(str.len == 1);
     testAssert(strcmp(strAsC(&str), cStr) == 0);
 

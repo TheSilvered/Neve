@@ -4,40 +4,33 @@
 #include <stdlib.h>
 #include <string.h>
 #include "nv_file.h"
+#include "nv_mem.h"
 #include "nv_string.h"
 
-#define FILE_ARR_RESIZE_IMPL_(arrName, type) \
-    if (requiredLen == file->arrName##Len) { \
-        return true; \
-    } else if (requiredLen == 0) { \
-        if (file->arrName != NULL) { \
-            free(file->arrName); \
-            file->arrName = NULL; \
-        } \
-        file->arrName##Cap = 0; \
-        file->arrName##Len = 0; \
-    } else if (requiredLen < file->arrName##Cap / 4) { \
-        type *newData = realloc(file->arrName, sizeof(type) * (file->arrName##Cap / 2)); \
-        if (newData == NULL) { \
-            return true; \
-        } \
-        file->arrName = newData; \
-        file->arrName##Cap /= 2; \
-    } else if (requiredLen > file->arrName##Cap) { \
-        type *newData = NULL; \
-        size_t newCap = requiredLen + requiredLen / 2; \
-        if (file->arrName == NULL) { \
-            newData = malloc(sizeof(type) * newCap); \
-        } else { \
-            newData = realloc(file->arrName, sizeof(type) * newCap); \
-        } \
-        if (newData == NULL) { \
-            return false; \
-        } \
-        file->arrName = newData; \
-        file->arrName##Cap = newCap; \
-    } \
-    return true; \
+#define FILE_ARR_RESIZE_IMPL_(arrName)                                         \
+    if (requiredLen == file->arrName##Len) {                                   \
+        return;                                                                \
+    } else if (requiredLen == 0) {                                             \
+        memFree(file->arrName);                                                \
+        file->arrName = NULL;                                                  \
+        file->arrName##Cap = 0;                                                \
+        file->arrName##Len = 0;                                                \
+    } else if (requiredLen < file->arrName##Cap / 4) {                         \
+        file->arrName = memShrink(                                             \
+            file->arrName,                                                     \
+            file->arrName##Cap / 2,                                            \
+            sizeof(*file->arrName)                                             \
+        );                                                                     \
+        file->arrName##Cap /= 2;                                               \
+    } else if (requiredLen > file->arrName##Cap) {                             \
+        size_t newCap = requiredLen + requiredLen / 2;                         \
+        file->arrName = memChange(                                             \
+            file->arrName,                                                     \
+            newCap,                                                            \
+            sizeof(*file->arrName)                                             \
+        );                                                                     \
+        file->arrName##Cap = newCap;                                           \
+    }
 
 void fileInitEmpty(File *file) {
     (void)strInit(&file->path, 0);
@@ -63,7 +56,8 @@ FileIOResult fileInitOpen(File *file, const char *path) {
     if (fp == NULL) {
         switch (errno) {
         case ENOMEM:
-            return FileIOResult_OutOfMemory;
+            fprintf(stderr, "Out of memory.");
+            abort();
         case EACCES:
             return FileIOResult_PermissionDenied;
         case EFBIG:
@@ -82,10 +76,7 @@ FileIOResult fileInitOpen(File *file, const char *path) {
         }
     }
 
-    if (!strInitFromC(&file->path, path)) {
-        (void)fclose(fp);
-        return FileIOResult_OutOfMemory;
-    }
+    strInitFromC(&file->path, path);
 
 #define bufSize_ 4096
     UcdCh8 buf[bufSize_];
@@ -93,10 +84,7 @@ FileIOResult fileInitOpen(File *file, const char *path) {
 
     do {
         bytesRead = fread(buf, 1, bufSize_, fp);
-        if (!fileInsertData(file, file->contentLen, buf, bytesRead)) {
-            (void)fclose(fp);
-            return FileIOResult_OutOfMemory;
-        }
+        fileInsertData(file, file->contentLen, buf, bytesRead);
     } while (bytesRead == bufSize_);
     (void)fclose(fp);
 #undef bufSize_
@@ -105,20 +93,17 @@ FileIOResult fileInitOpen(File *file, const char *path) {
 }
 
 void fileDestroy(File *file) {
-    strDestroy(&file->path);
-    if (file->content != NULL) {
-        free(file->content);
-        file->content = NULL;
-    }
+    memFree(file->content);
+    file->content = NULL;
     file->contentLen = 0;
     file->contentCap = 0;
 
-    if (file->lines != NULL) {
-        free(file->lines);
-        file->lines = NULL;
-    }
+    memFree(file->content);
+    file->lines = NULL;
     file->linesLen = 0;
     file->linesCap = 0;
+
+    strDestroy(&file->path);
     file->saved = false;
 }
 
@@ -166,12 +151,12 @@ ptrdiff_t fileGetLineChIdx(File *file, size_t lineIdx) {
     }
 }
 
-static bool fileResizeContent_(File *file, size_t requiredLen) {
-    FILE_ARR_RESIZE_IMPL_(content, UcdCh8)
+static void fileResizeContent_(File *file, size_t requiredLen) {
+    FILE_ARR_RESIZE_IMPL_(content)
 }
 
-static bool fileResizeLines_(File *file, size_t requiredLen) {
-    FILE_ARR_RESIZE_IMPL_(lines, size_t)
+static void fileResizeLines_(File *file, size_t requiredLen) {
+    FILE_ARR_RESIZE_IMPL_(lines)
 }
 
 static size_t fileFindLine_(File *file, size_t fileIdx) {
@@ -198,7 +183,7 @@ static size_t fileFindLine_(File *file, size_t fileIdx) {
     return lo + 1;
 }
 
-bool fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len) {
+void fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len) {
     size_t lineCount = 0;
     size_t trueLen = len;
     for (size_t i = 0; i < len; i++) {
@@ -210,13 +195,8 @@ bool fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len) {
     }
 
     // Preallocate all necessary space
-    if (!fileResizeContent_(file, file->contentLen + trueLen)) {
-        return false;
-    }
-
-    if (!fileResizeLines_(file, file->linesLen + lineCount)) {
-        return false;
-    }
+    fileResizeContent_(file, file->contentLen + trueLen);
+    fileResizeLines_(file, file->linesLen + lineCount);
 
     UcdCh8 *content = file->content;
 
@@ -248,7 +228,7 @@ bool fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len) {
     }
 
     if (lineCount == 0) {
-        return true;
+        return;
     }
 
     // Make space for the new lines
@@ -266,5 +246,4 @@ bool fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len) {
             lineCount--;
         }
     }
-    return true;
 }

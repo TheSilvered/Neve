@@ -17,6 +17,7 @@
 
 static struct termios g_origTermios = { 0 };
 static TermErr g_error = { 0 };
+static bool g_initialized = false;
 
 // Initialization
 
@@ -25,6 +26,7 @@ bool termInit(void) {
         g_error.type = TermErrType_Errno;
         return false;
     }
+    g_initialized = true;
     return true;
 }
 
@@ -47,8 +49,11 @@ bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
 }
 
 void termQuit(void) {
-    // Ignore failures, there is nothing left to do
-    (void)tcsetattr(STDIN_FILENO, TCSAFLUSH, &g_origTermios);
+    if (g_initialized) {
+        // Ignore failures, there is nothing left to do
+        (void)tcsetattr(STDIN_FILENO, TCSAFLUSH, &g_origTermios);
+        g_initialized = false;
+    }
 }
 
 // Error handling

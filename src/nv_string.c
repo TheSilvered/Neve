@@ -1,38 +1,24 @@
 #include <assert.h>
-#include <stdlib.h>
 #include <string.h>
+#include "nv_mem.h"
 #include "nv_string.h"
 
 // NOTE: The actual capacity of the string buffer is one more than Str.cap
 //       to allow for the NUL byte
 
 Str *strNew(size_t reserve) {
-    Str *str = malloc(sizeof(Str));
-    if (str == NULL) {
-        return NULL;
-    }
-
-    if (!strInit(str, reserve)) {
-        free(str);
-        return NULL;
-    }
+    Str *str = memAlloc(1, sizeof(Str));
+    strInit(str, reserve);
     return str;
 }
 
 Str *strNewFromC(const char *cStr) {
-    Str *str = malloc(sizeof(Str));
-    if (str == NULL) {
-        return NULL;
-    }
-
-    if (!strInitFromC(str, cStr)) {
-        free(str);
-        return NULL;
-    }
+    Str *str = memAlloc(1, sizeof(Str));
+    strInitFromC(str, cStr);
     return str;
 }
 
-bool strInit(Str *str, size_t reserve) {
+void strInit(Str *str, size_t reserve) {
     str->len = 0;
     str->cap = reserve + 1;
     if (reserve == 0) {
@@ -40,134 +26,82 @@ bool strInit(Str *str, size_t reserve) {
         str->cap = 0;
     } else {
         // Keep the space for '\0'
-        str->buf = calloc(reserve + 1, sizeof(*str->buf));
-        if (str->buf == NULL) {
-            str->cap = 0;
-            return false;
-        } else {
-            str->cap = reserve;
-            str->buf[0] = '\0';
-        }
+        str->buf = memAlloc(reserve + 1, sizeof(*str->buf));
+        str->cap = reserve;
+        str->buf[0] = '\0';
     }
-    return true;
 }
 
-bool strInitFromC(Str *str, const char *cStr) {
+void strInitFromC(Str *str, const char *cStr) {
     size_t len = strlen(cStr);
     str->len = len;
     str->cap = len;
-    str->buf = malloc((len + 1) * sizeof(*cStr));
-    if (str->buf == NULL) {
-        str->len = 0;
-        str->cap = 0;
-        str->buf = NULL;
-        return false;
-    }
+    str->buf = memAlloc(len + 1, sizeof(*cStr));
     // Copy the NUL character
     memcpy(str->buf, cStr, (len + 1) * sizeof(*cStr));
-    return true;
 }
 
 void strFree(Str *str) {
     if (str == NULL) {
         return;
     }
-    if (str->buf != NULL) {
-        free(str->buf);
-    }
-    free(str);
+    memFree(str->buf);
+    memFree(str);
 }
 
 void strDestroy(Str *str) {
     if (str == NULL) {
         return;
     }
-    if (str->buf != NULL) {
-        free(str->buf);
-    }
+    memFree(str->buf);
+    str->buf = NULL;
     str->len = 0;
     str->cap = 0;
-    str->buf = NULL;
 }
 
-bool strReserve(Str *str, size_t reserve) {
+void strReserve(Str *str, size_t reserve) {
     if (reserve == 0 || str->len + reserve < str->cap) {
-        return true;
+        return;
     }
 
-    size_t newCap = (str->cap + reserve) * 1.5;
-    UcdCh8 *newBuf = NULL;
-    if (str->buf == NULL) {
-        newBuf = malloc((newCap + 1) * sizeof(*str->buf));
-    } else {
-        newBuf = realloc(str->buf, (newCap + 1) * sizeof(*str->buf));
-    }
-    if (newBuf == NULL) {
-        return false;
-    }
+    size_t newCap = (str->cap + reserve + 1) * 1.5;
+    str->buf = memChange(str->buf, newCap, sizeof(*str->buf));
     str->cap = newCap;
-    str->buf = newBuf;
-    return true;
 }
 
-bool strAppendC(Str *str, const char *cStr) {
+void strAppendC(Str *str, const char *cStr) {
     size_t len = strlen(cStr);
     if (len == 0) {
-        return true;
+        return;
     }
-
-    if (!strReserve(str, len)) {
-        return false;
-    }
+    strReserve(str, len);
 
     memcpy(str->buf + str->len, cStr, (len + 1) * sizeof(*cStr));
     str->len += len;
-    return true;
 }
 
-bool strAppend(Str *str, const StrView *sv) {
+void strAppend(Str *str, const StrView *sv) {
     if (sv->len == 0) {
-        return true;
+        return;
     }
-
-    if (!strReserve(str, sv->len)) {
-        return false;
-    }
+    strReserve(str, sv->len);
 
     // StrView is not guaranteed to end with a NUL character, add it manually
     memcpy(str->buf + str->len, sv->buf, sv->len * sizeof(*sv->buf));
     str->len += sv->len;
     str->buf[str->len] = '\0';
-    return true;
 }
 
-bool strClear(Str *str, size_t reserve) {
+void strClear(Str *str, size_t reserve) {
     if (reserve == 0) {
         strDestroy(str);
-        return true;
+        return;
     }
 
-    UcdCh8 *newBuf = NULL;
-    if (reserve == str->cap) {
-        newBuf = str->buf;
-    } else if (str->buf == NULL) {
-        newBuf = malloc((reserve + 1) * sizeof(*str->buf));
-    } else {
-        newBuf = realloc(str->buf, (reserve + 1)* sizeof(*str->buf));
-    }
-    if (newBuf == NULL && str->cap > reserve) {
-        newBuf = str->buf;
-        reserve = str->cap;
-    } else if (newBuf == NULL) {
-        return false;
-    }
-
-    newBuf[0] = '\0';
-    str->buf = newBuf;
+    str->buf = memChange(str->buf, reserve + 1, sizeof(*str->buf));
     str->cap = reserve;
     str->len = 0;
-
-    return true;
+    str->buf[0] = '\0';
 }
 
 char *strAsC(Str *str) {

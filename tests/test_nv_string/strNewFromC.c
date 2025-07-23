@@ -7,7 +7,6 @@ void test_strNewFromCEmpty(void) {
     const char *cStr = "";
     Str *str = strNewFromC(cStr);
 
-    testAssertRequire(str != NULL);
     testAssert(str->len == 0);
     testAssert(strcmp(strAsC(str), cStr) == 0);
 
@@ -18,7 +17,6 @@ void test_strNewFromCFull(void) {
     const char *cStr = "a";
     Str *str = strNewFromC(cStr);
 
-    testAssertRequire(str != NULL);
     testAssert(str->len == 1);
     testAssert(strcmp(strAsC(str), cStr) == 0);
 

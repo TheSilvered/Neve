@@ -16,6 +16,7 @@ add_executable(Neve
     src/nv_editor.c
     src/nv_file.c
     src/nv_main.c
+    src/nv_mem.c
     src/nv_string.c
     src/nv_term.c
     src/nv_udb.c

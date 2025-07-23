@@ -15,7 +15,7 @@ void test_strAsCEmptyZeroReserve(void) {
 void test_strAsCEmptyWithReserve(void) {
     Str str;
 
-    testAssertRequire(strInit(&str, 10));
+    strInit(&str, 10);
     testAssert(strcmp(strAsC(&str), "") == 0);
 
     strDestroy(&str);
@@ -25,7 +25,7 @@ void test_strAsCFull(void) {
     const char *cStr = "a";
     Str str;
 
-    testAssertRequire(strInitFromC(&str, cStr));
+    strInitFromC(&str, cStr);
     testAssert(strcmp(strAsC(&str), cStr) == 0);
 
     strDestroy(&str);

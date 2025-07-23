@@ -8,7 +8,7 @@ void test_strAppendEmpty(void) {
     strInit(&str, 0);
     StrView emptyView = strViewMakeFromC("");
 
-    testAssert(strAppend(&str, &emptyView));
+    strAppend(&str, &emptyView);
     testAssert(str.len == 0);
     testAssert(strcmp(strAsC(&str), "") == 0);
 
@@ -17,10 +17,10 @@ void test_strAppendEmpty(void) {
 
 void test_strAppendEmptyToExisting(void) {
     Str str;
-    testAssertRequire(strInitFromC(&str, "a"));
+    strInitFromC(&str, "a");
     StrView emptyView = strViewMakeFromC("");
 
-    testAssert(strAppend(&str, &emptyView));
+    strAppend(&str, &emptyView);
     testAssert(str.len == 1);
     testAssert(strcmp(strAsC(&str), "a") == 0);
 
@@ -32,7 +32,7 @@ void test_strAppendFull(void) {
     strInit(&str, 0);
     StrView fullView = strViewMakeFromC("a");
 
-    testAssert(strAppend(&str, &fullView));
+    strAppend(&str, &fullView);
     testAssert(str.len == 1);
     testAssert(strcmp(strAsC(&str), "a") == 0);
 
@@ -41,10 +41,10 @@ void test_strAppendFull(void) {
 
 void test_strAppendFullToExisting(void) {
     Str str;
-    testAssertRequire(strInitFromC(&str, "a"));
+    strInitFromC(&str, "a");
     StrView fullView = strViewMakeFromC("b");
 
-    testAssert(strAppend(&str, &fullView));
+    strAppend(&str, &fullView);
     testAssert(str.len == 2);
     testAssert(strcmp(strAsC(&str), "ab") == 0);
 

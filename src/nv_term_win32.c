@@ -36,6 +36,7 @@ static DWORD g_readTimeoutMs = 0;
 static INPUT_RECORD g_inputEvents[INPUT_EVENTS_SIZE];
 static size_t g_eventIdx = 0;
 static size_t g_eventsSize = 0;
+static bool g_initialized = false;
 
 // Initialization
 
@@ -66,6 +67,7 @@ bool termInit(void) {
         g_error.type = TermErrType_Errno;
         return false;
     }
+    g_initialized = true;
     return true;
 }
 
@@ -103,9 +105,12 @@ bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
 }
 
 void termQuit(void) {
-    // Ignore failures, there is nothing left to do
-    (void)SetConsoleMode(g_consoleInput,  g_origInputMode);
-    (void)SetConsoleMode(g_consoleOutput,  g_origOutputMode);
+    if (g_initialized) {
+        // Ignore failures, there is nothing left to do
+        (void)SetConsoleMode(g_consoleInput,  g_origInputMode);
+        (void)SetConsoleMode(g_consoleOutput,  g_origOutputMode);
+        g_initialized = false;
+    }
 }
 
 // Error handling
