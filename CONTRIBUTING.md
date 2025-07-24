@@ -1,4 +1,18 @@
-# Code Guidelines
+# Directory structure
+
+```text
+.github/
+    workflows/        # Github actions
+include/              # Header files for the editor
+src/                  # Source of the editor
+tests/
+    main/             # Test "library"
+    test_nv_string/   # `nv_string.h` tests
+    test_nv_unicode/  # `nv_unicode.h` tests
+tools/                # Miscellaneous scripts
+```
+
+# Coding style
 
 ## Types
 
