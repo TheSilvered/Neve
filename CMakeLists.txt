@@ -6,7 +6,10 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED true)
 set(CMAKE_C_EXTENSIONS off)
 set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+
+if (${CMAKE_GENERATOR} MATCHES ".*(Make|Ninja).*")
+    set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+endif()
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
@@ -27,7 +30,10 @@ enable_testing()
 
 add_subdirectory(tests)
 
-add_custom_command(
-    TARGET neve POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_SOURCE_DIR}/compile_commands.json
-)
+# Copy compile_commands.json only with supported generators
+if (${CMAKE_GENERATOR} MATCHES ".*(Make|Ninja).*")
+    add_custom_command(
+        TARGET neve POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_SOURCE_DIR}/compile_commands.json
+    )
+endif()
