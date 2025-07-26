@@ -77,10 +77,6 @@ void refreshScreen(void) {
     bool rowsChanged, colsChanged;
     editorUpdateSize(&g_ed, &rowsChanged, &colsChanged);
 
-    if (!rowsChanged && !colsChanged) {
-        goto skipPaint;
-    }
-
     editorDraw(
         &g_ed, 0,
         escWithLen(
@@ -91,8 +87,8 @@ void refreshScreen(void) {
     );
 
     for (uint16_t i = 0; i < g_ed.rows; i++) {
-        if (i < fileLineCount(&g_ed.file)) {
-            printLine(i, i);
+        if (i + g_ed.fileLineOffset < fileLineCount(&g_ed.file)) {
+            printLine(i + g_ed.fileLineOffset, i);
         } else if (g_ed.file.contentLen == 0 && i == g_ed.rows / 2) {
             editorDraw(&g_ed, i, "~", 2);
             StrView msg = {
@@ -113,7 +109,7 @@ void refreshScreen(void) {
     }
     editorDraw(&g_ed, g_ed.rows - 1, escWithLen(escCursorShow));
 
-skipPaint:
+    // editorDrawFmt(&g_ed, g_ed.rows - 1, "Y: %u, idx: %zi, off: %zi", g_ed.curY, g_ed.fileCurIdx, g_ed.fileLineOffset);
     editorDrawEnd(&g_ed);
 }
 
@@ -126,6 +122,32 @@ void loadOrCreateFile(const char *path) {
         strInitFromC(&g_ed.file.path, path);
     default:
         return;
+    }
+}
+
+void handleKey(int32_t key) {
+    switch (key) {
+    case TermKey_CtrlC:
+        g_ed.running = false;
+        break;
+    case TermKey_ArrowUp:
+    case 'i':
+        editorMoveCursor(&g_ed, 0, -1);
+        break;
+    case TermKey_ArrowDown:
+    case 'k':
+        editorMoveCursor(&g_ed, 0, 1);
+        break;
+    case TermKey_ArrowLeft:
+    case 'j':
+        // TODO: horizontal movement
+        break;
+    case TermKey_ArrowRight:
+    case 'l':
+        // TODO: horizontal movement
+        break;
+    default:
+        break;
     }
 }
 
@@ -144,42 +166,14 @@ int main(int argc, char **argv) {
         loadOrCreateFile(argv[1]);
     }
 
-    bool running = true;
-    while (running) {
+    while (g_ed.running) {
         refreshScreen();
-        int key = termGetKey();
+        int32_t key = termGetKey();
         if (key < 0) {
             termLogError("failed to read the key");
             return 1;
         }
-        switch (key) {
-        case TermKey_CtrlC:
-            running = false;
-            termWrite(escWithLen(escScreenClear));
-            break;
-        case TermKey_ArrowUp:
-            if (g_ed.curY != 0) {
-                g_ed.curY--;
-            }
-            break;
-        case TermKey_ArrowDown:
-            if (g_ed.curY < g_ed.rows - 1) {
-                g_ed.curY++;
-            }
-            break;
-        case TermKey_ArrowLeft:
-            if (g_ed.curX != 0) {
-                g_ed.curX--;
-            }
-            break;
-        case TermKey_ArrowRight:
-            if (g_ed.curX < g_ed.cols - 1) {
-                g_ed.curX++;
-            }
-            break;
-        default:
-            break;
-        }
+        handleKey(key);
     }
 
     quitNeve();

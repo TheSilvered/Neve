@@ -10,7 +10,7 @@
 
 #define FmtBufSize 2048
 
-Editor g_ed;
+Editor g_ed = { 0 };
 
 void editorInit(Editor *ed) {
     ed->curX = 0;
@@ -21,6 +21,9 @@ void editorInit(Editor *ed) {
     (void)strInit(&ed->screenBuf, 0);
     termWrite(escWithLen(escCursorShapeStillBlock));
     fileInitEmpty(&ed->file);
+    ed->fileLineOffset = 0;
+    ed->fileCurIdx = 0;
+    ed->running = true;
 }
 
 void editorQuit(Editor *ed) {
@@ -85,6 +88,12 @@ bool editorUpdateSize(Editor *ed, bool *outRowsChanged, bool *outColsChanged) {
     ed->cols = cols;
     editorSetRowCount_(ed, rows);
 
+    if (ed->curY >= ed->rows) {
+        ed->fileLineOffset += ed->curY - ed->rows + 1;
+        ed->curY = ed->rows - 1;
+        assert(ed->fileLineOffset < fileLineCount(&ed->file));
+    }
+
     return true;
 }
 
@@ -105,13 +114,6 @@ bool editorDrawFmt(Editor *ed, uint16_t rowIdx, const char *fmt, ...) {
 }
 
 bool editorDrawEnd(Editor *ed) {
-    if (ed->curX >= ed->cols) {
-        ed->curX = ed->cols - 1;
-    }
-    if (ed->curY >= ed->rows) {
-        ed->curY = ed->rows - 1;
-    }
-
     char posBuf[32] = { 0 };
     for (uint16_t rowIdx = 0; rowIdx < ed->rows; rowIdx++) {
         if (!ed->rowBuffers[rowIdx].changed) {
@@ -136,3 +138,38 @@ bool editorDrawEnd(Editor *ed) {
     (void)strClear(&ed->screenBuf, ed->screenBuf.len); // success guaranteed
     return true;
 }
+
+void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy) {
+    // TODO: add horizontal movement
+    (void)dx;
+
+    size_t lineCount = fileLineCount(&ed->file);
+    if (
+        (ptrdiff_t)ed->fileLineOffset
+        + (ptrdiff_t)ed->curY
+        + dy >= (ptrdiff_t)lineCount
+    ) {
+        dy = lineCount - ed->fileLineOffset - ed->curY - 1;
+    } else if (
+        (ptrdiff_t)ed->fileLineOffset
+        + (ptrdiff_t)ed->curY
+        + dy < 0
+    ) {
+        dy = -((ptrdiff_t)(ed->curY + ed->fileLineOffset));
+    }
+
+    ptrdiff_t endY = (ptrdiff_t)ed->curY + dy;
+    ed->fileCurIdx = fileGetLineChIdx(&ed->file, ed->fileLineOffset + endY);
+
+    if (endY >= ed->rows) {
+        ed->fileLineOffset += endY - ed->rows + 1;
+        ed->curY = ed->rows - 1;
+    } else if (endY < 0) {
+        assert(ed->fileLineOffset >= (size_t)(-endY));
+        ed->fileLineOffset -= (size_t)(-endY);
+        ed->curY = 0;
+    } else {
+        ed->curY = endY;
+    }
+}
+
