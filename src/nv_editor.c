@@ -68,6 +68,14 @@ bool editorSetRowCount_(Editor *ed, uint16_t count) {
     }
 }
 
+void editorUpdateViewbox_(Editor *ed) {
+    if (ed->curY >= ed->rows + ed->fileLineOffset) {
+        ed->fileLineOffset = ed->curY - ed->rows + 1;
+    } else if (ed->curY < ed->fileLineOffset) {
+        ed->fileLineOffset = ed->curY;
+    }
+}
+
 bool editorUpdateSize(Editor *ed, bool *outRowsChanged, bool *outColsChanged) {
     size_t rows, cols;
     if (!termSize(&rows, &cols)) {
@@ -88,11 +96,7 @@ bool editorUpdateSize(Editor *ed, bool *outRowsChanged, bool *outColsChanged) {
     ed->cols = cols;
     editorSetRowCount_(ed, rows);
 
-    if (ed->curY >= ed->rows) {
-        ed->fileLineOffset += ed->curY - ed->rows + 1;
-        ed->curY = ed->rows - 1;
-        assert(ed->fileLineOffset < fileLineCount(&ed->file));
-    }
+    editorUpdateViewbox_(ed);
 
     return true;
 }
@@ -125,17 +129,17 @@ bool editorDrawEnd(Editor *ed) {
         strClear(&ed->rowBuffers[rowIdx].buf, ed->rowBuffers[rowIdx].buf.len);
         ed->rowBuffers[rowIdx].changed = false;
     }
-    snprintf(
-        posBuf, 32,
-        escCursorSetPos("%u", "%u"),
-        ed->curY + 1, ed->curX + 1
-    );
+
+    uint16_t termCurX = (uint16_t)ed->curX + 1;
+    uint16_t termCurY = (uint16_t)(ed->curY - ed->fileLineOffset) + 1;
+
+    snprintf(posBuf, 32, escCursorSetPos("%u", "%u"), termCurY, termCurX);
     strAppendC(&ed->screenBuf, posBuf);
 
     if (!termWrite(ed->screenBuf.buf, ed->screenBuf.len)) {
         return false;
     }
-    (void)strClear(&ed->screenBuf, ed->screenBuf.len); // success guaranteed
+    strClear(&ed->screenBuf, ed->screenBuf.len);
     return true;
 }
 
@@ -144,32 +148,14 @@ void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy) {
     (void)dx;
 
     size_t lineCount = fileLineCount(&ed->file);
-    if (
-        (ptrdiff_t)ed->fileLineOffset
-        + (ptrdiff_t)ed->curY
-        + dy >= (ptrdiff_t)lineCount
-    ) {
-        dy = lineCount - ed->fileLineOffset - ed->curY - 1;
-    } else if (
-        (ptrdiff_t)ed->fileLineOffset
-        + (ptrdiff_t)ed->curY
-        + dy < 0
-    ) {
-        dy = -((ptrdiff_t)(ed->curY + ed->fileLineOffset));
-    }
-
     ptrdiff_t endY = (ptrdiff_t)ed->curY + dy;
-    ed->fileCurIdx = fileGetLineChIdx(&ed->file, ed->fileLineOffset + endY);
-
-    if (endY >= ed->rows) {
-        ed->fileLineOffset += endY - ed->rows + 1;
-        ed->curY = ed->rows - 1;
-    } else if (endY < 0) {
-        assert(ed->fileLineOffset >= (size_t)(-endY));
-        ed->fileLineOffset -= (size_t)(-endY);
-        ed->curY = 0;
-    } else {
-        ed->curY = endY;
+    if (endY >= (ptrdiff_t)lineCount) {
+        endY = lineCount - 1;
+    } else if ((ptrdiff_t)ed->curY + dy < 0) {
+        endY = 0;
     }
+    ed->curY = endY;
+    ed->fileCurIdx = fileGetLineChIdx(&ed->file, endY);
+    editorUpdateViewbox_(ed);
 }
 

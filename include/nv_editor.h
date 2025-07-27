@@ -12,13 +12,13 @@ typedef struct Row {
 
 // The state of the editor.
 typedef struct Editor {
-    uint16_t curX, curY; // Terminal position of the cursor.
     uint16_t rows, cols; // Terminal resolution.
     Row *rowBuffers; // Rows array (length == .rows)
     Str screenBuf; // Buffer for screen printing.
     File file; // Opened file.
-    size_t fileLineOffset; // Vertical scrolling.
+    size_t curX, curY; // Position of the cursor.
     size_t fileCurIdx; // Cursor position in the file.
+    size_t fileLineOffset; // Vertical scrolling.
     bool running; // If the editor is running.
 } Editor;
 
