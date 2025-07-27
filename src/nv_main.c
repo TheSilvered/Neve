@@ -58,7 +58,7 @@ void printLine(size_t fileLine, uint16_t termRow) {
                 termRow,
                 escWithLen(escSetStyle(colorBrightBlackFg))
             );
-            for (size_t i = 0; i < g_ed.viewboxX - width - cpWidth; i++) {
+            for (size_t i = 0; i < width + cpWidth - g_ed.viewboxX; i++) {
                 editorDraw(&g_ed, termRow, "<", 1);
             }
             editorDraw(
