@@ -5,6 +5,7 @@ set(Sources
     ../../src/nv_mem.c
     ../../src/nv_string.c
     ../../src/nv_term.c
+    ../../src/nv_udb.c
     ../../src/nv_unicode.c
 )
 

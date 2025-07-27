@@ -18,7 +18,8 @@ typedef struct Editor {
     File file; // Opened file.
     size_t curX, curY; // Position of the cursor.
     size_t fileCurIdx; // Cursor position in the file.
-    size_t fileLineOffset; // Vertical scrolling.
+    size_t viewboxX; // Horizontal scrolling.
+    size_t viewboxY; // Vertical scrolling.
     bool running; // If the editor is running.
 } Editor;
 

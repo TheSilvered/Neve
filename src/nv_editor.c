@@ -13,15 +13,16 @@
 Editor g_ed = { 0 };
 
 void editorInit(Editor *ed) {
-    ed->curX = 0;
-    ed->curY = 0;
     ed->rows = 0;
     ed->cols = 0;
     ed->rowBuffers = NULL;
     (void)strInit(&ed->screenBuf, 0);
-    termWrite(escWithLen(escCursorShapeStillBlock));
+    termWrite(escWithLen(escCursorShapeStillBar));
     fileInitEmpty(&ed->file);
-    ed->fileLineOffset = 0;
+    ed->viewboxX = 0;
+    ed->viewboxY = 0;
+    ed->curX = 0;
+    ed->curY = 0;
     ed->fileCurIdx = 0;
     ed->running = true;
 }
@@ -69,10 +70,16 @@ bool editorSetRowCount_(Editor *ed, uint16_t count) {
 }
 
 void editorUpdateViewbox_(Editor *ed) {
-    if (ed->curY >= ed->rows + ed->fileLineOffset) {
-        ed->fileLineOffset = ed->curY - ed->rows + 1;
-    } else if (ed->curY < ed->fileLineOffset) {
-        ed->fileLineOffset = ed->curY;
+    if (ed->curY >= ed->rows + ed->viewboxY) {
+        ed->viewboxY = ed->curY - ed->rows + 1;
+    } else if (ed->curY < ed->viewboxY) {
+        ed->viewboxY = ed->curY;
+    }
+
+    if (ed->curX >= ed->cols + ed->viewboxX) {
+        ed->viewboxX = ed->curX - ed->cols + 1;
+    } else if (ed->curX < ed->viewboxX) {
+        ed->viewboxX = ed->curX;
     }
 }
 
@@ -130,8 +137,8 @@ bool editorDrawEnd(Editor *ed) {
         ed->rowBuffers[rowIdx].changed = false;
     }
 
-    uint16_t termCurX = (uint16_t)ed->curX + 1;
-    uint16_t termCurY = (uint16_t)(ed->curY - ed->fileLineOffset) + 1;
+    uint16_t termCurX = (uint16_t)(ed->curX - ed->viewboxX) + 1;
+    uint16_t termCurY = (uint16_t)(ed->curY - ed->viewboxY) + 1;
 
     snprintf(posBuf, 32, escCursorSetPos("%u", "%u"), termCurY, termCurX);
     strAppendC(&ed->screenBuf, posBuf);
@@ -144,18 +151,48 @@ bool editorDrawEnd(Editor *ed) {
 }
 
 void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy) {
-    // TODO: add horizontal movement
-    (void)dx;
-
+    // Execute first the vertical movement and then the horizontal movement
     size_t lineCount = fileLineCount(&ed->file);
     ptrdiff_t endY = (ptrdiff_t)ed->curY + dy;
-    if (endY >= (ptrdiff_t)lineCount) {
-        endY = lineCount - 1;
-    } else if ((ptrdiff_t)ed->curY + dy < 0) {
+
+    if (endY < 0) {
         endY = 0;
+    } else if (endY >= (ptrdiff_t)lineCount) {
+        endY = lineCount - 1;
     }
+
     ed->curY = endY;
-    ed->fileCurIdx = fileGetLineChIdx(&ed->file, endY);
+
+    StrView line = fileGetLine(&ed->file, endY);
+    ptrdiff_t endX = (ptrdiff_t)ed->curX + dx;
+    if (endX < 0) {
+        ed->fileCurIdx = fileGetLineChIdx(&ed->file, endY);
+        endX = 0;
+    } else {
+        size_t baseIdx = fileGetLineChIdx(&ed->file, endY);
+        size_t width = 0;
+        UcdCP cp;
+        ptrdiff_t lineIdx = -1;
+        for (
+            lineIdx = strViewNext(&line, lineIdx, &cp);
+            lineIdx != -1;
+            lineIdx = strViewNext(&line, lineIdx, &cp)
+        ) {
+            if (cp == '\n') {
+                break;
+            }
+            uint8_t cpWidth = ucdCPWidth(cp);
+            if (width + cpWidth > endX) {
+                break;
+            }
+            width += cpWidth;
+        }
+        endX = width;
+        ed->fileCurIdx = baseIdx + lineIdx;
+    }
+
+    ed->curX = endX;
+
     editorUpdateViewbox_(ed);
 }
 

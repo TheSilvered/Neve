@@ -35,7 +35,9 @@ void quitNeve(void) {
 
 void printLine(size_t fileLine, uint16_t termRow) {
     StrView line = fileGetLine(&g_ed.file, fileLine);
-    size_t visualWidth = 0;
+    size_t width = 0;
+    bool isInViewbox = g_ed.viewboxX == 0;
+    size_t viewboxOffset = 0;
     UcdCP cp;
     for (
         ptrdiff_t i = strViewNext(&line, -1, &cp);
@@ -47,30 +49,42 @@ void printLine(size_t fileLine, uint16_t termRow) {
             break;
         }
 
-        UdbCPInfo info = udbGetCPInfo(cp);
-        uint8_t cpVisualWidth = 0;
-        switch (info.width) {
-        case UdbWidth_Fullwidth:
-        case UdbWidth_Wide:
-            cpVisualWidth = 2;
-            break;
-        case UdbWidth_Ambiguous:
-        case UdbWidth_Neutral:
-        case UdbWidth_Narrow:
-        case UdbWidth_Halfwidth:
-            cpVisualWidth = 1;
-            break;
-        default:
-            assert(false);
-        }
+        uint8_t cpWidth = ucdCPWidth(cp);
 
-        if (visualWidth + cpVisualWidth > g_ed.cols) {
+        if (!isInViewbox && width + cpWidth >= g_ed.viewboxX) {
+            isInViewbox = true;
+            editorDraw(
+                &g_ed,
+                termRow,
+                escWithLen(escSetStyle(colorBrightBlackFg))
+            );
+            for (size_t i = 0; i < g_ed.viewboxX - width - cpWidth; i++) {
+                editorDraw(&g_ed, termRow, "<", 1);
+            }
+            editorDraw(
+                &g_ed,
+                termRow,
+                escWithLen(escSetStyle(styleDefault))
+            );
+            width = 0;
+            viewboxOffset = i + ucdCh8CPLen(cp);
+            continue;
+        }
+        if (width + cpWidth > g_ed.cols) {
             line.len = i;
             break;
         }
-        visualWidth += cpVisualWidth;
+        width += cpWidth;
     }
-    editorDraw(&g_ed, termRow, (const char *)line.buf, line.len);
+    if (!isInViewbox) {
+        return;
+    }
+    editorDraw(
+        &g_ed,
+        termRow,
+        (const char *)(line.buf + viewboxOffset),
+        line.len - viewboxOffset
+    );
 }
 
 void refreshScreen(void) {
@@ -87,8 +101,8 @@ void refreshScreen(void) {
     );
 
     for (uint16_t i = 0; i < g_ed.rows; i++) {
-        if (i + g_ed.fileLineOffset < fileLineCount(&g_ed.file)) {
-            printLine(i + g_ed.fileLineOffset, i);
+        if (i + g_ed.viewboxY < fileLineCount(&g_ed.file)) {
+            printLine(i + g_ed.viewboxY, i);
         } else if (g_ed.file.contentLen == 0 && i == g_ed.rows / 2) {
             editorDraw(&g_ed, i, "~", 2);
             StrView msg = {
@@ -109,7 +123,6 @@ void refreshScreen(void) {
     }
     editorDraw(&g_ed, g_ed.rows - 1, escWithLen(escCursorShow));
 
-    // editorDrawFmt(&g_ed, g_ed.rows - 1, "Y: %u, idx: %zi, off: %zi", g_ed.curY, g_ed.fileCurIdx, g_ed.fileLineOffset);
     editorDrawEnd(&g_ed);
 }
 
@@ -140,11 +153,11 @@ void handleKey(int32_t key) {
         break;
     case TermKey_ArrowLeft:
     case 'j':
-        // TODO: horizontal movement
+        editorMoveCursor(&g_ed, -1, 0);
         break;
     case TermKey_ArrowRight:
     case 'l':
-        // TODO: horizontal movement
+        editorMoveCursor(&g_ed, 1, 0);
         break;
     default:
         break;

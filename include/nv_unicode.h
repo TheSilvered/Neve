@@ -24,6 +24,9 @@ typedef UcdCh32 UcdCP;
 // A valid codepoint is not a high or low surrogate and is not above U+10FFFF.
 bool ucdIsCPValid(UcdCP cp);
 
+// Get the width of a character (based on the East_Asian_Width property).
+uint8_t ucdCPWidth(UcdCP cp);
+
 // Translate a UTF16-encoded string to UTF8 adding a NUL character at the end.
 // Encoding errors in `str` are ignored.
 // Returns the length of the UTF8 string written to `buf`.

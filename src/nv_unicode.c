@@ -29,6 +29,30 @@ bool ucdIsCPValid(UcdCP cp) {
         && (cp < ucdHighSurrogateFirst || cp > ucdLowSurrogateLast);
 }
 
+uint8_t ucdCPWidth(UcdCP cp) {
+    // Short path for ASCII printable characters
+    if (cp >= ' ' && cp <= '~') {
+        return 1;
+    }
+
+    {
+        UdbCPInfo info = udbGetCPInfo(cp);
+        switch (info.width) {
+        case UdbWidth_Fullwidth:
+        case UdbWidth_Wide:
+            return 2;
+        case UdbWidth_Ambiguous:
+        case UdbWidth_Neutral:
+        case UdbWidth_Narrow:
+        case UdbWidth_Halfwidth:
+            return 1;
+        default:
+            assert(false);
+            return 0;
+        }
+    }
+}
+
 size_t ucdCh16StrToCh8Str(
     const UcdCh16 *str, size_t strLen,
     UcdCh8 *buf, size_t bufLen
