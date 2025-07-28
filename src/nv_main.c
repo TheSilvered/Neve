@@ -4,6 +4,7 @@
 #include "nv_editor.h"
 #include "nv_escapes.h"
 #include "nv_file.h"
+#include "nv_render.h"
 #include "nv_term.h"
 
 bool initNeve(void) {
@@ -22,7 +23,7 @@ bool initNeve(void) {
 }
 
 void quitNeve(void) {
-    termWrite(escWithLen(
+    termWrite(sLen(
         escScreenClear
         escCursorShow
         escCursorShapeDefault
@@ -32,96 +33,22 @@ void quitNeve(void) {
     termQuit();
 }
 
-void printLine(size_t fileLine, uint16_t termRow) {
-    StrView line = fileGetLine(&g_ed.file, fileLine);
-    size_t width = 0;
-    bool isInViewbox = g_ed.viewboxX == 0;
-    size_t viewboxOffset = 0;
-    UcdCP cp;
-    for (
-        ptrdiff_t i = strViewNext(&line, -1, &cp);
-        i != -1;
-        i = strViewNext(&line, i, &cp)
-    ) {
-        if (cp == '\n') {
-            line.len = i;
-            break;
-        }
-
-        uint8_t cpWidth = ucdCPWidth(cp);
-
-        if (!isInViewbox && width + cpWidth >= g_ed.viewboxX) {
-            isInViewbox = true;
-            editorDraw(
-                &g_ed,
-                termRow,
-                escWithLen(escSetStyle(colorBrightBlackFg))
-            );
-            for (size_t i = 0; i < width + cpWidth - g_ed.viewboxX; i++) {
-                editorDraw(&g_ed, termRow, "<", 1);
-            }
-            editorDraw(
-                &g_ed,
-                termRow,
-                escWithLen(escSetStyle(styleDefault))
-            );
-            width = 0;
-            viewboxOffset = i + ucdCh8CPLen(cp);
-            continue;
-        }
-        if (width + cpWidth > g_ed.cols) {
-            line.len = i;
-            break;
-        }
-        width += cpWidth;
-    }
-    if (!isInViewbox) {
-        return;
-    }
-    editorDraw(
-        &g_ed,
-        termRow,
-        (const char *)(line.buf + viewboxOffset),
-        line.len - viewboxOffset
-    );
-}
-
 void refreshScreen(void) {
     bool rowsChanged, colsChanged;
     editorUpdateSize(&g_ed, &rowsChanged, &colsChanged);
 
     editorDraw(
         &g_ed, 0,
-        escWithLen(
+        sLen(
             escScreenClear
             escCursorHide
             escCursorSetPos("", "")
         )
     );
 
-    for (uint16_t i = 0; i < g_ed.rows; i++) {
-        if (i + g_ed.viewboxY < fileLineCount(&g_ed.file)) {
-            printLine(i + g_ed.viewboxY, i);
-        } else if (g_ed.file.contentLen == 0 && i == g_ed.rows / 2) {
-            editorDraw(&g_ed, i, "~", 2);
-            StrView msg = {
-                (const UcdCh8 *)escWithLen("Neve editor prototype")
-            };
+    renderFile(&g_ed);
 
-            for (
-                size_t pad = 1, tot = (g_ed.cols - msg.len) >> 1;
-                pad < tot;
-                pad++
-            ) {
-                editorDraw(&g_ed, i, " ", 1);
-            }
-            editorDraw(&g_ed, i, (char *)msg.buf, msg.len);
-        } else {
-            editorDraw(&g_ed, i, "~", 1);
-        }
-    }
-    editorDraw(&g_ed, g_ed.rows - 1, escWithLen(escCursorShow));
-
+    editorDraw(&g_ed, g_ed.rows - 1, sLen(escCursorShow));
     editorDrawEnd(&g_ed);
 }
 

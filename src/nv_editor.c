@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <string.h>
 
 #include "nv_editor.h"
 #include "nv_escapes.h"
 #include "nv_file.h"
 #include "nv_mem.h"
+#include "nv_render.h"
 #include "nv_term.h"
 
 #define FmtBufSize 2048
@@ -17,7 +19,7 @@ void editorInit(Editor *ed) {
     ed->cols = 0;
     ed->rowBuffers = NULL;
     (void)strInit(&ed->screenBuf, 0);
-    termWrite(escWithLen(escCursorShapeStillBar));
+    termWrite(sLen(escCursorShapeStillBar));
     fileInitEmpty(&ed->file);
     ed->viewboxX = 0;
     ed->viewboxY = 0;
@@ -109,7 +111,7 @@ bool editorUpdateSize(Editor *ed, bool *outRowsChanged, bool *outColsChanged) {
     return true;
 }
 
-bool editorDraw(Editor *ed, uint16_t rowIdx, const char *buf, size_t len) {
+bool editorDraw(Editor *ed, uint16_t rowIdx, const UcdCh8 *buf, size_t len) {
     assert(rowIdx < ed->rows);
     StrView sv = { .buf = (const UcdCh8 *)buf, .len = len };
     strAppend(&ed->rowBuffers[rowIdx].buf, &sv);
@@ -122,7 +124,7 @@ bool editorDrawFmt(Editor *ed, uint16_t rowIdx, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     int len = vsnprintf(buf, FmtBufSize, fmt, args);
-    return editorDraw(ed, rowIdx, buf, len);
+    return editorDraw(ed, rowIdx, (UcdCh8 *)buf, len);
 }
 
 bool editorDrawEnd(Editor *ed) {
@@ -179,22 +181,8 @@ void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy) {
     } else {
         size_t baseIdx = fileGetLineChIdx(&ed->file, endY);
         size_t width = 0;
-        UcdCP cp;
-        ptrdiff_t lineIdx = -1;
-        for (
-            lineIdx = strViewNext(&line, lineIdx, &cp);
-            lineIdx != -1;
-            lineIdx = strViewNext(&line, lineIdx, &cp)
-        ) {
-            if (cp == '\n') {
-                break;
-            }
-            uint8_t cpWidth = ucdCPWidth(cp);
-            if (width + cpWidth > (size_t)endX) {
-                break;
-            }
-            width += cpWidth;
-        }
+        StrView slice = visualSlice(&line, 0, endX, NULL, &width);
+        size_t lineIdx = slice.buf - line.buf;
         endX = width;
         ed->fileCurIdx = baseIdx + lineIdx;
     }

@@ -4,8 +4,8 @@
 // Maximum value for numbers in escape sequences
 #define escNumMax 32767
 
-// Get an escape sequence and its length comma separated
-#define escWithLen(esc) (esc), sizeof(esc) - 1
+// Expand to a string literal and its length comma separated
+#define sLen(strLit) (UcdCh8 *)(strLit), sizeof(strLit) - 1
 
 // Clear the screen
 #define escScreenClear "\x1b[2J\x1b[3J\x1b[H"

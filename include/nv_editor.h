@@ -37,7 +37,7 @@ bool editorUpdateSize(Editor *ed, bool *outRowsChanged, bool *outColsChanged);
 // Each call before `editorDrawEnd` appends the contents of buf.
 // After `editorDrawEnd` the underlying buffer is cleared and the screen is
 // updated only if new content is added to the line.
-bool editorDraw(Editor *ed, uint16_t rowIdx, const char *buf, size_t len);
+bool editorDraw(Editor *ed, uint16_t rowIdx, const UcdCh8 *buf, size_t len);
 // The same as `editorDraw` but with a printf-style format.
 bool editorDrawFmt(Editor *ed, uint16_t rowIdx, const char *fmt, ...);
 // Finish drawing and update the screen.
