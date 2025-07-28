@@ -13,13 +13,13 @@
 // |  U+10000 | U+10FFFF | 11110xxx | 10xxxxxx | 10xxxxxx | 10xxxxxx |
 
 // Mask for the data of the first byte of a 2-byte character sequence
-#define UTF8_ByteMask2 0b00011111
+#define UTF8_ByteMask2 0x1f // 0b00011111
 // Mask for the data of the first byte of a 3-byte character sequence
-#define UTF8_ByteMask3 0b00001111
+#define UTF8_ByteMask3 0x0f // 0b00001111
 // Mask for the data of the first byte of a 4-byte character sequence
-#define UTF8_ByteMask4 0b00000111
+#define UTF8_ByteMask4 0x07 // 0b00000111
 // Mask for the data of following bytes in a character sequence
-#define UTF8_ByteMaskX 0b00111111
+#define UTF8_ByteMaskX 0x3f // 0b00111111
 
 #define DECODING_ERROR_CH 0xfffd
 
@@ -86,17 +86,17 @@ size_t ucdCh16StrToCh8Str(
         } else if (ch <= 0x7f && bufLen - bufIdx > 1) {
             buf[bufIdx++] = (UcdCh8)ch;
         } else if (ch <= 0x7ff && bufLen - bufIdx > 2) {
-            buf[bufIdx++] = 0b11000000 | (UcdCh8)(ch >> 6);
-            buf[bufIdx++] = 0b10000000 | (UcdCh8)(ch & 0x3f);
+            buf[bufIdx++] = 0xc0 | (UcdCh8)(ch >> 6);
+            buf[bufIdx++] = 0x80 | (UcdCh8)(ch & 0x3f);
         } else if (ch <= 0xffff && bufLen - bufIdx > 3) {
-            buf[bufIdx++] = 0b11100000 | (UcdCh8)(ch >> 12);
-            buf[bufIdx++] = 0b10000000 | (UcdCh8)(ch >> 6 & 0x3f);
-            buf[bufIdx++] = 0b10000000 | (UcdCh8)(ch & 0x3f);
+            buf[bufIdx++] = 0xe0 | (UcdCh8)(ch >> 12);
+            buf[bufIdx++] = 0x80 | (UcdCh8)(ch >> 6 & 0x3f);
+            buf[bufIdx++] = 0x80 | (UcdCh8)(ch & 0x3f);
         } else if (ch <= 0x10ffff && bufLen - bufIdx > 4) {
-            buf[bufIdx++] = 0b11110000 | (UcdCh8)(ch >> 18);
-            buf[bufIdx++] = 0b10000000 | (UcdCh8)(ch >> 12 & 0x3f);
-            buf[bufIdx++] = 0b10000000 | (UcdCh8)(ch >> 6 & 0x3f);
-            buf[bufIdx++] = 0b10000000 | (UcdCh8)(ch & 0x3f);
+            buf[bufIdx++] = 0xf0 | (UcdCh8)(ch >> 18);
+            buf[bufIdx++] = 0x80 | (UcdCh8)(ch >> 12 & 0x3f);
+            buf[bufIdx++] = 0x80 | (UcdCh8)(ch >> 6 & 0x3f);
+            buf[bufIdx++] = 0x80 | (UcdCh8)(ch & 0x3f);
         } else
             break;
     }
@@ -126,7 +126,7 @@ size_t ucdCh8StrToCh16Str(
         case 2:
             if (
                 strIdx == strLen
-                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0b10000000
+                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0x80
             ) {
                 ch = DECODING_ERROR_CH;
                 break;
@@ -138,8 +138,8 @@ size_t ucdCh8StrToCh16Str(
         case 3:
             if (
                 strIdx >= strLen - 1
-                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0b10000000
-                || (str[strIdx + 1] & (~UTF8_ByteMaskX)) != 0b10000000
+                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0x80
+                || (str[strIdx + 1] & (~UTF8_ByteMaskX)) != 0x80
             ) {
                 ch = DECODING_ERROR_CH;
                 break;
@@ -155,9 +155,9 @@ size_t ucdCh8StrToCh16Str(
         case 4:
             if (
                 strIdx >= strLen - 2
-                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0b10000000
-                || (str[strIdx + 1] & (~UTF8_ByteMaskX)) != 0b10000000
-                || (str[strIdx + 2] & (~UTF8_ByteMaskX)) != 0b10000000
+                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0x80
+                || (str[strIdx + 1] & (~UTF8_ByteMaskX)) != 0x80
+                || (str[strIdx + 2] & (~UTF8_ByteMaskX)) != 0x80
             ) {
                 ch = DECODING_ERROR_CH;
                 break;
@@ -203,9 +203,9 @@ size_t ucdCh8StrToCh16Str(
 
 size_t ucdCh8RunLen(UcdCh8 byte0) {
     return (byte0 < 0x80)
-         + 2*((byte0 & ~UTF8_ByteMask2) == 0b11000000)*(byte0 >= 0xc2)
-         + 3*((byte0 & ~UTF8_ByteMask3) == 0b11100000)
-         + 4*((byte0 & ~UTF8_ByteMask4) == 0b11110000)*(byte0 <= 0xf4);
+         + 2*((byte0 & ~UTF8_ByteMask2) == 0xc0)*(byte0 >= 0xc2)
+         + 3*((byte0 & ~UTF8_ByteMask3) == 0xe0)
+         + 4*((byte0 & ~UTF8_ByteMask4) == 0xf0)*(byte0 <= 0xf4);
 }
 
 size_t ucdCh8CPLen(UcdCP ch) {

@@ -5,7 +5,6 @@
 #include "nv_escapes.h"
 #include "nv_file.h"
 #include "nv_term.h"
-#include "nv_udb.h"
 
 bool initNeve(void) {
     if (!termInit()) {

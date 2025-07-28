@@ -26,6 +26,12 @@ add_executable(neve
     src/nv_unicode.c
 )
 
+if(MSVC)
+    target_compile_options(neve PRIVATE /W4)
+else()
+    target_compile_options(neve PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 enable_testing()
 
 add_subdirectory(tests)

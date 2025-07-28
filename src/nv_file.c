@@ -223,7 +223,7 @@ void fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len) {
 
     // Offset the indices after the data
     size_t lineIdx = fileFindLine_(file, idx);
-    for (int i = lineIdx; i < file->linesLen; i++) {
+    for (size_t i = lineIdx; i < file->linesLen; i++) {
         lines[i] += len;
     }
 

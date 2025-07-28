@@ -190,7 +190,7 @@ void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy) {
                 break;
             }
             uint8_t cpWidth = ucdCPWidth(cp);
-            if (width + cpWidth > endX) {
+            if (width + cpWidth > (size_t)endX) {
                 break;
             }
             width += cpWidth;
