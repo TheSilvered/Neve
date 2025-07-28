@@ -23,6 +23,7 @@ void editorInit(Editor *ed) {
     ed->viewboxY = 0;
     ed->curX = 0;
     ed->curY = 0;
+    ed->baseCurX = 0;
     ed->fileCurIdx = 0;
     ed->running = true;
 }
@@ -163,8 +164,15 @@ void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy) {
 
     ed->curY = endY;
 
+    ptrdiff_t endX = 0;
+    if (dx != 0) {
+        endX = (ptrdiff_t)ed->curX + dx;
+    } else {
+        endX = ed->baseCurX;
+    }
+
     StrView line = fileGetLine(&ed->file, endY);
-    ptrdiff_t endX = (ptrdiff_t)ed->curX + dx;
+
     if (endX < 0) {
         ed->fileCurIdx = fileGetLineChIdx(&ed->file, endY);
         endX = 0;
@@ -192,6 +200,9 @@ void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy) {
     }
 
     ed->curX = endX;
+    if (dx != 0) {
+        ed->baseCurX = ed->curX;
+    }
 
     editorUpdateViewbox_(ed);
 }

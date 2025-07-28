@@ -17,6 +17,7 @@ typedef struct Editor {
     Str screenBuf; // Buffer for screen printing.
     File file; // Opened file.
     size_t curX, curY; // Position of the cursor.
+    size_t baseCurX; // Column the cursor goes to if possible.
     size_t fileCurIdx; // Cursor position in the file.
     size_t viewboxX; // Horizontal scrolling.
     size_t viewboxY; // Vertical scrolling.
