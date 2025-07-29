@@ -11,7 +11,7 @@
 // `outWidth` is the visual width of the returned slice.
 // The slice will stop at any newline characters without including them.
 StrView visualSlice(
-    StrView *str,
+    const StrView *str,
     size_t visualStart,
     ptrdiff_t maxVisualLength,
     uint8_t tabStop,

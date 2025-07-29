@@ -37,25 +37,25 @@ FileIOResult fileInitOpen(File *file, const char *path);
 void fileDestroy(File *file);
 
 // Get the number of lines in a file
-size_t fileLineCount(File *file);
+size_t fileLineCount(const File *file);
 
 // Get the line of a file.
 // `lineIdx == 0` is the first line.
 // Return value has `.buf == NULL` if the line is out of bounds.
-StrView fileGetLine(File *file, size_t lineIdx);
+StrView fileGetLine(const File *file, size_t lineIdx);
 
 // Get a pointer to the first character of a line.
 // `lineIdx == 0` is the first line.
 // Return NULL if the line is out of bounds.
-UcdCh8 *fileGetLinePtr(File *file, size_t lineIdx);
+UcdCh8 *fileGetLinePtr(const File *file, size_t lineIdx);
 
 // Get the index to the first character of a line inside `file->content`.
 // `lineIdx == 0` is the first line.
 // Return -1 if the line is out of bounds.
-ptrdiff_t fileGetLineChIdx(File *file, size_t lineIdx);
+ptrdiff_t fileGetLineChIdx(const File *file, size_t lineIdx);
 
 // Insert data into the file at position `idx`.
-void fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len);
+void fileInsertData(File *file, size_t idx, const UcdCh8 *data, size_t len);
 
 // TODO: Save the contents of a file to the disk
 // void fileSave(File *file);

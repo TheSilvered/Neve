@@ -82,7 +82,7 @@ void strBufClear(StrBuf *sb);
 //     idx = strViewNext(&sv, idx, &cp)
 // ) { ... }
 // ```
-ptrdiff_t strViewNext(StrView *sv, ptrdiff_t idx, UcdCP *outCP);
+ptrdiff_t strViewNext(const StrView *sv, ptrdiff_t idx, UcdCP *outCP);
 
 // Iterate through the codepoints of a `StrView` backwards.
 // Set `idx` to -1 to begin iterating and feed the return value of the function
@@ -97,7 +97,7 @@ ptrdiff_t strViewNext(StrView *sv, ptrdiff_t idx, UcdCP *outCP);
 //     i = strViewPrev(&sv, i, &cp)
 // ) { ... }
 // ```
-ptrdiff_t strViewPrev(StrView *sv, ptrdiff_t idx, UcdCP *outCP);
+ptrdiff_t strViewPrev(const StrView *sv, ptrdiff_t idx, UcdCP *outCP);
 
 #ifdef _WIN32
 // Windows only. Temporary wchar_t string from char.

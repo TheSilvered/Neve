@@ -171,7 +171,7 @@ void strBufClear(StrBuf *sb) {
     sb->len = 0;
 }
 
-ptrdiff_t strViewNext(StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
+ptrdiff_t strViewNext(const StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
     if (idx >= (ptrdiff_t)sv->len) {
         goto endReached;
     } else if (idx < 0) {
@@ -201,7 +201,7 @@ endReached:
     return -1;
 }
 
-ptrdiff_t strViewPrev(StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
+ptrdiff_t strViewPrev(const StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
     if (idx == 0) {
         goto endReached;
     } else if (idx < 0) {

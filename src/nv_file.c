@@ -107,11 +107,11 @@ void fileDestroy(File *file) {
     file->saved = false;
 }
 
-size_t fileLineCount(File *file) {
+size_t fileLineCount(const File *file) {
     return file->linesLen + 1;
 }
 
-StrView fileGetLine(File *file, size_t lineIdx) {
+StrView fileGetLine(const File *file, size_t lineIdx) {
     UcdCh8 *buf = fileGetLinePtr(file, lineIdx);
     if (buf == NULL) {
         StrView empty = {
@@ -133,7 +133,7 @@ StrView fileGetLine(File *file, size_t lineIdx) {
     return sv;
 }
 
-UcdCh8 *fileGetLinePtr(File *file, size_t lineIdx) {
+UcdCh8 *fileGetLinePtr(const File *file, size_t lineIdx) {
     ptrdiff_t idx = fileGetLineChIdx(file, lineIdx);
     if (idx == -1) {
         return NULL;
@@ -142,7 +142,7 @@ UcdCh8 *fileGetLinePtr(File *file, size_t lineIdx) {
     return file->content + idx;
 }
 
-ptrdiff_t fileGetLineChIdx(File *file, size_t lineIdx) {
+ptrdiff_t fileGetLineChIdx(const File *file, size_t lineIdx) {
     if (lineIdx > file->linesLen) {
         return -1;
     }
@@ -161,7 +161,7 @@ static void fileResizeLines_(File *file, size_t requiredLen) {
     FILE_ARR_RESIZE_IMPL_(lines)
 }
 
-static size_t fileFindLine_(File *file, size_t fileIdx) {
+static size_t fileFindLine_(const File *file, size_t fileIdx) {
     if (file->linesLen == 0 || file->lines[0] > fileIdx) {
         return 0;
     } else if (fileIdx == file->contentLen) {
@@ -185,7 +185,7 @@ static size_t fileFindLine_(File *file, size_t fileIdx) {
     return lo + 1;
 }
 
-void fileInsertData(File *file, size_t idx, UcdCh8 *data, size_t len) {
+void fileInsertData(File *file, size_t idx, const UcdCh8 *data, size_t len) {
     size_t lineCount = 0;
     size_t trueLen = len;
     for (size_t i = 0; i < len; i++) {

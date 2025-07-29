@@ -2,7 +2,7 @@
 #include "nv_render.h"
 
 StrView visualSlice(
-    StrView *str,
+    const StrView *str,
     size_t visualStart,
     ptrdiff_t maxVisualLength,
     uint8_t tabStop,
