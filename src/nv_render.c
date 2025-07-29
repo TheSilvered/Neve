@@ -4,7 +4,7 @@
 StrView visualSlice(
     StrView *str,
     size_t visualStart,
-    size_t maxVisualLength,
+    ptrdiff_t maxVisualLength,
     size_t *outStartWidth,
     size_t *outWidth
 ) {
@@ -40,7 +40,11 @@ StrView visualSlice(
             sliceStartOffset = i + ucdCh8CPLen(cp);
             continue;
         }
-        if (isInSlice && width + cpWidth > maxVisualLength) {
+        if (
+            isInSlice
+            && maxVisualLength >= 0
+            && width + cpWidth > (size_t)maxVisualLength
+        ) {
             slice.len = i;
             break;
         }

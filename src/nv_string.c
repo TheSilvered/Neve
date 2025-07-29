@@ -201,6 +201,35 @@ endReached:
     return -1;
 }
 
+ptrdiff_t strViewPrev(StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
+    if (idx == 0) {
+        goto endReached;
+    } else if (idx < 0) {
+        idx = sv->len;
+    }
+    idx--;
+    while (idx >= 0 && ucdCh8RunLen(sv->buf[idx]) == 0) {
+        idx--;
+    }
+    if (idx < 0) {
+        goto endReached;
+    }
+    size_t runLen = ucdCh8RunLen(sv->buf[idx]);
+    if (runLen == 0 || idx + runLen > sv->len) {
+        goto endReached;
+    }
+    if (outCP != NULL) {
+        *outCP = ucdCh8ToCP(sv->buf + idx);
+    }
+    return idx;
+
+endReached:
+    if (outCP != NULL) {
+        *outCP = -1;
+    }
+    return -1;
+}
+
 #ifdef _WIN32
 #include "nv_unicode.h"
 

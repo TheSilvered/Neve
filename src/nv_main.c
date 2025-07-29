@@ -71,19 +71,19 @@ void handleKey(int32_t key) {
         break;
     case TermKey_ArrowUp:
     case 'i':
-        editorMoveCursor(&g_ed, 0, -1);
+        editorMoveCursorY(&g_ed, -1);
         break;
     case TermKey_ArrowDown:
     case 'k':
-        editorMoveCursor(&g_ed, 0, 1);
+        editorMoveCursorY(&g_ed, 1);
         break;
     case TermKey_ArrowLeft:
     case 'j':
-        editorMoveCursor(&g_ed, -1, 0);
+        editorMoveCursorX(&g_ed, -1);
         break;
     case TermKey_ArrowRight:
     case 'l':
-        editorMoveCursor(&g_ed, 1, 0);
+        editorMoveCursorX(&g_ed, 1);
         break;
     default:
         break;

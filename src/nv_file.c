@@ -123,6 +123,8 @@ StrView fileGetLine(File *file, size_t lineIdx) {
     UcdCh8 *lineEnd = fileGetLinePtr(file, lineIdx + 1);
     if (lineEnd == NULL) {
         lineEnd = file->content + file->contentLen;
+    } else {
+        lineEnd--; // Remove newline
     }
     StrView sv = {
         .buf = buf,

@@ -43,7 +43,9 @@ bool editorDrawFmt(Editor *ed, uint16_t rowIdx, const char *fmt, ...);
 // Finish drawing and update the screen.
 // Only edited lines are updated.
 bool editorDrawEnd(Editor *ed);
-// Move the cursor by `dx` columns and `dy` rows.
-void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy);
+// Move the cursor by `dx` characters in the current line.
+void editorMoveCursorX(Editor *ed, ptrdiff_t dx);
+// Move the cursor by `dy` lines.
+void editorMoveCursorY(Editor *ed, ptrdiff_t dy);
 
 #endif // !NV_EDITOR_H_

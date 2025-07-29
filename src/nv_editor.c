@@ -153,8 +153,64 @@ bool editorDrawEnd(Editor *ed) {
     return true;
 }
 
-void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy) {
-    // Execute first the vertical movement and then the horizontal movement
+void editorMoveCursorX(Editor *ed, ptrdiff_t dx) {
+    if (dx == 0) {
+        return;
+    }
+
+    // Move the cursor by dx characters, it may be more than dx columns.
+
+    size_t baseLineIdx = fileGetLineChIdx(&ed->file, ed->curY);
+    size_t lineIdx = ed->fileCurIdx - baseLineIdx;
+    StrView line = fileGetLine(&ed->file, ed->curY);
+
+    if (dx > 0) {
+        ptrdiff_t i;
+        for (
+            i = strViewNext(&line, lineIdx, NULL);
+            i != -1;
+            i = strViewNext(&line, i, NULL)
+        ) {
+            if (--dx == 0) {
+                break;
+            }
+        }
+        if (i < 0) {
+            lineIdx = line.len;
+        } else {
+            lineIdx = i;
+        }
+    } else {
+        ptrdiff_t i;
+        for (
+            i = strViewPrev(&line, lineIdx, NULL);
+            i != -1;
+            i = strViewPrev(&line, i, NULL)
+        ) {
+            if (++dx == 0) {
+                break;
+            }
+        }
+        if (i < 0) {
+            lineIdx = 0;
+        } else {
+            lineIdx = i;
+        }
+    }
+
+    ed->fileCurIdx = baseLineIdx + lineIdx;
+    line.len = lineIdx;
+    (void)visualSlice(&line, 0, -1, NULL, &ed->curX);
+    ed->baseCurX = ed->curX;
+
+    editorUpdateViewbox_(ed);
+}
+
+void editorMoveCursorY(Editor *ed, ptrdiff_t dy) {
+    if (dy == 0) {
+        return;
+    }
+
     size_t lineCount = fileLineCount(&ed->file);
     ptrdiff_t endY = (ptrdiff_t)ed->curY + dy;
 
@@ -166,32 +222,10 @@ void editorMoveCursor(Editor *ed, ptrdiff_t dx, ptrdiff_t dy) {
 
     ed->curY = endY;
 
-    ptrdiff_t endX = 0;
-    if (dx != 0) {
-        endX = (ptrdiff_t)ed->curX + dx;
-    } else {
-        endX = ed->baseCurX;
-    }
-
-    StrView line = fileGetLine(&ed->file, endY);
-
-    if (endX < 0) {
-        ed->fileCurIdx = fileGetLineChIdx(&ed->file, endY);
-        endX = 0;
-    } else {
-        size_t baseIdx = fileGetLineChIdx(&ed->file, endY);
-        size_t width = 0;
-        StrView slice = visualSlice(&line, 0, endX, NULL, &width);
-        size_t lineIdx = slice.buf - line.buf;
-        endX = width;
-        ed->fileCurIdx = baseIdx + lineIdx;
-    }
-
-    ed->curX = endX;
-    if (dx != 0) {
-        ed->baseCurX = ed->curX;
-    }
+    size_t baseLineIdx = fileGetLineChIdx(&ed->file, endY);
+    StrView line = fileGetLine(&ed->file, ed->curY);
+    StrView slice = visualSlice(&line, 0, ed->baseCurX, NULL, &ed->curX);
+    ed->fileCurIdx = baseLineIdx + slice.len;
 
     editorUpdateViewbox_(ed);
 }
-

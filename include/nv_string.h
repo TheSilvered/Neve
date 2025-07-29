@@ -69,18 +69,35 @@ bool strBufAppend(StrBuf *sb, const StrView *sv);
 // Clear the contents of a string buffer.
 void strBufClear(StrBuf *sb);
 
-// TODO: add strViewNext tests
-
-// Iterate through the codepoints of a `StrView`
+// Iterate through the codepoints of a `StrView`.
+// Set `idx` to -1 to begin iterating and feed the return value of the function
+// as `idx` to continue iterating.
+// The iteration stops when the return value is `-1`.
+// The return value is the index of the first byte of the codepoint in `sv`.
 // Usage:
 // ```c
 // for (
-//     ptrdiff_t i = strViewNext(&sv, -1, &cp);
-//     i != -1;
-//     i = strViewNext(&sv, i, &cp)
+//     ptrdiff_t idx = strViewNext(&sv, -1, &cp);
+//     idx != -1;
+//     idx = strViewNext(&sv, idx, &cp)
 // ) { ... }
 // ```
 ptrdiff_t strViewNext(StrView *sv, ptrdiff_t idx, UcdCP *outCP);
+
+// Iterate through the codepoints of a `StrView` backwards.
+// Set `idx` to -1 to begin iterating and feed the return value of the function
+// as `idx` to continue iterating.
+// The iteration stops when the return value is `-1`.
+// The return value is the index of the first byte of the codepoint in `sv`.
+// Usage:
+// ```c
+// for (
+//     ptrdiff_t i = strViewPrev(&sv, -1, &cp);
+//     i != -1;
+//     i = strViewPrev(&sv, i, &cp)
+// ) { ... }
+// ```
+ptrdiff_t strViewPrev(StrView *sv, ptrdiff_t idx, UcdCP *outCP);
 
 #ifdef _WIN32
 // Windows only. Temporary wchar_t string from char.
