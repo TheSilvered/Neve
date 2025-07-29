@@ -12,15 +12,15 @@ typedef struct Row {
 
 // The state of the editor.
 typedef struct Editor {
-    uint16_t rows, cols; // Terminal resolution.
     Row *rowBuffers; // Rows array (length == .rows)
+    uint16_t rows, cols; // Terminal resolution.
+    uint16_t viewboxW, viewboxH; // Viewbox size.
     Str screenBuf; // Buffer for screen printing.
     File file; // Opened file.
     size_t curX, curY; // Position of the cursor.
     size_t baseCurX; // Column the cursor goes to if possible.
     size_t fileCurIdx; // Cursor position in the file.
-    size_t viewboxX; // Horizontal scrolling.
-    size_t viewboxY; // Vertical scrolling.
+    size_t scrollX, scrollY; // Scrolling.
     bool running; // If the editor is running.
 } Editor;
 
@@ -32,7 +32,9 @@ void editorInit(Editor *ed);
 // Deinitialize an editor.
 void editorQuit(Editor *ed);
 // Query the size of the terminal and update the editor accordingly.
-bool editorUpdateSize(Editor *ed, bool *outRowsChanged, bool *outColsChanged);
+bool editorUpdateSize(Editor *ed);
+// Set the size and update the viewbox.
+void editorSetViewboxSize(Editor *ed, uint16_t width, uint16_t height);
 // Queue content to be drawn on row `rowIdx`.
 // Each call before `editorDrawEnd` appends the contents of buf.
 // After `editorDrawEnd` the underlying buffer is cleared and the screen is

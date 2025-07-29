@@ -79,15 +79,15 @@ void renderLine_(Editor *ed, size_t fileLine, uint16_t termRow) {
 
     StrView slice = visualSlice(
         &line,
-        ed->viewboxX,
-        ed->cols,
+        ed->scrollX,
+        ed->viewboxW,
         &offsetX,
         &width
     );
 
-    if (offsetX > ed->viewboxX) {
+    if (offsetX > ed->scrollX) {
         editorDraw(ed, termRow, sLen(escSetStyle(colorBrightBlackFg)));
-        for (size_t i = 0; i < offsetX - ed->viewboxX; i++) {
+        for (size_t i = 0; i < offsetX - ed->scrollX; i++) {
             editorDraw(ed, termRow, sLen("<"));
         }
         editorDraw(ed, termRow, sLen(escSetStyle(styleDefault)));
@@ -103,7 +103,7 @@ void renderMessage_(Editor *ed, uint16_t rowIdx) {
     StrView msg = { sLen("Neve editor prototype") };
 
     for (
-        size_t pad = 1, tot = (ed->cols - msg.len) >> 1;
+        size_t pad = 1, tot = (ed->viewboxW - msg.len) >> 1;
         pad < tot;
         pad++
     ) {
@@ -113,13 +113,17 @@ void renderMessage_(Editor *ed, uint16_t rowIdx) {
 }
 
 void renderFile(Editor *ed) {
-    for (uint16_t i = 0; i < ed->rows; i++) {
-        if (i + ed->viewboxY < fileLineCount(&ed->file)) {
-            renderLine_(ed, i + ed->viewboxY, i);
-        } else if (ed->file.contentLen == 0 && i == ed->rows / 2) {
+    for (uint16_t i = 0; i < ed->viewboxH; i++) {
+        if (i + ed->scrollY < fileLineCount(&ed->file)) {
+            renderLine_(ed, i + ed->scrollY, i);
+        } else if (ed->file.contentLen == 0 && i == ed->viewboxH / 2) {
             renderMessage_(ed, i);
         } else {
             editorDraw(ed, i, sLen("~"));
         }
     }
+}
+
+void renderStatusBar(Editor *ed) {
+    editorDrawFmt(ed, ed->rows - 1, "%zi:%zi", ed->curY + 1, ed->curX + 1);
 }

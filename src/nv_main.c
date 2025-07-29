@@ -34,8 +34,9 @@ void quitNeve(void) {
 }
 
 void refreshScreen(void) {
-    bool rowsChanged, colsChanged;
-    editorUpdateSize(&g_ed, &rowsChanged, &colsChanged);
+    editorUpdateSize(&g_ed);
+    // Leave the last row for a status bar.
+    editorSetViewboxSize(&g_ed, g_ed.cols, g_ed.rows - 1);
 
     editorDraw(
         &g_ed, 0,
@@ -47,6 +48,7 @@ void refreshScreen(void) {
     );
 
     renderFile(&g_ed);
+    renderStatusBar(&g_ed);
 
     editorDraw(&g_ed, g_ed.rows - 1, sLen(escCursorShow));
     editorDrawEnd(&g_ed);

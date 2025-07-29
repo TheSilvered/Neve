@@ -19,5 +19,6 @@ StrView visualSlice(
 );
 
 void renderFile(Editor *ed);
+void renderStatusBar(Editor *ed);
 
 #endif // !NV_RENDER_H_

@@ -21,8 +21,8 @@ void editorInit(Editor *ed) {
     (void)strInit(&ed->screenBuf, 0);
     termWrite(sLen(escCursorShapeStillBar));
     fileInitEmpty(&ed->file);
-    ed->viewboxX = 0;
-    ed->viewboxY = 0;
+    ed->scrollX = 0;
+    ed->scrollY = 0;
     ed->curX = 0;
     ed->curY = 0;
     ed->baseCurX = 0;
@@ -73,42 +73,34 @@ bool editorSetRowCount_(Editor *ed, uint16_t count) {
 }
 
 void editorUpdateViewbox_(Editor *ed) {
-    if (ed->curY >= ed->rows + ed->viewboxY) {
-        ed->viewboxY = ed->curY - ed->rows + 1;
-    } else if (ed->curY < ed->viewboxY) {
-        ed->viewboxY = ed->curY;
+    if (ed->curY >= ed->viewboxH + ed->scrollY) {
+        ed->scrollY = ed->curY - ed->viewboxH + 1;
+    } else if (ed->curY < ed->scrollY) {
+        ed->scrollY = ed->curY;
     }
 
-    if (ed->curX >= ed->cols + ed->viewboxX) {
-        ed->viewboxX = ed->curX - ed->cols + 1;
-    } else if (ed->curX < ed->viewboxX) {
-        ed->viewboxX = ed->curX;
+    if (ed->curX >= ed->viewboxW + ed->scrollX) {
+        ed->scrollX = ed->curX - ed->viewboxW + 1;
+    } else if (ed->curX < ed->scrollX) {
+        ed->scrollX = ed->curX;
     }
 }
 
-bool editorUpdateSize(Editor *ed, bool *outRowsChanged, bool *outColsChanged) {
+bool editorUpdateSize(Editor *ed) {
     size_t rows, cols;
     if (!termSize(&rows, &cols)) {
-        if (outRowsChanged != NULL) {
-            *outRowsChanged = false;
-        }
-        if (outColsChanged != NULL) {
-            *outColsChanged = false;
-        }
         return false;
-    }
-    if (outRowsChanged != NULL) {
-        *outRowsChanged = rows != ed->rows;
-    }
-    if (outColsChanged != NULL) {
-        *outColsChanged = cols != ed->cols;
     }
     ed->cols = cols;
     editorSetRowCount_(ed, rows);
 
-    editorUpdateViewbox_(ed);
-
     return true;
+}
+
+void editorSetViewboxSize(Editor *ed, uint16_t width, uint16_t height) {
+    ed->viewboxW = width;
+    ed->viewboxH = height;
+    editorUpdateViewbox_(ed);
 }
 
 bool editorDraw(Editor *ed, uint16_t rowIdx, const UcdCh8 *buf, size_t len) {
@@ -140,8 +132,8 @@ bool editorDrawEnd(Editor *ed) {
         ed->rowBuffers[rowIdx].changed = false;
     }
 
-    uint16_t termCurX = (uint16_t)(ed->curX - ed->viewboxX) + 1;
-    uint16_t termCurY = (uint16_t)(ed->curY - ed->viewboxY) + 1;
+    uint16_t termCurX = (uint16_t)(ed->curX - ed->scrollX) + 1;
+    uint16_t termCurY = (uint16_t)(ed->curY - ed->scrollY) + 1;
 
     snprintf(posBuf, 32, escCursorSetPos("%u", "%u"), termCurY, termCurX);
     strAppendC(&ed->screenBuf, posBuf);
