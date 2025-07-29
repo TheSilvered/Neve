@@ -40,10 +40,12 @@ as constant.
 
 ```c
 // CORRECT
+
 // `strAppend` only reads `sv`, it does not modify it
 bool strAppend(Str *str, const StrView *sv)
 
 // INCORRECT
+
 bool strAppend(Str *str, StrView *sv)
 ```
 
@@ -53,6 +55,7 @@ Any return value that is ignored must be marked with a `void` cast.
 
 ```c
 // CORRECT
+
 #include <stdio.h>
 
 int main(void) {
@@ -61,6 +64,7 @@ int main(void) {
 }
 
 // INCORRECT
+
 #include <stdio.h>
 
 int main(void) {
@@ -79,7 +83,7 @@ Use 4-space intentation.
 
 Lines should be at most **80 characters long**. You can split lines at
 function calls or long operator chains. A line that is too long due to too many
-indentatio levels is a signal that the code should probably be re-written.
+indentation levels are a signal that the code should be refactored.
 
 ### Functions
 
@@ -96,6 +100,7 @@ ReallyLongReturnType reallyLongFunctionName(
 );
 
 // INCORRECT
+
 void myFunc( int32_t arg1, size_t arg2 );
 
 void myFunc(
