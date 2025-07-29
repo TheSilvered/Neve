@@ -1,12 +1,12 @@
-#include <stdio.h>
-#include <string.h>
+#include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
+#include <string.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
 #include <termios.h>
+#include <unistd.h>
 
 #include "nv_escapes.h"
 #include "nv_term.h"
@@ -242,7 +242,7 @@ bool termCursorSetPos(uint16_t x, uint16_t y) {
 
     size_t bufLen = snprintf(
         buf, CURSOR_POS_BUF_SIZE + 3,
-        escCursorSetPos("%zi", "%zi"), y, x
+        escCursorSetPos("%u", "%u"), y, x
     );
 
     if (bufLen == 0) {

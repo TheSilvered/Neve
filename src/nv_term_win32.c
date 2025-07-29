@@ -165,7 +165,6 @@ void termLogError(const char *msg) {
         break;
     }
     default:
-#pragma
         UNREACHABLE;
     }
 }
