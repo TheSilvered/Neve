@@ -134,7 +134,7 @@ bool termWrite(const void *buf, size_t size) {
     return true;
 }
 
-bool termSize(size_t *outRows, size_t *outCols) {
+bool termSize(uint16_t *outRows, uint16_t *outCols) {
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) {
         g_error.type = TermErrType_Errno;
@@ -149,7 +149,7 @@ bool termSize(size_t *outRows, size_t *outCols) {
     return true;
 }
 
-bool termCursorGetPos(size_t *outX, size_t *outY) {
+bool termCursorGetPos(uint16_t *outX, uint16_t *outY) {
     char buf[CURSOR_POS_BUF_SIZE];
     if (!termWrite(escCursorGetPos, 4)) {
         goto failure;
@@ -202,12 +202,14 @@ bool termCursorGetPos(size_t *outX, size_t *outY) {
     if (x <= 0) {
         goto failure_msg;
     }
+    assert(x <= escNumMax);
+    assert(y <= escNumMax);
 
     if (outX != NULL) {
-        *outX = (size_t)(x - 1);
+        *outX = (uint16_t)(x - 1);
     }
     if (outY != NULL) {
-        *outY = (size_t)(y - 1);
+        *outY = (uint16_t)(y - 1);
     }
 
     return true;
@@ -226,21 +228,21 @@ failure:
     return false;
 }
 
-bool termCursorSetPos(size_t x, size_t y) {
+bool termCursorSetPos(uint16_t x, uint16_t y) {
     char buf[CURSOR_POS_BUF_SIZE + 3];
     x++;
     y++;
 
-    if (x > UINT16_MAX) {
-        x = UINT16_MAX;
+    if (x < UINT16_MAX) {
+        x++;
     }
-    if (y > UINT16_MAX) {
-        y = UINT16_MAX;
+    if (y < UINT16_MAX) {
+        y++;
     }
 
     size_t bufLen = snprintf(
         buf, CURSOR_POS_BUF_SIZE + 3,
-        escCursorSetPos("%zi", "%zi") , y, x
+        escCursorSetPos("%zi", "%zi"), y, x
     );
 
     if (bufLen == 0) {

@@ -88,7 +88,7 @@ void editorUpdateViewbox_(Editor *ed) {
 }
 
 bool editorUpdateSize(Editor *ed) {
-    size_t rows, cols;
+    uint16_t rows, cols;
     if (!termSize(&rows, &cols)) {
         return false;
     }

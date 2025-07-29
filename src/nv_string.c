@@ -64,7 +64,7 @@ void strReserve(Str *str, size_t reserve) {
         return;
     }
 
-    size_t newCap = (str->cap + reserve + 1) * 1.5;
+    size_t newCap = (size_t)((str->cap + reserve + 1) * 1.5);
     str->buf = memChange(str->buf, newCap, sizeof(*str->buf));
     str->cap = newCap;
 }

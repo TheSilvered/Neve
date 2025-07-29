@@ -99,10 +99,10 @@ bool termWrite(const void *buf, size_t size);
 /************************************ Info ************************************/
 
 // Get the size of the terminal.
-bool termSize(size_t *outRows, size_t *outCols);
+bool termSize(uint16_t *outRows, uint16_t *outCols);
 // Get the cursor position, (0, 0) is the top left corner.
-bool termCursorGetPos(size_t *outX, size_t *outY);
+bool termCursorGetPos(uint16_t *outX, uint16_t *outY);
 // Set the cursor position, (0, 0) is the top left corner.
-bool termCursorSetPos(size_t x, size_t y);
+bool termCursorSetPos(uint16_t x, uint16_t y);
 
 #endif // !NV_TERM_H_

@@ -13,7 +13,7 @@
 #include "nv_unicode.h"
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#define UNREACHABLE do { __assume(0); abort(); } while (0)
+#define UNREACHABLE __assume(0)
 #elif defined(__clang__)
 #define UNREACHABLE __builtin_unreachable()
 #else
@@ -165,6 +165,7 @@ void termLogError(const char *msg) {
         break;
     }
     default:
+#pragma
         UNREACHABLE;
     }
 }
@@ -275,7 +276,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
         BOOL readResult = ReadConsoleW(
             g_consoleInput,
             readBuf + offsetOutBuf,
-            toRead,
+            (DWORD)toRead,
             &charsRead,
             NULL
         );
@@ -328,7 +329,7 @@ bool termWrite(const void *buf, size_t size) {
     return true;
 }
 
-bool termSize(size_t *outRows, size_t *outCols) {
+bool termSize(uint16_t *outRows, uint16_t *outCols) {
     CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
     if (GetConsoleScreenBufferInfo(g_consoleOutput, &bufferInfo) == FALSE) {
         g_error.type = TermErrType_Errno;
@@ -341,15 +342,15 @@ bool termSize(size_t *outRows, size_t *outCols) {
         return false;
     }
     if (outRows != NULL) {
-        *outRows = (size_t)bufferInfo.dwSize.Y;
+        *outRows = (uint16_t)bufferInfo.dwSize.Y;
     }
     if (outCols != NULL) {
-        *outCols = (size_t)bufferInfo.dwSize.X;
+        *outCols = (uint16_t)bufferInfo.dwSize.X;
     }
     return true;
 }
 
-bool termCursorGetPos(size_t *outX, size_t *outY) {
+bool termCursorGetPos(uint16_t *outX, uint16_t *outY) {
     CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
     if (GetConsoleScreenBufferInfo(g_consoleOutput, &bufferInfo) == FALSE) {
         g_error.type = TermErrType_Errno;
@@ -362,22 +363,22 @@ bool termCursorGetPos(size_t *outX, size_t *outY) {
         return false;
     }
     if (outX != NULL) {
-        *outX = (size_t)bufferInfo.dwCursorPosition.X;
+        *outX = (uint16_t)bufferInfo.dwCursorPosition.X;
     }
     if (outY != NULL) {
-        *outY = (size_t)bufferInfo.dwCursorPosition.Y;
+        *outY = (uint16_t)bufferInfo.dwCursorPosition.Y;
     }
     return true;
 }
 
-bool termCursorSetPos(size_t x, size_t y) {
+bool termCursorSetPos(uint16_t x, uint16_t y) {
     if (x > INT16_MAX) {
         x = INT16_MAX;
     }
     if (y > INT16_MAX) {
         y = INT16_MAX;
     }
-    COORD cursorPos = { .X = (SHORT)x, .Y = (SHORT)y };
+    COORD cursorPos = { .X = x, .Y = y };
     if (SetConsoleCursorPosition(g_consoleOutput, cursorPos) == FALSE) {
         g_error.type = TermErrType_Errno;
         return false;
