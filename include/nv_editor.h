@@ -21,6 +21,7 @@ typedef struct Editor {
     size_t baseCurX; // Column the cursor goes to if possible.
     size_t fileCurIdx; // Cursor position in the file.
     size_t scrollX, scrollY; // Scrolling.
+    uint16_t tabStop; // Stopping multiple for tab characters.
     bool running; // If the editor is running.
 } Editor;
 

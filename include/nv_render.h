@@ -14,6 +14,7 @@ StrView visualSlice(
     StrView *str,
     size_t visualStart,
     ptrdiff_t maxVisualLength,
+    uint8_t tabStop,
     size_t *outStartWidth,
     size_t *outWidth
 );

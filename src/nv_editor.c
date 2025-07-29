@@ -27,6 +27,7 @@ void editorInit(Editor *ed) {
     ed->curY = 0;
     ed->baseCurX = 0;
     ed->fileCurIdx = 0;
+    ed->tabStop = 8;
     ed->running = true;
 }
 
@@ -192,7 +193,7 @@ void editorMoveCursorX(Editor *ed, ptrdiff_t dx) {
 
     ed->fileCurIdx = baseLineIdx + lineIdx;
     line.len = lineIdx;
-    (void)visualSlice(&line, 0, -1, NULL, &ed->curX);
+    (void)visualSlice(&line, 0, -1, ed->tabStop, NULL, &ed->curX);
     ed->baseCurX = ed->curX;
 
     editorUpdateViewbox_(ed);
@@ -216,7 +217,14 @@ void editorMoveCursorY(Editor *ed, ptrdiff_t dy) {
 
     size_t baseLineIdx = fileGetLineChIdx(&ed->file, endY);
     StrView line = fileGetLine(&ed->file, ed->curY);
-    StrView slice = visualSlice(&line, 0, ed->baseCurX, NULL, &ed->curX);
+    StrView slice = visualSlice(
+        &line,
+        0,
+        ed->baseCurX,
+        ed->tabStop,
+        NULL,
+        &ed->curX
+    );
     ed->fileCurIdx = baseLineIdx + slice.len;
 
     editorUpdateViewbox_(ed);
