@@ -192,9 +192,23 @@ void editorMoveCursorX(Editor *ed, ptrdiff_t dx) {
     }
 
     ed->fileCurIdx = baseLineIdx + lineIdx;
-    line.len = lineIdx;
-    (void)visualSlice(&line, 0, -1, ed->tabStop, NULL, &ed->curX);
-    ed->baseCurX = ed->curX;
+
+    // Find the actual column of the cursor
+
+    line.len = lineIdx; // Get the width until lineIdx
+    size_t width = 0;
+    uint8_t tabStop = ed->tabStop;
+    UcdCP cp = -1;
+    for (
+        ptrdiff_t i = strViewNext(&line, -1, &cp);
+        i != -1;
+        i = strViewNext(&line, i, &cp)
+    ) {
+        width += ucdCPWidth(cp, tabStop, width);
+    }
+
+    ed->curX = width;
+    ed->baseCurX = width;
 
     editorUpdateViewbox_(ed);
 }
@@ -215,17 +229,27 @@ void editorMoveCursorY(Editor *ed, ptrdiff_t dy) {
 
     ed->curY = endY;
 
-    size_t baseLineIdx = fileGetLineChIdx(&ed->file, endY);
     StrView line = fileGetLine(&ed->file, ed->curY);
-    StrView slice = visualSlice(
-        &line,
-        0,
-        ed->baseCurX,
-        ed->tabStop,
-        NULL,
-        &ed->curX
-    );
-    ed->fileCurIdx = baseLineIdx + slice.len;
+    size_t baseLineIdx = fileGetLineChIdx(&ed->file, endY);
+    size_t lineIdx = line.len;
+
+    size_t width = 0;
+    uint8_t tabStop = ed->tabStop;
+    UcdCP cp = -1;
+    for (
+        ptrdiff_t i = strViewNext(&line, -1, &cp);
+        i != -1;
+        i = strViewNext(&line, i, &cp)
+    ) {
+        uint8_t chWidth = ucdCPWidth(cp, tabStop, width);
+        if (width + chWidth > ed->baseCurX) {
+            lineIdx = i;
+            break;
+        }
+        width += chWidth;
+    }
+    ed->curX = width;
+    ed->fileCurIdx = baseLineIdx + lineIdx;
 
     editorUpdateViewbox_(ed);
 }

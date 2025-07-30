@@ -1,89 +1,7 @@
 #include "nv_escapes.h"
 #include "nv_render.h"
 
-StrView visualSlice(
-    const StrView *str,
-    size_t visualStart,
-    ptrdiff_t maxVisualLength,
-    uint8_t tabStop,
-    size_t *outStartWidth,
-    size_t *outWidth
-) {
-    StrView slice = *str;
-
-    size_t startWidth = 0;
-    size_t width = 0;
-    bool isInSlice = visualStart == 0;
-    if (isInSlice && outStartWidth != NULL) {
-        *outStartWidth = 0;
-    }
-
-    size_t sliceStartOffset = 0;
-    UcdCP cp;
-
-    for (
-        ptrdiff_t i = strViewNext(str, -1, &cp);
-        i != -1;
-        i = strViewNext(str, i, &cp)
-    ) {
-        if (cp == '\n') {
-            slice.len = i;
-            break;
-        }
-
-        uint8_t cpWidth;
-        if (cp != '\t') {
-            cpWidth = ucdCPWidth(cp);
-        } else {
-            cpWidth = tabStop - ((width + startWidth) % tabStop);
-        }
-
-        if (!isInSlice && width + cpWidth >= visualStart) {
-            isInSlice = true;
-            startWidth = width + cpWidth;
-            width = 0;
-            sliceStartOffset = i + ucdCh8CPLen(cp);
-            continue;
-        }
-        if (
-            isInSlice
-            && maxVisualLength >= 0
-            && width
-                + cpWidth
-                + startWidth
-                - visualStart > (size_t)maxVisualLength
-        ) {
-            slice.len = i;
-            break;
-        }
-        width += cpWidth;
-    }
-
-    if (!isInSlice) {
-        if (outStartWidth != NULL) {
-            *outStartWidth = width;
-        }
-        if (outWidth != NULL) {
-            *outWidth = 0;
-        }
-        slice.buf = NULL;
-        slice.len = 0;
-        return slice;
-    }
-
-    if (outWidth != NULL) {
-        *outWidth = width;
-    }
-    if (outStartWidth != NULL) {
-        *outStartWidth = startWidth;
-    }
-
-    slice.buf += sliceStartOffset;
-    slice.len -= sliceStartOffset;
-    return slice;
-}
-
-void renderLine_(Editor *ed, size_t lineIdx, uint16_t termRow) {
+static void renderLine_(Editor *ed, size_t lineIdx, uint16_t termRow) {
     if (ed->viewboxW == 0) {
         return;
     }
@@ -113,12 +31,7 @@ void renderLine_(Editor *ed, size_t lineIdx, uint16_t termRow) {
         i != -1;
         i = strViewNext(&line, i, &cp)
     ) {
-        uint8_t chWidth;
-        if (cp == '\t') {
-            chWidth = tabStop - (width % tabStop);
-        } else {
-            chWidth = ucdCPWidth(cp);
-        }
+        uint8_t chWidth = ucdCPWidth(cp, tabStop, width);
         width += chWidth;
 
         if (width <= ed->scrollX) {
@@ -153,7 +66,7 @@ void renderLine_(Editor *ed, size_t lineIdx, uint16_t termRow) {
     }
 }
 
-void renderMessage_(Editor *ed, uint16_t rowIdx) {
+static void renderMessage_(Editor *ed, uint16_t rowIdx) {
     editorDraw(ed, rowIdx, sLen("~"));
     StrView msg = { sLen("Neve editor prototype") };
 

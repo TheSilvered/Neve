@@ -25,7 +25,8 @@ typedef UcdCh32 UcdCP;
 bool ucdIsCPValid(UcdCP cp);
 
 // Get the width of a character (based on the East_Asian_Width property).
-uint8_t ucdCPWidth(UcdCP cp);
+// If `currWidth` is `0` the width of `\t` will always be `tabStop`.
+uint8_t ucdCPWidth(UcdCP cp, uint8_t tabStop, size_t currWidth);
 
 // Translate a UTF16-encoded string to UTF8 adding a NUL character at the end.
 // Encoding errors in `str` are ignored.

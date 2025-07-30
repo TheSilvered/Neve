@@ -29,7 +29,11 @@ bool ucdIsCPValid(UcdCP cp) {
         && (cp < ucdHighSurrogateFirst || cp > ucdLowSurrogateLast);
 }
 
-uint8_t ucdCPWidth(UcdCP cp) {
+uint8_t ucdCPWidth(UcdCP cp, uint8_t tabStop, size_t currWidth) {
+    if (cp == '\t') {
+        return tabStop - (currWidth % tabStop);
+    }
+
     // Short path for ASCII printable characters
     if (cp >= ' ' && cp <= '~') {
         return 1;
