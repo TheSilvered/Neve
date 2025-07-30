@@ -84,7 +84,7 @@ FileIOResult fileInitOpen(File *file, const char *path) {
 
     do {
         bytesRead = fread(buf, 1, bufSize_, fp);
-        fileInsertData(file, file->contentLen, buf, bytesRead);
+        fileInsert(file, file->contentLen, buf, bytesRead);
     } while (bytesRead == bufSize_);
     (void)fclose(fp);
 #undef bufSize_
@@ -185,7 +185,7 @@ static size_t fileFindLine_(const File *file, size_t fileIdx) {
     return lo + 1;
 }
 
-void fileInsertData(File *file, size_t idx, const UcdCh8 *data, size_t len) {
+void fileInsert(File *file, size_t idx, const UcdCh8 *data, size_t len) {
     size_t lineCount = 0;
     size_t trueLen = len;
     for (size_t i = 0; i < len; i++) {
@@ -247,5 +247,44 @@ void fileInsertData(File *file, size_t idx, const UcdCh8 *data, size_t len) {
             lines[lineIdx++] = i + idx + 1;
             lineCount--;
         }
+    }
+}
+
+void fileRemove(File *file, size_t startIdx, size_t endIdx) {
+    if (startIdx >= endIdx) {
+        return;
+    }
+    assert(endIdx <= file->contentLen);
+
+    size_t lineCount = 0;
+    for (size_t i = startIdx; i < endIdx; i++) {
+        if (file->content[i] == '\n') {
+            lineCount++;
+        }
+    }
+
+    memmove(
+        file->content + startIdx,
+        file->content + endIdx,
+        file->contentLen - endIdx
+    );
+
+    file->contentLen -= endIdx - startIdx;
+    fileResizeContent_(file, file->contentLen);
+
+    size_t lineIdx = fileFindLine_(file, startIdx);
+
+    if (lineCount != 0) {
+        memmove(
+            file->lines + lineIdx,
+            file->lines + lineIdx + lineCount,
+            sizeof(*file->lines) * (file->linesLen - lineIdx - lineCount)
+        );
+        file->linesLen -= lineCount;
+        fileResizeLines_(file, file->linesLen);
+    }
+
+    for (size_t i = lineIdx; i < file->linesLen; i++) {
+        file->lines[i] -= endIdx - startIdx;
     }
 }

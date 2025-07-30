@@ -55,7 +55,9 @@ UcdCh8 *fileGetLinePtr(const File *file, size_t lineIdx);
 ptrdiff_t fileGetLineChIdx(const File *file, size_t lineIdx);
 
 // Insert data into the file at position `idx`.
-void fileInsertData(File *file, size_t idx, const UcdCh8 *data, size_t len);
+void fileInsert(File *file, size_t idx, const UcdCh8 *data, size_t len);
+// Remove data from `startIdx` included to `endIdx` excluded.
+void fileRemove(File *file, size_t startIdx, size_t endIdx);
 
 // TODO: Save the contents of a file to the disk
 // void fileSave(File *file);
