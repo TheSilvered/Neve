@@ -83,85 +83,72 @@ StrView visualSlice(
     return slice;
 }
 
-void renderLine_(Editor *ed, size_t fileLine, uint16_t termRow) {
-    StrView line = fileGetLine(&ed->file, fileLine);
-    size_t offsetX = 0;
-    size_t lineWidth = 0;
-
-    StrView slice = visualSlice(
-        &line,
-        ed->scrollX,
-        ed->viewboxW,
-        ed->tabStop,
-        &offsetX,
-        &lineWidth
-    );
-
-    if (offsetX > ed->scrollX) {
-        editorDrawFmt(
-            ed,
-            termRow,
-            escSetStyle(colorBrightBlackFg)
-            "<%*s"
-            escSetStyle(styleDefault),
-            offsetX - ed->scrollX - 1, "" // Padding with spaces
-        );
+void renderLine_(Editor *ed, size_t lineIdx, uint16_t termRow) {
+    if (ed->viewboxW == 0) {
+        return;
     }
-    UcdCP cp;
-    size_t width = offsetX;
+
+    StrView line = fileGetLine(&ed->file, lineIdx);
+
+    size_t width = 0;
+    size_t totWidth = ed->scrollX + ed->viewboxW;
+    uint8_t tabStop = ed->tabStop;
+
+    const char *tabFmt =
+        escSetStyle(colorBrightBlackFg)
+        "\xc2\xbb%*s" // »%*s
+        escSetStyle(styleDefault);
+    const char *startCutoffFmt =
+        escSetStyle(colorBrightBlackFg)
+        "<%*s"
+        escSetStyle(styleDefault);
+    const char *endCutoffFmt =
+        escSetStyle(colorBrightBlackFg)
+        "%*s>"
+        escSetStyle(styleDefault);
+
+    UcdCP cp = -1;
     for (
-        ptrdiff_t i = strViewNext(&slice, -1, &cp);
+        ptrdiff_t i = strViewNext(&line, -1, &cp);
         i != -1;
-        i = strViewNext(&slice, i, &cp)
+        i = strViewNext(&line, i, &cp)
     ) {
-        if (cp != '\t') {
-            editorDraw(ed, termRow, slice.buf + i, ucdCh8CPLen(cp));
-            width += ucdCPWidth(cp);
-            continue;
+        uint8_t chWidth;
+        if (cp == '\t') {
+            chWidth = tabStop - (width % tabStop);
+        } else {
+            chWidth = ucdCPWidth(cp);
         }
-        uint8_t tabWidth = ed->tabStop - (width % ed->tabStop);
-        editorDrawFmt(
-            ed,
-            termRow,
-            escSetStyle(colorBrightBlackFg)
-            "\xc2\xbb%*s" // "»%*s" in UTF8
-            escSetStyle(styleDefault),
-            tabWidth - 1, "" // Padding with spaces
-        );
-        width += tabWidth;
-    }
-    size_t actualWidth = lineWidth + offsetX - ed->scrollX;
+        width += chWidth;
 
-    // If there are other characters too wide to display
-    if (
-        actualWidth < ed->viewboxW
-        && slice.len + (slice.buf - line.buf) < line.len
-    ) {
-        // Safe since `slice` is a view into `line` and `slice.len` + the
-        // number of bytes between the start of `line.buf` and `slice.buf` is
-        // still smaller than the length of the line itself.
-        if (slice.buf[slice.len] == '\t') {
-            // Draw tabs normally
-            editorDraw(
-                ed,
-                termRow,
-                sLen(
-                    escSetStyle(colorBrightBlackFg)
-                    "\xc2\xbb" // "»" in UTF8
-                    escSetStyle(styleDefault)
-                )
-            );
-            actualWidth++;
-        }
-        if (ed->viewboxW - actualWidth >= 1) {
+        if (width <= ed->scrollX) {
+            continue;
+        } else if (width - chWidth < ed->scrollX) {
+            // Draw a gray '<' at the start if a character is cut off
             editorDrawFmt(
                 ed,
                 termRow,
-                escSetStyle(colorBrightBlackFg)
-                "%*s>"
-                escSetStyle(styleDefault),
-                ed->viewboxW - actualWidth - 1, "" // Padding with spaces
+                startCutoffFmt,
+                width - ed->scrollX - 1, ""
             );
+        } else if (width > totWidth) {
+            // Draw a gray '>' at the end if a character is cut off
+            // If the character is a tab it can just draw a '»'
+            editorDrawFmt(
+                ed,
+                termRow,
+                cp == '\t' ? tabFmt : endCutoffFmt,
+                totWidth + chWidth - width - 1, ""
+            );
+            break;
+        } else if (cp == '\t') {
+            editorDrawFmt(ed, termRow, tabFmt, chWidth - 1, "");
+        } else {
+            editorDraw(ed, termRow, line.buf + i, ucdCh8CPLen(cp));
+        }
+
+        if (width == totWidth) {
+            break;
         }
     }
 }
