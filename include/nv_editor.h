@@ -4,15 +4,20 @@
 #include "nv_file.h"
 #include "nv_string.h"
 
+typedef enum EditorMode {
+    EditorMode_Normal,
+    EditorMode_Insert
+} EditorMode;
+
 // A terminal row.
-typedef struct Row {
+typedef struct EditorRow {
     Str buf;
     bool changed;
-} Row;
+} EditorRow;
 
 // The state of the editor.
 typedef struct Editor {
-    Row *rowBuffers; // Rows array (length == .rows)
+    EditorRow *rowBuffers; // Rows array (length == .rows)
     uint16_t rows, cols; // Terminal resolution.
     uint16_t viewboxW, viewboxH; // Viewbox size.
     Str screenBuf; // Buffer for screen printing.
@@ -21,7 +26,8 @@ typedef struct Editor {
     size_t baseCurX; // Column the cursor goes to if possible.
     size_t fileCurIdx; // Cursor position in the file.
     size_t scrollX, scrollY; // Scrolling.
-    uint8_t tabStop; // Stopping multiple for tab characters.
+    uint8_t tabStop; // Stop multiple for tab characters.
+    EditorMode mode; // Current editor mode.
     bool running; // If the editor is running.
 } Editor;
 
@@ -50,5 +56,7 @@ bool editorDrawEnd(Editor *ed);
 void editorMoveCursorX(Editor *ed, ptrdiff_t dx);
 // Move the cursor by `dy` lines.
 void editorMoveCursorY(Editor *ed, ptrdiff_t dy);
+// Move the cursor by `diffIdx` characters.
+void editorMoveCursorIdx(Editor *ed, ptrdiff_t diffIdx);
 
 #endif // !NV_EDITOR_H_

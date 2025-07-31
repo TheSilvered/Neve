@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "nv_escapes.h"
 #include "nv_render.h"
 
@@ -6,7 +8,7 @@ static void renderLine_(Editor *ed, size_t lineIdx, uint16_t termRow) {
         return;
     }
 
-    StrView line = fileGetLine(&ed->file, lineIdx);
+    StrView line = fileLine(&ed->file, lineIdx);
 
     size_t width = 0;
     size_t totWidth = ed->scrollX + ed->viewboxW;
@@ -93,5 +95,24 @@ void renderFile(Editor *ed) {
 }
 
 void renderStatusBar(Editor *ed) {
-    editorDrawFmt(ed, ed->rows - 1, "%zi:%zi", ed->curY + 1, ed->curX + 1);
+    const char *mode;
+    switch (ed->mode) {
+    case EditorMode_Insert:
+        mode = "Insert";
+        break;
+    case EditorMode_Normal:
+        mode = "Normal";
+        break;
+    default:
+        assert(false);
+    }
+
+    editorDrawFmt(
+        ed,
+        ed->rows - 1,
+        "%zi:%zi %s",
+        ed->curY + 1,
+        ed->curX + 1,
+        mode
+    );
 }

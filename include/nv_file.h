@@ -5,7 +5,7 @@
 
 // A file opened in the editor.
 // `lines` is an array of indices in `content` of the start of each line.
-// Do not read `lines` directly. Use `fileGetLine`, `fileGetLinePtr` or
+// Do not read `lines` directly. Use `fileLine`, `fileLinePtr` or
 // `fileGetLineIdx`.
 typedef struct File {
     Str path;
@@ -36,23 +36,25 @@ FileIOResult fileInitOpen(File *file, const char *path);
 // Destroy the contents of a file
 void fileDestroy(File *file);
 
+// Get the content of a file as a string view.
+StrView fileContent(const File *file);
+
 // Get the number of lines in a file
 size_t fileLineCount(const File *file);
-
+// Get the line where `fileIdx` is.
+size_t fileLineFromFileIdx(const File *file, size_t fileIdx);
 // Get the line of a file.
 // `lineIdx == 0` is the first line.
 // Return value has `.buf == NULL` if the line is out of bounds.
-StrView fileGetLine(const File *file, size_t lineIdx);
-
+StrView fileLine(const File *file, size_t lineIdx);
 // Get a pointer to the first character of a line.
 // `lineIdx == 0` is the first line.
 // Return NULL if the line is out of bounds.
-UcdCh8 *fileGetLinePtr(const File *file, size_t lineIdx);
-
+UcdCh8 *fileLinePtr(const File *file, size_t lineIdx);
 // Get the index to the first character of a line inside `file->content`.
 // `lineIdx == 0` is the first line.
 // Return -1 if the line is out of bounds.
-ptrdiff_t fileGetLineChIdx(const File *file, size_t lineIdx);
+ptrdiff_t fileLineChIdx(const File *file, size_t lineIdx);
 
 // Insert data into the file at position `idx`.
 void fileInsert(File *file, size_t idx, const UcdCh8 *data, size_t len);

@@ -6,6 +6,7 @@
 #include "nv_file.h"
 #include "nv_render.h"
 #include "nv_term.h"
+#include "nv_udb.h"
 
 bool initNeve(void) {
     if (!termInit()) {
@@ -66,30 +67,94 @@ void loadOrCreateFile(const char *path) {
     }
 }
 
-void handleKey(int32_t key) {
+void handleKeyNormalMode(int32_t key) {
     switch (key) {
     case TermKey_CtrlC:
         g_ed.running = false;
-        break;
+        return;
     case TermKey_ArrowUp:
     case 'i':
         editorMoveCursorY(&g_ed, -1);
-        break;
+        return;
     case TermKey_ArrowDown:
     case 'k':
         editorMoveCursorY(&g_ed, 1);
-        break;
+        return;
     case TermKey_ArrowLeft:
     case 'j':
         editorMoveCursorX(&g_ed, -1);
-        break;
+        return;
     case TermKey_ArrowRight:
     case 'l':
         editorMoveCursorX(&g_ed, 1);
+        return;
+    case 'a':
+        g_ed.mode = EditorMode_Insert;
+    default:
+        return;
+    }
+}
+
+void handleKeyInsertMode(int32_t key) {
+    switch (key) {
+    case TermKey_CtrlC:
+        g_ed.running = false;
+        return;
+    case TermKey_ArrowUp:
+        editorMoveCursorY(&g_ed, -1);
+        return;
+    case TermKey_ArrowDown:
+        editorMoveCursorY(&g_ed, 1);
+        return;
+    case TermKey_ArrowLeft:
+        editorMoveCursorX(&g_ed, -1);
+        return;
+    case TermKey_ArrowRight:
+        editorMoveCursorX(&g_ed, 1);
+        return;
+    case TermKey_Escape:
+        g_ed.mode = EditorMode_Normal;
+        return;
+    case TermKey_Backspace: {
+        if (g_ed.fileCurIdx == 0) {
+            return;
+        }
+        StrView content = fileContent(&g_ed.file);
+        size_t startIdx = strViewPrev(&content, g_ed.fileCurIdx, NULL);
+        size_t endIdx = g_ed.fileCurIdx;
+        // Edit content only _after_ the cursor otherwise it could end up in
+        // the middle of a multibyte sequence.
+        editorMoveCursorIdx(&g_ed, -1);
+        fileRemove(&g_ed.file, startIdx, endIdx);
+        return;
+    }
+    case '\r':
+        key = '\n';
         break;
     default:
         break;
     }
+
+    if (key < 0 || key > UcdCPMax) {
+        return;
+    }
+
+    UdbCPInfo info = udbGetCPInfo((UcdCP)key);
+    // Do not insert control characters
+    if (
+        key != '\n'
+        && info.category >= UdbCategory_C_First
+        && info.category <= UdbCategory_C_Last
+    ) {
+        return;
+    }
+
+    UcdCh8 buf[4];
+    size_t len = ucdCh8FromCP((UcdCP)key, buf);
+    // Edit content only _after_ the cursor otherwise it could end up in
+    // the middle of a multibyte sequence.
+    fileInsert(&g_ed.file, g_ed.fileCurIdx, buf, len);
+    editorMoveCursorIdx(&g_ed, 1);
 }
 
 // TODO: use wmain on Windows
@@ -114,7 +179,15 @@ int main(int argc, char **argv) {
             termLogError("failed to read the key");
             return 1;
         }
-        handleKey(key);
+
+        switch (g_ed.mode) {
+        case EditorMode_Normal:
+            handleKeyNormalMode(key);
+            break;
+        case EditorMode_Insert:
+            handleKeyInsertMode(key);
+            break;
+        }
     }
 
     quitNeve();

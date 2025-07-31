@@ -28,6 +28,7 @@ void editorInit(Editor *ed) {
     ed->baseCurX = 0;
     ed->fileCurIdx = 0;
     ed->tabStop = 8;
+    ed->mode = EditorMode_Normal;
     ed->running = true;
 }
 
@@ -153,9 +154,9 @@ void editorMoveCursorX(Editor *ed, ptrdiff_t dx) {
 
     // Move the cursor by dx characters, it may be more than dx columns.
 
-    size_t baseLineIdx = fileGetLineChIdx(&ed->file, ed->curY);
+    size_t baseLineIdx = fileLineChIdx(&ed->file, ed->curY);
     size_t lineIdx = ed->fileCurIdx - baseLineIdx;
-    StrView line = fileGetLine(&ed->file, ed->curY);
+    StrView line = fileLine(&ed->file, ed->curY);
 
     if (dx > 0) {
         ptrdiff_t i;
@@ -229,8 +230,8 @@ void editorMoveCursorY(Editor *ed, ptrdiff_t dy) {
 
     ed->curY = endY;
 
-    StrView line = fileGetLine(&ed->file, ed->curY);
-    size_t baseLineIdx = fileGetLineChIdx(&ed->file, endY);
+    StrView line = fileLine(&ed->file, ed->curY);
+    size_t baseLineIdx = fileLineChIdx(&ed->file, endY);
     size_t lineIdx = line.len;
 
     size_t width = 0;
@@ -250,6 +251,72 @@ void editorMoveCursorY(Editor *ed, ptrdiff_t dy) {
     }
     ed->curX = width;
     ed->fileCurIdx = baseLineIdx + lineIdx;
+
+    editorUpdateViewbox_(ed);
+}
+
+void editorMoveCursorIdx(Editor *ed, ptrdiff_t diffIdx) {
+    if (diffIdx == 0) {
+        return;
+    }
+
+    StrView content = fileContent(&ed->file);
+    size_t endCurIdx = 0;
+
+    if (diffIdx > 0) {
+        ptrdiff_t i;
+        for (
+            i = strViewNext(&content, ed->fileCurIdx, NULL);
+            i != -1;
+            i = strViewNext(&content, i, NULL)
+        ) {
+            if (--diffIdx == 0) {
+                break;
+            }
+        }
+        if (i < 0) {
+            endCurIdx = content.len;
+        } else {
+            endCurIdx = i;
+        }
+    } else {
+        ptrdiff_t i;
+        for (
+            i = strViewPrev(&content, ed->fileCurIdx, NULL);
+            i != -1;
+            i = strViewPrev(&content, i, NULL)
+        ) {
+            if (++diffIdx == 0) {
+                break;
+            }
+        }
+        if (i < 0) {
+            endCurIdx = 0;
+        } else {
+            endCurIdx = i;
+        }
+    }
+
+    size_t lineIdx = fileLineFromFileIdx(&ed->file, endCurIdx);
+    size_t baseLineIdx = fileLineChIdx(&ed->file, lineIdx);
+    StrView line = fileLine(&ed->file, lineIdx);
+
+    line.len = endCurIdx - baseLineIdx;
+    size_t width = 0;
+    uint8_t tabStop = ed->tabStop;
+    UcdCP cp = -1;
+    for (
+        ptrdiff_t i = strViewNext(&line, -1, &cp);
+        i != -1;
+        i = strViewNext(&line, i, &cp)
+    ) {
+        width += ucdCPWidth(cp, tabStop, width);
+    }
+
+    ed->curX = width;
+    ed->baseCurX = width;
+    ed->curY = lineIdx;
+    ed->fileCurIdx = endCurIdx;
 
     editorUpdateViewbox_(ed);
 }

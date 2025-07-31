@@ -107,12 +107,20 @@ void fileDestroy(File *file) {
     file->saved = false;
 }
 
+StrView fileContent(const File *file) {
+    StrView sv = {
+        .buf = file->content,
+        .len = file->contentLen
+    };
+    return sv;
+}
+
 size_t fileLineCount(const File *file) {
     return file->linesLen + 1;
 }
 
-StrView fileGetLine(const File *file, size_t lineIdx) {
-    UcdCh8 *buf = fileGetLinePtr(file, lineIdx);
+StrView fileLine(const File *file, size_t lineIdx) {
+    UcdCh8 *buf = fileLinePtr(file, lineIdx);
     if (buf == NULL) {
         StrView empty = {
             .buf = NULL,
@@ -120,7 +128,7 @@ StrView fileGetLine(const File *file, size_t lineIdx) {
         };
         return empty;
     }
-    UcdCh8 *lineEnd = fileGetLinePtr(file, lineIdx + 1);
+    UcdCh8 *lineEnd = fileLinePtr(file, lineIdx + 1);
     if (lineEnd == NULL) {
         lineEnd = file->content + file->contentLen;
     } else {
@@ -133,8 +141,8 @@ StrView fileGetLine(const File *file, size_t lineIdx) {
     return sv;
 }
 
-UcdCh8 *fileGetLinePtr(const File *file, size_t lineIdx) {
-    ptrdiff_t idx = fileGetLineChIdx(file, lineIdx);
+UcdCh8 *fileLinePtr(const File *file, size_t lineIdx) {
+    ptrdiff_t idx = fileLineChIdx(file, lineIdx);
     if (idx == -1) {
         return NULL;
     }
@@ -142,7 +150,7 @@ UcdCh8 *fileGetLinePtr(const File *file, size_t lineIdx) {
     return file->content + idx;
 }
 
-ptrdiff_t fileGetLineChIdx(const File *file, size_t lineIdx) {
+ptrdiff_t fileLineChIdx(const File *file, size_t lineIdx) {
     if (lineIdx > file->linesLen) {
         return -1;
     }
@@ -161,7 +169,7 @@ static void fileResizeLines_(File *file, size_t requiredLen) {
     FILE_ARR_RESIZE_IMPL_(lines)
 }
 
-static size_t fileFindLine_(const File *file, size_t fileIdx) {
+size_t fileLineFromFileIdx(const File *file, size_t fileIdx) {
     if (file->linesLen == 0 || file->lines[0] > fileIdx) {
         return 0;
     } else if (fileIdx == file->contentLen) {
@@ -206,7 +214,7 @@ void fileInsert(File *file, size_t idx, const UcdCh8 *data, size_t len) {
     memmove(
         content + idx + trueLen,
         content + idx,
-        file->contentLen - idx
+        sizeof (*content) * (file->contentLen - idx)
     );
 
     size_t copyIdx = idx;
@@ -224,7 +232,7 @@ void fileInsert(File *file, size_t idx, const UcdCh8 *data, size_t len) {
     size_t *lines = file->lines;
 
     // Offset the indices after the data
-    size_t lineIdx = fileFindLine_(file, idx);
+    size_t lineIdx = fileLineFromFileIdx(file, idx);
     for (size_t i = lineIdx; i < file->linesLen; i++) {
         lines[i] += len;
     }
@@ -237,7 +245,7 @@ void fileInsert(File *file, size_t idx, const UcdCh8 *data, size_t len) {
     memmove(
         lines + lineIdx + lineCount,
         lines + lineIdx,
-        file->linesLen - lineIdx
+        sizeof(*lines) * (file->linesLen - lineIdx)
     );
     file->linesLen += lineCount;
 
@@ -266,13 +274,13 @@ void fileRemove(File *file, size_t startIdx, size_t endIdx) {
     memmove(
         file->content + startIdx,
         file->content + endIdx,
-        file->contentLen - endIdx
+        sizeof(*file->content) * (file->contentLen - endIdx)
     );
 
     file->contentLen -= endIdx - startIdx;
     fileResizeContent_(file, file->contentLen);
 
-    size_t lineIdx = fileFindLine_(file, startIdx);
+    size_t lineIdx = fileLineFromFileIdx(file, startIdx);
 
     if (lineCount != 0) {
         memmove(
