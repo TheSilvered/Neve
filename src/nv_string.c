@@ -134,7 +134,7 @@ void strClear(Str *str, size_t reserve) {
     str->buf[0] = '\0';
 }
 
-char *strAsC(Str *str) {
+char *strAsC(const Str *str) {
     if (str->buf == NULL) {
         return "";
     } else {

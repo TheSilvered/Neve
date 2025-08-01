@@ -53,7 +53,7 @@ void strPop(Str *str, size_t count);
 // Clear the contents of a string and keep a capacity of `reserve`.
 void strClear(Str *str, size_t reserve);
 // Get the contents of a string as a NUL terminated string.
-char *strAsC(Str *str);
+char *strAsC(const Str *str);
 
 // Initialize a new string view from a C string.
 void strViewInitFromC(StrView *sv, const char *cStr);
