@@ -173,7 +173,7 @@ size_t fileLineFromFileIdx(const File *file, size_t fileIdx) {
     if (file->linesLen == 0 || file->lines[0] > fileIdx) {
         return 0;
     } else if (fileIdx == file->contentLen) {
-        return file->linesLen - 1;
+        return file->linesLen;
     }
 
     size_t lo = 0;
@@ -303,10 +303,10 @@ FileIOResult fileSave(File *file) {
     }
 
 #ifdef _WIN32
-    const wchar_t *wpath = tempWStr(file->path.buf);
+    const wchar_t *wpath = tempWStr(strAsC(&file->path));
     FILE *fp = _wfopen(wpath, L"wb");
 #else
-    FILE *fp = fopen(file->path.buf, "wb");
+    FILE *fp = fopen(strAsC(&file->path), "wb");
 #endif // !_WIN32
 
     if (fp == NULL) {
