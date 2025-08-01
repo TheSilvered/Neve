@@ -40,5 +40,5 @@ class TableGenerator:
         self.writeln()
 
     def save_file(self):
-        with open(self.out_file, "w", encoding="utf8") as f:
-            f.write(self.file_content)
+        with open(self.out_file, "wb") as f:
+            f.write(self.file_content.encode("utf8"))
