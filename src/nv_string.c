@@ -92,6 +92,36 @@ void strAppend(Str *str, const StrView *sv) {
     str->buf[str->len] = '\0';
 }
 
+void strPop(Str *str, size_t count) {
+    if (count == 0) {
+        return;
+    }
+
+    ptrdiff_t i = str->len;
+    for (
+        i = strViewPrev((StrView *)str, i, NULL);
+        i > 0;
+        i = strViewPrev((StrView *)str, i, NULL)
+    ) {
+        if (--count == 0) {
+            break;
+        }
+    }
+    // This should never happen, just in case
+    if (i < 0) {
+        i = 0;
+    }
+
+    str->len = i;
+    str->buf[str->len] = '\0';
+
+    // Shrink the buffer by half if the string is less than a quarter full
+    if (str->len < str->cap / 4) {
+        str->buf = memShrink(str->buf, str->cap / 2, sizeof(*str->buf));
+        str->cap /= 2;
+    }
+}
+
 void strClear(Str *str, size_t reserve) {
     if (reserve == 0) {
         strDestroy(str);
@@ -164,6 +194,30 @@ bool strBufAppend(StrBuf *sb, const StrView *sv) {
     sb->len += sv->len;
     sb->buf[sb->len] = '\0';
     return true;
+}
+
+void strBufPop(StrBuf *sb, size_t count) {
+    if (count == 0) {
+        return;
+    }
+
+    ptrdiff_t i = sb->len;
+    for (
+        i = strViewPrev((StrView *)sb, i, NULL);
+        i > 0;
+        i = strViewPrev((StrView *)sb, i, NULL)
+    ) {
+        if (--count == 0) {
+            break;
+        }
+    }
+    // This should never happen, just in case
+    if (i < 0) {
+        i = 0;
+    }
+
+    sb->len = i;
+    sb->buf[i] = '\0';
 }
 
 void strBufClear(StrBuf *sb) {

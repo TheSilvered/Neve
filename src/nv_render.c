@@ -3,15 +3,19 @@
 #include "nv_escapes.h"
 #include "nv_render.h"
 
-static void renderLine_(Editor *ed, size_t lineIdx, uint16_t termRow) {
-    if (ed->viewboxW == 0) {
+static void renderLine_(
+    Editor *ed,
+    StrView *line,
+    uint16_t termRow,
+    size_t maxWidth,
+    size_t offsetX
+) {
+    if (maxWidth == 0) {
         return;
     }
 
-    StrView line = fileLine(&ed->file, lineIdx);
-
     size_t width = 0;
-    size_t totWidth = ed->scrollX + ed->viewboxW;
+    size_t totWidth = offsetX + maxWidth;
     uint8_t tabStop = ed->tabStop;
 
     const char *tabFmt =
@@ -29,22 +33,22 @@ static void renderLine_(Editor *ed, size_t lineIdx, uint16_t termRow) {
 
     UcdCP cp = -1;
     for (
-        ptrdiff_t i = strViewNext(&line, -1, &cp);
+        ptrdiff_t i = strViewNext(line, -1, &cp);
         i != -1;
-        i = strViewNext(&line, i, &cp)
+        i = strViewNext(line, i, &cp)
     ) {
         uint8_t chWidth = ucdCPWidth(cp, tabStop, width);
         width += chWidth;
 
-        if (width <= ed->scrollX) {
+        if (width <= offsetX) {
             continue;
-        } else if (width - chWidth < ed->scrollX) {
+        } else if (width - chWidth < offsetX) {
             // Draw a gray '<' at the start if a character is cut off
             editorDrawFmt(
                 ed,
                 termRow,
                 startCutoffFmt,
-                width - ed->scrollX - 1, ""
+                width - offsetX - 1, ""
             );
         } else if (width > totWidth) {
             // Draw a gray '>' at the end if a character is cut off
@@ -59,7 +63,7 @@ static void renderLine_(Editor *ed, size_t lineIdx, uint16_t termRow) {
         } else if (cp == '\t') {
             editorDrawFmt(ed, termRow, tabFmt, chWidth - 1, "");
         } else {
-            editorDraw(ed, termRow, line.buf + i, ucdCh8CPLen(cp));
+            editorDraw(ed, termRow, line->buf + i, ucdCh8CPLen(cp));
         }
 
         if (width == totWidth) {
@@ -83,15 +87,43 @@ static void renderMessage_(Editor *ed, uint16_t rowIdx) {
 }
 
 void renderFile(Editor *ed) {
+    if  (ed->mode == EditorMode_SaveDialog) {
+        return;
+    }
+
     for (uint16_t i = 0; i < ed->viewboxH; i++) {
         if (i + ed->scrollY < fileLineCount(&ed->file)) {
-            renderLine_(ed, i + ed->scrollY, i);
+            StrView line = fileLine(&ed->file, i + ed->scrollY);
+            renderLine_(ed, &line, i, ed->viewboxW, ed->scrollX);
         } else if (ed->file.contentLen == 0 && i == ed->viewboxH / 2) {
             renderMessage_(ed, i);
         } else {
             editorDraw(ed, i, sLen("~"));
         }
     }
+}
+
+void renderSaveDialog_(Editor *ed) {
+    const char msg[] = "File Name: ";
+    editorDraw(ed, ed->rows - 1, (const UcdCh8 *)msg, sizeof(msg));
+    UcdCP cp;
+    size_t width = 0;
+    for (
+        ptrdiff_t i = strViewNext((StrView *)&ed->file.path, -1, &cp);
+        i != -1;
+        i = strViewNext((StrView *)&ed->file.path, i, &cp)
+    ) {
+        width += ucdCPWidth(cp, ed->tabStop, width);
+    }
+
+    size_t maxWidth = ed->cols - sizeof(msg);
+    renderLine_(
+        ed,
+        (StrView *)&ed->file.path,
+        ed->rows - 1,
+        maxWidth,
+        maxWidth >= width ? 0 : width - maxWidth
+    );
 }
 
 void renderStatusBar(Editor *ed) {
@@ -103,6 +135,10 @@ void renderStatusBar(Editor *ed) {
     case EditorMode_Normal:
         mode = "Normal";
         break;
+    case EditorMode_SaveDialog: {
+        renderSaveDialog_(ed);
+        return;
+    }
     default:
         assert(false);
     }

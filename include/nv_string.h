@@ -48,6 +48,8 @@ void strReserve(Str *str, size_t reserve);
 void strAppendC(Str *str, const char *cStr);
 // Append a string view to a string.
 void strAppend(Str *str, const StrView *sv);
+// Pop a number of characters from the end of a string.
+void strPop(Str *str, size_t count);
 // Clear the contents of a string and keep a capacity of `reserve`.
 void strClear(Str *str, size_t reserve);
 // Get the contents of a string as a NUL terminated string.
@@ -66,6 +68,8 @@ StrBuf strBufMake(char *buf, size_t bufSize);
 bool strBufAppendC(StrBuf *sb, const char *cStr);
 // Append a string view to a string buffer.
 bool strBufAppend(StrBuf *sb, const StrView *sv);
+// Pop a number of characters from the end of a string buffer.
+void strBufPop(StrBuf *sb, size_t count);
 // Clear the contents of a string buffer.
 void strBufClear(StrBuf *sb);
 

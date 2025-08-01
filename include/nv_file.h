@@ -3,6 +3,8 @@
 
 #include "nv_string.h"
 
+// TODO: Add support for \r\n line endings on save
+
 // A file opened in the editor.
 // `lines` is an array of indices in `content` of the start of each line.
 // Do not read `lines` directly. Use `fileLine`, `fileLinePtr` or
@@ -61,7 +63,7 @@ void fileInsert(File *file, size_t idx, const UcdCh8 *data, size_t len);
 // Remove data from `startIdx` included to `endIdx` excluded.
 void fileRemove(File *file, size_t startIdx, size_t endIdx);
 
-// TODO: Save the contents of a file to the disk
-// void fileSave(File *file);
+// Save the contents of a file to the disk
+FileIOResult fileSave(File *file);
 
 #endif // !NV_FILE_H_

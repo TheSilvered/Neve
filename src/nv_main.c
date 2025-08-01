@@ -51,7 +51,9 @@ void refreshScreen(void) {
     renderFile(&g_ed);
     renderStatusBar(&g_ed);
 
-    editorDraw(&g_ed, g_ed.rows - 1, sLen(escCursorShow));
+    if (g_ed.mode != EditorMode_SaveDialog) {
+        editorDraw(&g_ed, g_ed.rows - 1, sLen(escCursorShow));
+    }
     editorDrawEnd(&g_ed);
 }
 
@@ -65,6 +67,24 @@ void loadOrCreateFile(const char *path) {
     default:
         return;
     }
+}
+
+static size_t keyToUTF8(int32_t key, bool allowLF, UcdCh8 *outBuf) {
+    if (key < 0 || key > UcdCPMax) {
+        return 0;
+    }
+
+    UdbCPInfo info = udbGetCPInfo((UcdCP)key);
+    // Do not insert control characters
+    if (
+        (key != '\n' || !allowLF)
+        && info.category >= UdbCategory_C_First
+        && info.category <= UdbCategory_C_Last
+    ) {
+        return 0;
+    }
+
+    return ucdCh8FromCP((UcdCP)key, outBuf);
 }
 
 void handleKeyNormalMode(int32_t key) {
@@ -90,6 +110,17 @@ void handleKeyNormalMode(int32_t key) {
         return;
     case 'a':
         g_ed.mode = EditorMode_Insert;
+        return;
+    case 'W':
+        g_ed.mode = EditorMode_SaveDialog;
+        return;
+    case 'w':
+        if (g_ed.file.path.len == 0) {
+            g_ed.mode = EditorMode_SaveDialog;
+            return;
+        }
+        fileSave(&g_ed.file);
+        return;
     default:
         return;
     }
@@ -135,26 +166,47 @@ void handleKeyInsertMode(int32_t key) {
         break;
     }
 
-    if (key < 0 || key > UcdCPMax) {
-        return;
-    }
-
-    UdbCPInfo info = udbGetCPInfo((UcdCP)key);
-    // Do not insert control characters
-    if (
-        key != '\n'
-        && info.category >= UdbCategory_C_First
-        && info.category <= UdbCategory_C_Last
-    ) {
-        return;
-    }
-
     UcdCh8 buf[4];
-    size_t len = ucdCh8FromCP((UcdCP)key, buf);
+    size_t len = keyToUTF8(key, true, buf);
+    if (len == 0) {
+        return;
+    }
     // Edit content only _after_ the cursor otherwise it could end up in
     // the middle of a multibyte sequence.
     fileInsert(&g_ed.file, g_ed.fileCurIdx, buf, len);
     editorMoveCursorIdx(&g_ed, 1);
+}
+
+void handleKeySaveDialogMode(int32_t key) {
+    switch (key) {
+    case TermKey_Enter:
+        if (g_ed.file.path.len != 0) {
+            fileSave(&g_ed.file);
+            g_ed.mode = EditorMode_Normal;
+        }
+        return;
+    case TermKey_Escape:
+    case TermKey_CtrlC:
+        g_ed.mode = EditorMode_Normal;
+        return;
+    case TermKey_Backspace:
+        strPop(&g_ed.file.path, 1);
+        return;
+    default:
+        break;
+    }
+
+    UcdCh8 buf[4];
+    size_t len = keyToUTF8(key, false, buf);
+    if (len == 0) {
+        return;
+    }
+    StrView ch = {
+        .buf = buf,
+        .len = len
+    };
+
+    strAppend(&g_ed.file.path, &ch);
 }
 
 // TODO: use wmain on Windows
@@ -187,6 +239,11 @@ int main(int argc, char **argv) {
         case EditorMode_Insert:
             handleKeyInsertMode(key);
             break;
+        case EditorMode_SaveDialog:
+            handleKeySaveDialogMode(key);
+            break;
+        default:
+            assert(false);
         }
     }
 

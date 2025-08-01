@@ -296,3 +296,49 @@ void fileRemove(File *file, size_t startIdx, size_t endIdx) {
         file->lines[i] -= endIdx - startIdx;
     }
 }
+
+FileIOResult fileSave(File *file) {
+    if (file->path.len == 0) {
+        return FileIOResult_BadPath;
+    }
+
+#ifdef _WIN32
+    const wchar_t *wpath = tempWStr(file->path.buf);
+    FILE *fp = _wfopen(wpath, L"wb");
+#else
+    FILE *fp = fopen(file->path.buf, "wb");
+#endif // !_WIN32
+
+    if (fp == NULL) {
+        switch (errno) {
+        case ENOMEM:
+            fprintf(stderr, "Out of memory.");
+            abort();
+        case EACCES:
+            return FileIOResult_PermissionDenied;
+        case EFBIG:
+        case EOVERFLOW:
+            return FileIOResult_FileTooBig;
+        case EINVAL:
+        case ENAMETOOLONG:
+            return FileIOResult_BadPath;
+        case ELOOP:
+        case ENOENT:
+            return FileIOResult_FileNotFound;
+        case EPERM:
+            return FileIOResult_OperationNotAllowed;
+        default:
+            return FileIOResult_OtherIOError;
+        }
+    }
+
+    size_t bytesWritten = fwrite(file->content, 1, file->contentLen, fp);
+    (void)fclose(fp);
+
+    if (bytesWritten != file->contentLen) {
+        return FileIOResult_OtherIOError;
+    }
+    file->saved = true;
+
+    return FileIOResult_Success;
+}

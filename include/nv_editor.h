@@ -6,7 +6,8 @@
 
 typedef enum EditorMode {
     EditorMode_Normal,
-    EditorMode_Insert
+    EditorMode_Insert,
+    EditorMode_SaveDialog
 } EditorMode;
 
 // A terminal row.
