@@ -84,10 +84,6 @@ static void renderMessage_(uint16_t rowIdx) {
 }
 
 void renderFile(void) {
-    if  (g_ed.mode == EditorMode_SaveDialog) {
-        return;
-    }
-
     for (uint16_t i = 0; i < g_ed.fileCtx.win.h; i++) {
         if (i + g_ed.fileCtx.win.y < ctxLineCount(&g_ed.fileCtx)) {
             StrView line = ctxGetLine(&g_ed.fileCtx, i + g_ed.fileCtx.win.y);

@@ -38,7 +38,7 @@ void editorQuit(void) {
     }
 
     for (uint16_t row = 0; row < g_ed.rows; row++) {
-        strDestroy(&g_ed.rowBuffers[row].buf);
+        strDestroy(&g_ed.rowBuffers[row]);
     }
     memFree(g_ed.rowBuffers);
 }
@@ -48,7 +48,7 @@ bool editorSetRowCount_(uint16_t count) {
         return true;
     } else if (count < g_ed.rows) {
         for (uint16_t row = count; row < g_ed.rows; row++) {
-            strDestroy(&g_ed.rowBuffers[row].buf);
+            strDestroy(&g_ed.rowBuffers[row]);
         }
         g_ed.rowBuffers = memShrink(
             g_ed.rowBuffers,
@@ -64,8 +64,7 @@ bool editorSetRowCount_(uint16_t count) {
             sizeof(*g_ed.rowBuffers)
         );
         for (uint16_t row = g_ed.rows; row < count; row++) {
-            strInit(&g_ed.rowBuffers[row].buf, 0);
-            g_ed.rowBuffers[row].changed = true;
+            strInit(&g_ed.rowBuffers[row], 0);
         }
         g_ed.rows = count;
         return true;
@@ -96,8 +95,7 @@ bool editorUpdateSize(void) {
 bool editorDraw(uint16_t rowIdx, const UcdCh8 *buf, size_t len) {
     assert(rowIdx < g_ed.rows);
     StrView sv = { .buf = (const UcdCh8 *)buf, .len = len };
-    strAppend(&g_ed.rowBuffers[rowIdx].buf, &sv);
-    g_ed.rowBuffers[rowIdx].changed = true;
+    strAppend(&g_ed.rowBuffers[rowIdx], &sv);
     return true;
 }
 
@@ -114,9 +112,6 @@ bool editorDrawEnd(void) {
 
     char posBuf[64] = { 0 };
     for (uint16_t rowIdx = 0; rowIdx < g_ed.rows; rowIdx++) {
-        if (!g_ed.rowBuffers[rowIdx].changed) {
-            continue;
-        }
         snprintf(
             posBuf,
             64,
@@ -124,9 +119,8 @@ bool editorDrawEnd(void) {
             rowIdx + 1, 1
         );
         strAppendC(&g_ed.screenBuf, posBuf);
-        strAppend(&g_ed.screenBuf, (StrView *)&g_ed.rowBuffers[rowIdx].buf);
-        strClear(&g_ed.rowBuffers[rowIdx].buf, g_ed.rowBuffers[rowIdx].buf.len);
-        g_ed.rowBuffers[rowIdx].changed = false;
+        strAppend(&g_ed.screenBuf, (StrView *)&g_ed.rowBuffers[rowIdx]);
+        strClear(&g_ed.rowBuffers[rowIdx], g_ed.rowBuffers[rowIdx].len);
     }
 
     Ctx *ctx = editorGetActiveCtx();

@@ -9,19 +9,13 @@ typedef enum EditorMode {
     EditorMode_SaveDialog
 } EditorMode;
 
-// A terminal row.
-typedef struct EditorRow {
-    Str buf;
-    bool changed;
-} EditorRow;
-
 typedef struct EditorStrings {
     Str savePrompt;
 } EditorStrings;
 
 // The state of the editor.
 typedef struct Editor {
-    EditorRow *rowBuffers; // Rows array (length == .rows)
+    Str *rowBuffers; // Rows array (length == .rows)
     uint16_t rows, cols; // Terminal resolution.
     Str screenBuf; // Buffer for screen printing.
     EditorMode mode; // Current editor mode.
