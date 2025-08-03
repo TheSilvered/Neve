@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#include "nv_context.h"
 #include "nv_escapes.h"
 #include "nv_render.h"
 
@@ -77,7 +78,7 @@ static void renderMessage_(Editor *ed, uint16_t rowIdx) {
     StrView msg = { sLen("Neve editor prototype") };
 
     for (
-        size_t pad = 1, tot = (ed->viewboxW - msg.len) >> 1;
+        size_t pad = 1, tot = (ed->fileCtx.win.w - msg.len) >> 1;
         pad < tot;
         pad++
     ) {
@@ -91,11 +92,11 @@ void renderFile(Editor *ed) {
         return;
     }
 
-    for (uint16_t i = 0; i < ed->viewboxH; i++) {
-        if (i + ed->scrollY < fileLineCount(&ed->file)) {
-            StrView line = fileLine(&ed->file, i + ed->scrollY);
-            renderLine_(ed, &line, i, ed->viewboxW, ed->scrollX);
-        } else if (ed->file.contentLen == 0 && i == ed->viewboxH / 2) {
+    for (uint16_t i = 0; i < ed->fileCtx.win.h; i++) {
+        if (i + ed->fileCtx.win.y < ctxLineCount(&ed->fileCtx)) {
+            StrView line = ctxGetLine(&ed->fileCtx, i + ed->fileCtx.win.y);
+            renderLine_(ed, &line, i, ed->fileCtx.win.w, ed->fileCtx.win.x);
+        } else if (ed->fileCtx.text.bufLen == 0 && i == ed->fileCtx.win.h / 2) {
             renderMessage_(ed, i);
         } else {
             editorDraw(ed, i, sLen("~"));
@@ -104,25 +105,20 @@ void renderFile(Editor *ed) {
 }
 
 void renderSaveDialog_(Editor *ed) {
-    const char msg[] = "File Name: ";
-    editorDraw(ed, ed->rows - 1, (const UcdCh8 *)msg, sizeof(msg));
-    UcdCP cp;
-    size_t width = 0;
-    for (
-        ptrdiff_t i = strViewNext((StrView *)&ed->file.path, -1, &cp);
-        i != -1;
-        i = strViewNext((StrView *)&ed->file.path, i, &cp)
-    ) {
-        width += ucdCPWidth(cp, ed->tabStop, width);
-    }
+    editorDraw(
+        ed,
+        ed->rows - 1,
+        ed->strings.savePrompt.buf,
+        ed->strings.savePrompt.len
+    );
 
-    size_t maxWidth = ed->cols - sizeof(msg);
+    StrView path = ctxGetLine(&ed->saveDialogCtx, 0);
     renderLine_(
         ed,
-        (StrView *)&ed->file.path,
+        &path,
         ed->rows - 1,
-        maxWidth,
-        maxWidth >= width ? 0 : width - maxWidth
+        ed->saveDialogCtx.win.w,
+        ed->saveDialogCtx.win.x
     );
 }
 
@@ -143,12 +139,17 @@ void renderStatusBar(Editor *ed) {
         assert(false);
     }
 
+    Ctx *ctx = editorGetActiveCtx(ed);
+
     editorDrawFmt(
         ed,
         ed->rows - 1,
-        "%zi:%zi %s",
-        ed->curY + 1,
-        ed->curX + 1,
+        "%zi:%zi %s ",
+        ctx->cur.x + 1,
+        ctx->cur.y + 1,
         mode
     );
+    if (ed->fileCtx.edited) {
+        editorDraw(ed, ed->rows - 1, sLen("*"));
+    }
 }

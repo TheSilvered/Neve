@@ -19,17 +19,15 @@ void editorInit(Editor *ed) {
     ed->cols = 0;
     ed->rowBuffers = NULL;
     (void)strInit(&ed->screenBuf, 0);
-    termWrite(sLen(escCursorShapeStillBar));
-    fileInitEmpty(&ed->file);
-    ed->scrollX = 0;
-    ed->scrollY = 0;
-    ed->curX = 0;
-    ed->curY = 0;
-    ed->baseCurX = 0;
-    ed->fileCurIdx = 0;
     ed->tabStop = 8;
     ed->mode = EditorMode_Normal;
     ed->running = true;
+    ctxInitNewFile(&ed->fileCtx, NULL);
+    ctxInitLine(&ed->saveDialogCtx);
+
+    strInitFromC(&ed->strings.savePrompt, "File path: ");
+
+    termWrite(sLen(escCursorShapeStillBar));
 }
 
 void editorQuit(Editor *ed) {
@@ -74,20 +72,6 @@ bool editorSetRowCount_(Editor *ed, uint16_t count) {
     }
 }
 
-void editorUpdateViewbox_(Editor *ed) {
-    if (ed->curY >= ed->viewboxH + ed->scrollY) {
-        ed->scrollY = ed->curY - ed->viewboxH + 1;
-    } else if (ed->curY < ed->scrollY) {
-        ed->scrollY = ed->curY;
-    }
-
-    if (ed->curX >= ed->viewboxW + ed->scrollX) {
-        ed->scrollX = ed->curX - ed->viewboxW + 1;
-    } else if (ed->curX < ed->scrollX) {
-        ed->scrollX = ed->curX;
-    }
-}
-
 bool editorUpdateSize(Editor *ed) {
     uint16_t rows, cols;
     if (!termSize(&rows, &cols)) {
@@ -96,13 +80,17 @@ bool editorUpdateSize(Editor *ed) {
     ed->cols = cols;
     editorSetRowCount_(ed, rows);
 
-    return true;
-}
+    ctxSetWinSize(&ed->fileCtx, ed->cols, ed->rows - 1);
 
-void editorSetViewboxSize(Editor *ed, uint16_t width, uint16_t height) {
-    ed->viewboxW = width;
-    ed->viewboxH = height;
-    editorUpdateViewbox_(ed);
+    if (ed->mode == EditorMode_SaveDialog) {
+        // TODO: use visual width of savePrompt
+        uint16_t saveDialogWidth = ed->cols - ed->strings.savePrompt.len;
+        ctxSetWinSize(&ed->saveDialogCtx, saveDialogWidth, 1);
+        ed->saveDialogCtx.win.termX = ed->strings.savePrompt.len;
+        ed->saveDialogCtx.win.termY = ed->rows - 1;
+    }
+
+    return true;
 }
 
 bool editorDraw(Editor *ed, uint16_t rowIdx, const UcdCh8 *buf, size_t len) {
@@ -122,22 +110,31 @@ bool editorDrawFmt(Editor *ed, uint16_t rowIdx, const char *fmt, ...) {
 }
 
 bool editorDrawEnd(Editor *ed) {
-    char posBuf[32] = { 0 };
+    strAppendC(&ed->screenBuf, escCursorHide escCursorSetPos("", ""));
+
+    char posBuf[64] = { 0 };
     for (uint16_t rowIdx = 0; rowIdx < ed->rows; rowIdx++) {
         if (!ed->rowBuffers[rowIdx].changed) {
             continue;
         }
-        snprintf(posBuf, 32, escCursorSetPos("%u", "%u"), rowIdx + 1, 1);
+        snprintf(
+            posBuf,
+            64,
+            escCursorSetPos("%u", "%u") escLineClear,
+            rowIdx + 1, 1
+        );
         strAppendC(&ed->screenBuf, posBuf);
         strAppend(&ed->screenBuf, (StrView *)&ed->rowBuffers[rowIdx].buf);
         strClear(&ed->rowBuffers[rowIdx].buf, ed->rowBuffers[rowIdx].buf.len);
         ed->rowBuffers[rowIdx].changed = false;
     }
 
-    uint16_t termCurX = (uint16_t)(ed->curX - ed->scrollX) + 1;
-    uint16_t termCurY = (uint16_t)(ed->curY - ed->scrollY) + 1;
+    Ctx *ctx = editorGetActiveCtx(ed);
 
-    snprintf(posBuf, 32, escCursorSetPos("%u", "%u"), termCurY, termCurX);
+    uint16_t curX, curY;
+    ctxGetCurTermPos(ctx, &curX, &curY);
+
+    snprintf(posBuf, 32, escCursorSetPos("%u", "%u"), curY + 1, curX + 1);
     strAppendC(&ed->screenBuf, posBuf);
 
     if (!termWrite(ed->screenBuf.buf, ed->screenBuf.len)) {
@@ -147,176 +144,47 @@ bool editorDrawEnd(Editor *ed) {
     return true;
 }
 
-void editorMoveCursorX(Editor *ed, ptrdiff_t dx) {
-    if (dx == 0) {
-        return;
+bool editorRefresh(Editor *ed) {
+    if (!editorUpdateSize(ed)) {
+        return false;
     }
 
-    // Move the cursor by dx characters, it may be more than dx columns.
+    renderFile(ed);
+    renderStatusBar(ed);
 
-    size_t baseLineIdx = fileLineChIdx(&ed->file, ed->curY);
-    size_t lineIdx = ed->fileCurIdx - baseLineIdx;
-    StrView line = fileLine(&ed->file, ed->curY);
-
-    if (dx > 0) {
-        ptrdiff_t i;
-        for (
-            i = strViewNext(&line, lineIdx, NULL);
-            i != -1;
-            i = strViewNext(&line, i, NULL)
-        ) {
-            if (--dx == 0) {
-                break;
-            }
-        }
-        if (i < 0) {
-            lineIdx = line.len;
-        } else {
-            lineIdx = i;
-        }
-    } else {
-        ptrdiff_t i;
-        for (
-            i = strViewPrev(&line, lineIdx, NULL);
-            i != -1;
-            i = strViewPrev(&line, i, NULL)
-        ) {
-            if (++dx == 0) {
-                break;
-            }
-        }
-        if (i < 0) {
-            lineIdx = 0;
-        } else {
-            lineIdx = i;
-        }
+    if (!editorDraw(ed, ed->rows - 1, sLen(escCursorShow))) {
+        return false;
     }
-
-    ed->fileCurIdx = baseLineIdx + lineIdx;
-
-    // Find the actual column of the cursor
-
-    line.len = lineIdx; // Get the width until lineIdx
-    size_t width = 0;
-    uint8_t tabStop = ed->tabStop;
-    UcdCP cp = -1;
-    for (
-        ptrdiff_t i = strViewNext(&line, -1, &cp);
-        i != -1;
-        i = strViewNext(&line, i, &cp)
-    ) {
-        width += ucdCPWidth(cp, tabStop, width);
+    if (!editorDrawEnd(ed)) {
+        return false;
     }
-
-    ed->curX = width;
-    ed->baseCurX = width;
-
-    editorUpdateViewbox_(ed);
+    return true;
 }
 
-void editorMoveCursorY(Editor *ed, ptrdiff_t dy) {
-    if (dy == 0) {
-        return;
+Ctx *editorGetActiveCtx(Editor *ed) {
+    if (ed->mode == EditorMode_SaveDialog) {
+        return &ed->saveDialogCtx;
     }
-
-    size_t lineCount = fileLineCount(&ed->file);
-    ptrdiff_t endY = (ptrdiff_t)ed->curY + dy;
-
-    if (endY < 0) {
-        endY = 0;
-    } else if (endY >= (ptrdiff_t)lineCount) {
-        endY = lineCount - 1;
-    }
-
-    ed->curY = endY;
-
-    StrView line = fileLine(&ed->file, ed->curY);
-    size_t baseLineIdx = fileLineChIdx(&ed->file, endY);
-    size_t lineIdx = line.len;
-
-    size_t width = 0;
-    uint8_t tabStop = ed->tabStop;
-    UcdCP cp = -1;
-    for (
-        ptrdiff_t i = strViewNext(&line, -1, &cp);
-        i != -1;
-        i = strViewNext(&line, i, &cp)
-    ) {
-        uint8_t chWidth = ucdCPWidth(cp, tabStop, width);
-        if (width + chWidth > ed->baseCurX) {
-            lineIdx = i;
-            break;
-        }
-        width += chWidth;
-    }
-    ed->curX = width;
-    ed->fileCurIdx = baseLineIdx + lineIdx;
-
-    editorUpdateViewbox_(ed);
+    return &ed->fileCtx;
 }
 
-void editorMoveCursorIdx(Editor *ed, ptrdiff_t diffIdx) {
-    if (diffIdx == 0) {
-        return;
+bool editorSaveFile(Editor *ed) {
+    if (ed->fileCtx.path.len == 0) {
+        return false;
     }
-
-    StrView content = fileContent(&ed->file);
-    size_t endCurIdx = 0;
-
-    if (diffIdx > 0) {
-        ptrdiff_t i;
-        for (
-            i = strViewNext(&content, ed->fileCurIdx, NULL);
-            i != -1;
-            i = strViewNext(&content, i, NULL)
-        ) {
-            if (--diffIdx == 0) {
-                break;
-            }
-        }
-        if (i < 0) {
-            endCurIdx = content.len;
-        } else {
-            endCurIdx = i;
-        }
-    } else {
-        ptrdiff_t i;
-        for (
-            i = strViewPrev(&content, ed->fileCurIdx, NULL);
-            i != -1;
-            i = strViewPrev(&content, i, NULL)
-        ) {
-            if (++diffIdx == 0) {
-                break;
-            }
-        }
-        if (i < 0) {
-            endCurIdx = 0;
-        } else {
-            endCurIdx = i;
-        }
+    File file;
+    FileIOResult result = fileOpen(
+        &file,
+        strAsC(&ed->fileCtx.path),
+        FileMode_Write
+    );
+    if (result != FileIOResult_Success) {
+        return false;
     }
-
-    size_t lineIdx = fileLineFromFileIdx(&ed->file, endCurIdx);
-    size_t baseLineIdx = fileLineChIdx(&ed->file, lineIdx);
-    StrView line = fileLine(&ed->file, lineIdx);
-
-    line.len = endCurIdx - baseLineIdx;
-    size_t width = 0;
-    uint8_t tabStop = ed->tabStop;
-    UcdCP cp = -1;
-    for (
-        ptrdiff_t i = strViewNext(&line, -1, &cp);
-        i != -1;
-        i = strViewNext(&line, i, &cp)
-    ) {
-        width += ucdCPWidth(cp, tabStop, width);
+    if (!ctxWriteToFile(&ed->fileCtx, &file)) {
+        fileClose(&file);
+        return false;
     }
-
-    ed->curX = width;
-    ed->baseCurX = width;
-    ed->curY = lineIdx;
-    ed->fileCurIdx = endCurIdx;
-
-    editorUpdateViewbox_(ed);
+    fileClose(&file);
+    return true;
 }

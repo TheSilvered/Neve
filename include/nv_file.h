@@ -1,24 +1,8 @@
 #ifndef NV_FILE_H_
 #define NV_FILE_H_
 
+#include <stdio.h>
 #include "nv_string.h"
-
-// TODO: Add support for \r\n line endings on save
-
-// A file opened in the editor.
-// `lines` is an array of indices in `content` of the start of each line.
-// Do not read `lines` directly. Use `fileLine`, `fileLinePtr` or
-// `fileGetLineIdx`.
-typedef struct File {
-    Str path;
-    UcdCh8 *content;
-    size_t contentLen;
-    size_t contentCap;
-    size_t *lines;
-    size_t linesLen;
-    size_t linesCap;
-    bool saved;
-} File;
 
 typedef enum FileIOResult {
     FileIOResult_Success,
@@ -30,40 +14,32 @@ typedef enum FileIOResult {
     FileIOResult_OtherIOError,
 } FileIOResult;
 
-// Create a new file without any contents
-void fileInitEmpty(File *file);
-// Load a file from disk (in UTF-8)
-FileIOResult fileInitOpen(File *file, const char *path);
+typedef enum FileMode {
+    FileMode_Read,
+    FileMode_Write
+} FileMode;
 
-// Destroy the contents of a file
-void fileDestroy(File *file);
+typedef struct File {
+    FileMode mode;
+    Str path;
+    FILE *fp;
+} File;
 
-// Get the content of a file as a string view.
-StrView fileContent(const File *file);
+// Open a file.
+FileIOResult fileOpen(File *file, const char *path, FileMode mode);
 
-// Get the number of lines in a file
-size_t fileLineCount(const File *file);
-// Get the line where `fileIdx` is.
-size_t fileLineFromFileIdx(const File *file, size_t fileIdx);
-// Get the line of a file.
-// `lineIdx == 0` is the first line.
-// Return value has `.buf == NULL` if the line is out of bounds.
-StrView fileLine(const File *file, size_t lineIdx);
-// Get a pointer to the first character of a line.
-// `lineIdx == 0` is the first line.
-// Return NULL if the line is out of bounds.
-UcdCh8 *fileLinePtr(const File *file, size_t lineIdx);
-// Get the index to the first character of a line inside `file->content`.
-// `lineIdx == 0` is the first line.
-// Return -1 if the line is out of bounds.
-ptrdiff_t fileLineChIdx(const File *file, size_t lineIdx);
+// Close a file and free any associated memory.
+void fileClose(File *file);
 
-// Insert data into the file at position `idx`.
-void fileInsert(File *file, size_t idx, const UcdCh8 *data, size_t len);
-// Remove data from `startIdx` included to `endIdx` excluded.
-void fileRemove(File *file, size_t startIdx, size_t endIdx);
+// Read from a file.
+FileIOResult fileRead(
+    File *file,
+    uint8_t *outBuf,
+    size_t bufSize,
+    size_t *outBytesRead
+);
 
-// Save the contents of a file to the disk
-FileIOResult fileSave(File *file);
+// Write to a file.
+FileIOResult fileWrite(File *file, uint8_t *buf, size_t bufSize);
 
 #endif // !NV_FILE_H_

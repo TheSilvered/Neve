@@ -1,8 +1,7 @@
 #ifndef NV_EDITOR_H_
 #define NV_EDITOR_H_
 
-#include "nv_file.h"
-#include "nv_string.h"
+#include "nv_context.h"
 
 typedef enum EditorMode {
     EditorMode_Normal,
@@ -16,19 +15,20 @@ typedef struct EditorRow {
     bool changed;
 } EditorRow;
 
+typedef struct EditorStrings {
+    Str savePrompt;
+} EditorStrings;
+
 // The state of the editor.
 typedef struct Editor {
     EditorRow *rowBuffers; // Rows array (length == .rows)
     uint16_t rows, cols; // Terminal resolution.
-    uint16_t viewboxW, viewboxH; // Viewbox size.
     Str screenBuf; // Buffer for screen printing.
-    File file; // Opened file.
-    size_t curX, curY; // Position of the cursor.
-    size_t baseCurX; // Column the cursor goes to if possible.
-    size_t fileCurIdx; // Cursor position in the file.
-    size_t scrollX, scrollY; // Scrolling.
-    uint8_t tabStop; // Stop multiple for tab characters.
     EditorMode mode; // Current editor mode.
+    Ctx fileCtx;
+    Ctx saveDialogCtx;
+    EditorStrings strings;
+    uint8_t tabStop; // Stop multiple for tab characters.
     bool running; // If the editor is running.
 } Editor;
 
@@ -41,8 +41,10 @@ void editorInit(Editor *ed);
 void editorQuit(Editor *ed);
 // Query the size of the terminal and update the editor accordingly.
 bool editorUpdateSize(Editor *ed);
-// Set the size and update the viewbox.
-void editorSetViewboxSize(Editor *ed, uint16_t width, uint16_t height);
+
+// Refresh the editor screen.
+bool editorRefresh(Editor *ed);
+
 // Queue content to be drawn on row `rowIdx`.
 // Each call before `editorDrawEnd` appends the contents of buf.
 // After `editorDrawEnd` the underlying buffer is cleared and the screen is
@@ -53,11 +55,10 @@ bool editorDrawFmt(Editor *ed, uint16_t rowIdx, const char *fmt, ...);
 // Finish drawing and update the screen.
 // Only edited lines are updated.
 bool editorDrawEnd(Editor *ed);
-// Move the cursor by `dx` characters in the current line.
-void editorMoveCursorX(Editor *ed, ptrdiff_t dx);
-// Move the cursor by `dy` lines.
-void editorMoveCursorY(Editor *ed, ptrdiff_t dy);
-// Move the cursor by `diffIdx` characters.
-void editorMoveCursorIdx(Editor *ed, ptrdiff_t diffIdx);
+// Get the current active context.
+Ctx *editorGetActiveCtx(Editor *ed);
+
+// Save the current file. Fail if no path is set for the file context.
+bool editorSaveFile(Editor *ed);
 
 #endif // !NV_EDITOR_H_
