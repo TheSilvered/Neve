@@ -467,9 +467,8 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
         lines[i] += len;
     }
 
-    ctxSetCurIdx_(ctx, ctx->cur.idx + len);
-
     if (lineCount == 0) {
+        ctxSetCurIdx_(ctx, ctx->cur.idx + len);
         return;
     }
 
@@ -488,6 +487,7 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
             lineCount--;
         }
     }
+    ctxSetCurIdx_(ctx, ctx->cur.idx + len);
 }
 
 static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, UcdCh8 *outBuf) {
@@ -554,7 +554,7 @@ void ctxRemove_(Ctx *ctx, size_t startIdx, size_t endIdx) {
         memmove(
             text->lines + lineIdx,
             text->lines + lineIdx + lineCount,
-            sizeof(*text->lines) * (text->linesLen - lineIdx - lineCount)
+            sizeof(*text->lines) * (text->linesLen + 1 - lineIdx - lineCount)
         );
         text->linesLen -= lineCount;
         textResizeLines_(text, text->linesLen);
