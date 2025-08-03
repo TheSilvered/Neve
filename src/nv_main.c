@@ -19,7 +19,7 @@ bool initNeve(void) {
         return false;
     }
 
-    editorInit(&g_ed);
+    editorInit();
     return true;
 }
 
@@ -30,7 +30,7 @@ void quitNeve(void) {
         escCursorShapeDefault
     ));
 
-    editorQuit(&g_ed);
+    editorQuit();
     termQuit();
 }
 
@@ -83,7 +83,7 @@ void handleKeyNormalMode(int32_t key) {
         if (g_ed.fileCtx.path.len == 0) {
             g_ed.mode = EditorMode_SaveDialog;
         } else {
-            editorSaveFile(&g_ed);
+            editorSaveFile();
         }
         return;
     default:
@@ -130,7 +130,7 @@ void handleKeySaveDialogMode(int32_t key) {
         StrView path = ctxGetLine(ctx, 0);
         if (path.len != 0) {
             ctxSetPath(&g_ed.fileCtx, &path);
-            editorSaveFile(&g_ed);
+            editorSaveFile();
             g_ed.mode = EditorMode_Normal;
         }
         return;
@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
     }
 
     while (g_ed.running) {
-        editorRefresh(&g_ed);
+        editorRefresh();
         int32_t key = termGetKey();
         if (key < 0) {
             termLogError("failed to read the key");

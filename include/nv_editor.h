@@ -35,30 +35,30 @@ typedef struct Editor {
 // Global editor variable.
 extern Editor g_ed;
 
-// Initialize an editor.
-void editorInit(Editor *ed);
-// Deinitialize an editor.
-void editorQuit(Editor *ed);
+// Initialize the editor.
+void editorInit(void);
+// Deinitialize the editor.
+void editorQuit(void);
 // Query the size of the terminal and update the editor accordingly.
-bool editorUpdateSize(Editor *ed);
+bool editorUpdateSize(void);
 
 // Refresh the editor screen.
-bool editorRefresh(Editor *ed);
+bool editorRefresh(void);
 
 // Queue content to be drawn on row `rowIdx`.
 // Each call before `editorDrawEnd` appends the contents of buf.
 // After `editorDrawEnd` the underlying buffer is cleared and the screen is
 // updated only if new content is added to the line.
-bool editorDraw(Editor *ed, uint16_t rowIdx, const UcdCh8 *buf, size_t len);
+bool editorDraw(uint16_t rowIdx, const UcdCh8 *buf, size_t len);
 // The same as `editorDraw` but with a printf-style format.
-bool editorDrawFmt(Editor *ed, uint16_t rowIdx, const char *fmt, ...);
+bool editorDrawFmt(uint16_t rowIdx, const char *fmt, ...);
 // Finish drawing and update the screen.
 // Only edited lines are updated.
-bool editorDrawEnd(Editor *ed);
+bool editorDrawEnd(void);
 // Get the current active context.
-Ctx *editorGetActiveCtx(Editor *ed);
+Ctx *editorGetActiveCtx(void);
 
 // Save the current file. Fail if no path is set for the file context.
-bool editorSaveFile(Editor *ed);
+bool editorSaveFile(void);
 
 #endif // !NV_EDITOR_H_
