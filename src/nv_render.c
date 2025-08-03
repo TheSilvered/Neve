@@ -137,8 +137,8 @@ void renderStatusBar(void) {
     editorDrawFmt(
         g_ed.rows - 1,
         "%zi:%zi %s ",
-        ctx->cur.x + 1,
         ctx->cur.y + 1,
+        ctx->cur.x + 1,
         mode
     );
     if (g_ed.fileCtx.edited) {

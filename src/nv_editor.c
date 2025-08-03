@@ -108,14 +108,19 @@ bool editorDrawFmt(uint16_t rowIdx, const char *fmt, ...) {
 }
 
 bool editorDrawEnd(void) {
-    strAppendC(&g_ed.screenBuf, escCursorHide escCursorSetPos("", ""));
+    strAppendC(
+        &g_ed.screenBuf,
+        escCursorHide
+        escCursorSetPos("", "")
+        escScreenClear
+    );
 
     char posBuf[64] = { 0 };
     for (uint16_t rowIdx = 0; rowIdx < g_ed.rows; rowIdx++) {
         snprintf(
             posBuf,
             64,
-            escCursorSetPos("%u", "%u") escLineClear,
+            escCursorSetPos("%u", "%u"),
             rowIdx + 1, 1
         );
         strAppendC(&g_ed.screenBuf, posBuf);
