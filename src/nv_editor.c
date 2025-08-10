@@ -143,6 +143,123 @@ bool editorDrawEnd(void) {
     return true;
 }
 
+static void handleKeyNormalMode(int32_t key) {
+    Ctx *ctx = &g_ed.fileCtx;
+    switch (key) {
+    case TermKey_CtrlC:
+        g_ed.running = false;
+        return;
+    case 'i':
+        ctxMoveCurY(ctx, -1);
+        return;
+    case 'k':
+        ctxMoveCurY(ctx, 1);
+        return;
+    case 'j':
+        ctxMoveCurX(ctx, -1);
+        return;
+    case 'l':
+        ctxMoveCurX(ctx, 1);
+        return;
+    case 'a':
+        g_ed.mode = EditorMode_Insert;
+        return;
+    case 'W':
+        g_ed.mode = EditorMode_SaveDialog;
+        return;
+    case 'w':
+        if (g_ed.fileCtx.path.len == 0) {
+            g_ed.mode = EditorMode_SaveDialog;
+        } else {
+            editorSaveFile();
+        }
+        return;
+    default:
+        return;
+    }
+}
+
+static void handleKeyInsertMode(int32_t key) {
+    Ctx *ctx = &g_ed.fileCtx;
+    switch (key) {
+    case TermKey_CtrlC:
+    case TermKey_Escape:
+        g_ed.mode = EditorMode_Normal;
+        return;
+    case TermKey_Backspace: {
+        ctxRemoveBack(ctx);
+        return;
+    }
+    case '\r':
+        key = '\n';
+    default:
+        ctxInsertCP(ctx, key);
+    }
+}
+
+static void handleKeySaveDialogMode(int32_t key) {
+    Ctx *ctx = &g_ed.saveDialogCtx;
+    switch (key) {
+    case TermKey_Enter: {
+        StrView path = ctxGetLine(ctx, 0);
+        if (path.len != 0) {
+            ctxSetPath(&g_ed.fileCtx, &path);
+            editorSaveFile();
+            g_ed.mode = EditorMode_Normal;
+        }
+        return;
+    }
+    case TermKey_Escape:
+    case TermKey_CtrlC:
+        g_ed.mode = EditorMode_Normal;
+        return;
+    case TermKey_ArrowLeft:
+        ctxMoveCurX(ctx, -1);
+        return;
+    case TermKey_ArrowRight:
+        ctxMoveCurX(ctx, 1);
+        return;
+    case TermKey_Backspace:
+        ctxRemoveBack(ctx);
+        return;
+    default:
+        ctxInsertCP(ctx, key);
+        return;
+    }
+}
+
+void editorHandleKey(uint32_t key) {
+    Ctx *ctx = editorGetActiveCtx();
+
+    switch (key) {
+    case TermKey_ArrowUp:
+        ctxMoveCurY(ctx, -1);
+        return;
+    case TermKey_ArrowDown:
+        ctxMoveCurY(ctx, 1);
+        return;
+    case TermKey_ArrowLeft:
+        ctxMoveCurX(ctx, -1);
+        return;
+    case TermKey_ArrowRight:
+        ctxMoveCurX(ctx, 1);
+        return;
+    default:
+        switch (g_ed.mode) {
+        case EditorMode_Normal:
+            handleKeyNormalMode(key);
+            return;
+        case EditorMode_Insert:
+            handleKeyInsertMode(key);
+            return;
+        case EditorMode_SaveDialog:
+            handleKeySaveDialogMode(key);
+            return;
+        }
+    }
+    assert(false);
+}
+
 bool editorRefresh(void) {
     if (!editorUpdateSize()) {
         return false;

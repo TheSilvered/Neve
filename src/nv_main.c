@@ -51,109 +51,6 @@ void loadOrCreateFile(const char *path) {
     }
 }
 
-void handleKeyNormalMode(int32_t key) {
-    Ctx *ctx = &g_ed.fileCtx;
-    switch (key) {
-    case TermKey_CtrlC:
-        g_ed.running = false;
-        return;
-    case TermKey_ArrowUp:
-    case 'i':
-        ctxMoveCurY(ctx, -1);
-        return;
-    case TermKey_ArrowDown:
-    case 'k':
-        ctxMoveCurY(ctx, 1);
-        return;
-    case TermKey_ArrowLeft:
-    case 'j':
-        ctxMoveCurX(ctx, -1);
-        return;
-    case TermKey_ArrowRight:
-    case 'l':
-        ctxMoveCurX(ctx, 1);
-        return;
-    case 'a':
-        g_ed.mode = EditorMode_Insert;
-        return;
-    case 'W':
-        g_ed.mode = EditorMode_SaveDialog;
-        return;
-    case 'w':
-        if (g_ed.fileCtx.path.len == 0) {
-            g_ed.mode = EditorMode_SaveDialog;
-        } else {
-            editorSaveFile();
-        }
-        return;
-    default:
-        return;
-    }
-}
-
-void handleKeyInsertMode(int32_t key) {
-    Ctx *ctx = &g_ed.fileCtx;
-    switch (key) {
-    case TermKey_CtrlC:
-        g_ed.running = false;
-        return;
-    case TermKey_ArrowUp:
-        ctxMoveCurY(ctx, -1);
-        return;
-    case TermKey_ArrowDown:
-        ctxMoveCurY(ctx, 1);
-        return;
-    case TermKey_ArrowLeft:
-        ctxMoveCurX(ctx, -1);
-        return;
-    case TermKey_ArrowRight:
-        ctxMoveCurX(ctx, 1);
-        return;
-    case TermKey_Escape:
-        g_ed.mode = EditorMode_Normal;
-        return;
-    case TermKey_Backspace: {
-        ctxRemoveBack(ctx);
-        return;
-    }
-    case '\r':
-        key = '\n';
-    default:
-        ctxInsertCP(ctx, key);
-    }
-}
-
-void handleKeySaveDialogMode(int32_t key) {
-    Ctx *ctx = &g_ed.saveDialogCtx;
-    switch (key) {
-    case TermKey_Enter: {
-        StrView path = ctxGetLine(ctx, 0);
-        if (path.len != 0) {
-            ctxSetPath(&g_ed.fileCtx, &path);
-            editorSaveFile();
-            g_ed.mode = EditorMode_Normal;
-        }
-        return;
-    }
-    case TermKey_Escape:
-    case TermKey_CtrlC:
-        g_ed.mode = EditorMode_Normal;
-        return;
-    case TermKey_ArrowLeft:
-        ctxMoveCurX(ctx, -1);
-        return;
-    case TermKey_ArrowRight:
-        ctxMoveCurX(ctx, 1);
-        return;
-    case TermKey_Backspace:
-        ctxRemoveBack(ctx);
-        return;
-    default:
-        ctxInsertCP(ctx, key);
-        return;
-    }
-}
-
 // TODO: use wmain on Windows
 int main(int argc, char **argv) {
     if (argc > 2) {
@@ -170,26 +67,13 @@ int main(int argc, char **argv) {
     }
 
     while (g_ed.running) {
-        editorRefresh();
         int32_t key = termGetKey();
         if (key < 0) {
             termLogError("failed to read the key");
             return 1;
         }
-
-        switch (g_ed.mode) {
-        case EditorMode_Normal:
-            handleKeyNormalMode(key);
-            break;
-        case EditorMode_Insert:
-            handleKeyInsertMode(key);
-            break;
-        case EditorMode_SaveDialog:
-            handleKeySaveDialogMode(key);
-            break;
-        default:
-            assert(false);
-        }
+        editorHandleKey((uint32_t)key);
+        editorRefresh();
     }
 
     quitNeve();

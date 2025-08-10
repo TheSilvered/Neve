@@ -36,6 +36,9 @@ void editorQuit(void);
 // Query the size of the terminal and update the editor accordingly.
 bool editorUpdateSize(void);
 
+// Handle a key event.
+void editorHandleKey(uint32_t key);
+
 // Refresh the editor screen.
 bool editorRefresh(void);
 
