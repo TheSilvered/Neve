@@ -29,7 +29,6 @@ static DWORD g_readTimeoutMs = 0;
 
 #define INPUT_EVENTS_SIZE 512
 
-#define msgBufSize 512
 #define readChunkSize 4096
 
 static INPUT_RECORD g_inputEvents[INPUT_EVENTS_SIZE];

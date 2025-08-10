@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif // !_WIN32
+
 #include "nv_error.h"
 
 static Err g_err = { 0 };
@@ -21,6 +25,7 @@ static void printErrMsg_(const char *msg, char *desc) {
 }
 
 #ifdef _WIN32
+#define msgBufSize 512
 
 static void printWindowsError_(const char *msg) {
     static char msgBuf[msgBufSize];
