@@ -2,20 +2,19 @@
 #include <stdio.h>
 
 #include "nv_editor.h"
+#include "nv_error.h"
 #include "nv_escapes.h"
 #include "nv_file.h"
-#include "nv_render.h"
 #include "nv_term.h"
-#include "nv_udb.h"
 
 bool initNeve(void) {
     if (!termInit()) {
-        termLogError("failed to initialize the terminal");
+        errLog("failed to initialize the terminal");
         return false;
     }
 
     if (!termEnableRawMode(1)) {
-        termLogError("failed to enable raw mode");
+        errLog("failed to enable raw mode");
         return false;
     }
 
@@ -69,7 +68,7 @@ int main(int argc, char **argv) {
     while (g_ed.running) {
         int32_t key = termGetKey();
         if (key < 0) {
-            termLogError("failed to read the key");
+            errLog("failed to read the key");
             return 1;
         }
         editorHandleKey((uint32_t)key);

@@ -18,6 +18,7 @@ include_directories(neve include)
 add_executable(neve
     src/nv_context.c
     src/nv_editor.c
+    src/nv_error.c
     src/nv_file.c
     src/nv_main.c
     src/nv_mem.c

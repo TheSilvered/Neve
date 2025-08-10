@@ -24,7 +24,6 @@ static HANDLE g_consoleInput = INVALID_HANDLE_VALUE;
 static HANDLE g_consoleOutput = INVALID_HANDLE_VALUE;
 static DWORD g_origInputMode = 0;
 static DWORD g_origOutputMode = 0;
-static TermErr g_error = { 0 };
 
 static DWORD g_readTimeoutMs = 0;
 
@@ -43,28 +42,28 @@ static bool g_initialized = false;
 bool termInit(void) {
     g_consoleInput = GetStdHandle(STD_INPUT_HANDLE);
     if (g_consoleInput == INVALID_HANDLE_VALUE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
 
     if (GetConsoleMode(g_consoleInput, &g_origInputMode) == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
 
     g_consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     if (g_consoleOutput == INVALID_HANDLE_VALUE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
 
     if (GetConsoleMode(g_consoleOutput, &g_origOutputMode) == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
 
     if (!SetConsoleOutputCP(CP_UTF8)) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
     g_initialized = true;
@@ -87,17 +86,17 @@ bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
     outputMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
     if (SetConsoleMode(g_consoleInput, inputMode) == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
 
     if (SetConsoleMode(g_consoleOutput, outputMode) == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
 
     if (FlushConsoleInputBuffer(g_consoleInput) == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
 
@@ -113,69 +112,13 @@ void termQuit(void) {
     }
 }
 
-// Error handling
-
-TermErr *termErr(void) {
-    return &g_error;
-}
-
-static void printErrMsg(const char *msg, char *desc) {
-    if (msg == NULL || *msg == '\0') {
-        (void)fprintf(stderr, "%s\r\n", desc);
-    } else {
-        (void)fprintf(stderr, "%s: %.4096s\r\n", msg, desc);
-    }
-}
-
-void termLogError(const char *msg) {
-    switch (g_error.type) {
-    case TermErrType_None:
-        printErrMsg(msg, (char *)"no error occurred");
-        break;
-    case TermErrType_Errno: {
-        static char msgBuf[msgBufSize];
-        static TCHAR wMsgBuf[msgBufSize];
-        DWORD formatFlags = FORMAT_MESSAGE_FROM_SYSTEM
-                          | FORMAT_MESSAGE_IGNORE_INSERTS;
-        DWORD errId = GetLastError();
-
-        BOOL fmtResult = FormatMessageW(
-            formatFlags,
-            NULL,
-            errId,
-            0,
-            wMsgBuf, msgBufSize,
-            NULL
-        );
-
-        if (fmtResult == FALSE) {
-            snprintf(
-                msgBuf,
-                msgBufSize,
-                "failed to format message, error 0x%04lX", errId
-            );
-            printErrMsg(msg, msgBuf);
-        } else {
-            ucdCh16StrToCh8Str(
-                wMsgBuf, wcslen(wMsgBuf),
-                (UcdCh8 *)msgBuf, msgBufSize
-            );
-            printErrMsg(msg, msgBuf);
-        }
-        break;
-    }
-    default:
-        UNREACHABLE;
-    }
-}
-
 // Input
 
 static int getCh(UcdCh16 *outCh) {
     if (g_readTimeoutMs == 0) {
         DWORD charsRead;
         if (ReadConsoleW(g_consoleInput, outCh, 1, &charsRead, NULL) == FALSE) {
-            g_error.type = TermErrType_Errno;
+            errSetErrno();
             return -1;
         }
         return (int)charsRead;
@@ -208,7 +151,7 @@ static int getCh(UcdCh16 *outCh) {
     case WAIT_TIMEOUT:
         return 0;
     case WAIT_FAILED:
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return -1;
     case WAIT_OBJECT_0:
         break;
@@ -225,7 +168,7 @@ static int getCh(UcdCh16 *outCh) {
     );
     g_eventsSize = eventsRead;
     if (result == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return -1;
     } else if (g_eventsSize == 0) {
         // this should be unreachable but in any case avoids infinite recursion
@@ -239,7 +182,7 @@ UcdCP termGetInput(void) {
     UcdCh16 ch = 0;
 
     if (getCh(&ch) < 0) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return -1;
     } else if (ch == 0) {
         return 0;
@@ -280,7 +223,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
             NULL
         );
         if (readResult == FALSE) {
-            g_error.type = TermErrType_Errno;
+            errSetErrno();
             return -1;
         }
         charsRead += offsetOutBuf;
@@ -322,7 +265,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
 
 bool termWrite(const void *buf, size_t size) {
     if (WriteConsoleA(g_consoleOutput, buf, (DWORD)size, NULL, NULL) == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
     return true;
@@ -331,7 +274,7 @@ bool termWrite(const void *buf, size_t size) {
 bool termSize(uint16_t *outRows, uint16_t *outCols) {
     CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
     if (GetConsoleScreenBufferInfo(g_consoleOutput, &bufferInfo) == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         if (outRows != NULL) {
             *outRows = 0;
         }
@@ -352,7 +295,7 @@ bool termSize(uint16_t *outRows, uint16_t *outCols) {
 bool termCursorGetPos(uint16_t *outX, uint16_t *outY) {
     CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
     if (GetConsoleScreenBufferInfo(g_consoleOutput, &bufferInfo) == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         if (outX != NULL) {
             *outX = 0;
         }
@@ -379,7 +322,7 @@ bool termCursorSetPos(uint16_t x, uint16_t y) {
     }
     COORD cursorPos = { .X = x, .Y = y };
     if (SetConsoleCursorPosition(g_consoleOutput, cursorPos) == FALSE) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
     return true;

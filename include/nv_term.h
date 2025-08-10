@@ -6,21 +6,6 @@
 #include <stdint.h>
 #include "nv_unicode.h"
 
-// Type of errors
-typedef enum TermErrType {
-    TermErrType_None = 0, // No error occurred
-    TermErrType_Errno, // An internal error set by a C function
-    TermErrType_CustomMsg // An error with a custom message in `data.customMsg`
-} TermErrType;
-
-// The error of a function call
-typedef struct TermErr {
-    TermErrType type; // The type of the error
-    union {
-        char *customMsg;
-    } data;
-} TermErr;
-
 // TODO: improve key management
 
 // Special keys
@@ -74,13 +59,6 @@ bool termEnableRawMode(uint8_t getInputTimeoutDSec);
 void termQuit(void);
 // Check if the terminal is initialized.
 bool termIsInit(void);
-
-/*********************************** Errors ***********************************/
-
-// Get the current error of the library.
-TermErr *termErr(void);
-// Print the current error to stderr.
-void termLogError(const char *msg);
 
 /*********************************** Input ************************************/
 

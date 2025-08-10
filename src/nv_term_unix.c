@@ -8,6 +8,7 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "nv_error.h"
 #include "nv_escapes.h"
 #include "nv_term.h"
 #include "nv_unicode.h"
@@ -16,14 +17,13 @@
 #define CURSOR_POS_BUF_SIZE 12 // len(65535) + ';' + len(65535) + '\0'
 
 static struct termios g_origTermios = { 0 };
-static TermErr g_error = { 0 };
 static bool g_initialized = false;
 
 // Initialization
 
 bool termInit(void) {
     if (tcgetattr(STDIN_FILENO, &g_origTermios) != 0) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
     g_initialized = true;
@@ -42,7 +42,7 @@ bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
     }
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) != 0) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
     return true;
@@ -56,40 +56,13 @@ void termQuit(void) {
     }
 }
 
-// Error handling
-
-TermErr *termErr(void) {
-    return &g_error;
-}
-
-static void printErrMsg(const char *msg, char *desc) {
-    if (msg == NULL || *msg == '\0') {
-        (void)fprintf(stderr, "%s\r\n", desc);
-    } else {
-        (void)fprintf(stderr, "%s: %s\r\n", msg, desc);
-    }
-}
-
-void termLogError(const char *msg) {
-    switch (g_error.type) {
-    case TermErrType_None:
-        printErrMsg(msg, (char *)"no error occurred");
-        break;
-    case TermErrType_Errno:
-        printErrMsg(msg, strerror(errno));
-        break;
-    default:
-        UNREACHABLE;
-    }
-}
-
 // Input
 
 UcdCP termGetInput(void) {
     UcdCh8 ch = 0;
 
     if (read(STDIN_FILENO, &ch, 1) < 0) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return -1;
     } else if (ch == 0) {
         return 0;
@@ -103,7 +76,7 @@ UcdCP termGetInput(void) {
     for (size_t i = 1; i < chLen; i++) {
         ch = 0; // reset ch value for possible timeout of getCh
         if (read(STDIN_FILENO, &ch, 1) < 0) {
-            g_error.type = TermErrType_Errno;
+            errSetErrno();
             return -1;
         }
         if (ch == 0) {
@@ -118,7 +91,7 @@ UcdCP termGetInput(void) {
 int64_t termRead(UcdCh8 *buf, size_t bufSize) {
     ssize_t res = read(STDIN_FILENO, buf, bufSize);
     if (res < 0) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return -1;
     }
     return res;
@@ -128,7 +101,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
 
 bool termWrite(const void *buf, size_t size) {
     if (write(STDOUT_FILENO, buf, size) == -1) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
     return true;
@@ -137,7 +110,7 @@ bool termWrite(const void *buf, size_t size) {
 bool termSize(uint16_t *outRows, uint16_t *outCols) {
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
     if (outRows != NULL) {
@@ -215,8 +188,7 @@ bool termCursorGetPos(uint16_t *outX, uint16_t *outY) {
     return true;
 
 failure_msg:
-    g_error.type = TermErrType_CustomMsg;
-    g_error.data.customMsg = "invalid sequence when reading cursor pos";
+    errSetMsg("invalid sequence when reading cursor position");
 
 failure:
     if (outX != NULL) {
@@ -246,7 +218,7 @@ bool termCursorSetPos(uint16_t x, uint16_t y) {
     );
 
     if (bufLen == 0) {
-        g_error.type = TermErrType_Errno;
+        errSetErrno();
         return false;
     }
 
