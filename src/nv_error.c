@@ -6,6 +6,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include "nv_string.h"
 #endif // !_WIN32
 
 #include "nv_error.h"
@@ -29,7 +30,7 @@ static void printErrMsg_(const char *msg, char *desc) {
 
 static void printWindowsError_(const char *msg) {
     static char msgBuf[msgBufSize];
-    static TCHAR wMsgBuf[msgBufSize];
+    static wchar_t wMsgBuf[msgBufSize];
     DWORD formatFlags = FORMAT_MESSAGE_FROM_SYSTEM
                       | FORMAT_MESSAGE_IGNORE_INSERTS;
     DWORD errId = GetLastError();

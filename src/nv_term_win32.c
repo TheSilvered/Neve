@@ -9,6 +9,7 @@
 #define _UNICODE
 #include <windows.h>
 
+#include "nv_error.h"
 #include "nv_term.h"
 #include "nv_unicode.h"
 
