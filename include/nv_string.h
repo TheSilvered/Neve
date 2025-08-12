@@ -48,6 +48,8 @@ void strReserve(Str *str, size_t reserve);
 void strAppendC(Str *str, const char *cStr);
 // Append a string view to a string.
 void strAppend(Str *str, const StrView *sv);
+// Append `ch` to the end of the string `count` times.
+void strRepeat(Str *str, char ch, size_t count);
 // Pop a number of characters from the end of a string.
 void strPop(Str *str, size_t count);
 // Clear the contents of a string and keep a capacity of `reserve`.

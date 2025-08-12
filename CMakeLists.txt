@@ -22,7 +22,7 @@ add_executable(neve
     src/nv_file.c
     src/nv_main.c
     src/nv_mem.c
-    src/nv_render.c
+    src/nv_screen.c
     src/nv_string.c
     src/nv_term.c
     src/nv_udb.c

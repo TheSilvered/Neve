@@ -92,6 +92,17 @@ void strAppend(Str *str, const StrView *sv) {
     str->buf[str->len] = '\0';
 }
 
+void strRepeat(Str *str, char ch, size_t count) {
+    if (count == 0 || (uint8_t)ch > 0x7f) {
+        return;
+    }
+
+    strReserve(str, count);
+    memset(str->buf + str->len, ch, count);
+    str->len += count;
+    str->buf[str->len] = '\0';
+}
+
 void strPop(Str *str, size_t count) {
     if (count == 0) {
         return;
