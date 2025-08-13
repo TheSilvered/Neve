@@ -249,7 +249,7 @@ bool screenRefresh(Screen *screen) {
     }
 
     Str *tempRows = screen->editRows;
-    screen->editRows = screen->editRows;
+    screen->editRows = screen->displayRows;
     screen->displayRows = tempRows;
 
     for (uint16_t y = 0; y < screen->h; y++) {
