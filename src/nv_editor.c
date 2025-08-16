@@ -86,6 +86,24 @@ static void handleKeyNormalMode(int32_t key) {
     }
 }
 
+static void handleInsertionKeys(int32_t key) {
+    Ctx *ctx = editorGetActiveCtx();
+    switch (key) {
+    case TermKey_Backspace: {
+        ctxRemoveBack(ctx);
+        return;
+    }
+    case TermKey_Delete: {
+        ctxRemoveForeward(ctx);
+        return;
+    }
+    case '\r':
+        key = '\n';
+    default:
+        ctxInsertCP(ctx, key);
+    }
+}
+
 static void handleKeyInsertMode(int32_t key) {
     Ctx *ctx = &g_ed.fileCtx;
     switch (key) {
@@ -93,14 +111,8 @@ static void handleKeyInsertMode(int32_t key) {
     case TermKey_Escape:
         g_ed.mode = EditorMode_Normal;
         return;
-    case TermKey_Backspace: {
-        ctxRemoveBack(ctx);
-        return;
-    }
-    case '\r':
-        key = '\n';
     default:
-        ctxInsertCP(ctx, key);
+        handleInsertionKeys(key);
     }
 }
 
@@ -120,18 +132,10 @@ static void handleKeySaveDialogMode(int32_t key) {
     case TermKey_CtrlC:
         g_ed.mode = EditorMode_Normal;
         return;
-    case TermKey_ArrowLeft:
-        ctxMoveCurX(ctx, -1);
-        return;
-    case TermKey_ArrowRight:
-        ctxMoveCurX(ctx, 1);
-        return;
-    case TermKey_Backspace:
-        ctxRemoveBack(ctx);
+    case '\n':
         return;
     default:
-        ctxInsertCP(ctx, key);
-        return;
+        handleInsertionKeys(key);
     }
 }
 
