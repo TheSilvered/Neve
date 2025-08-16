@@ -6,8 +6,6 @@
 #include <stdint.h>
 #include "nv_unicode.h"
 
-// TODO: improve key management
-
 // Special keys
 typedef enum TermKey {
     TermKey_None = 0,
@@ -44,7 +42,22 @@ typedef enum TermKey {
     TermKey_ArrowLeft = 0x110000,
     TermKey_ArrowRight,
     TermKey_ArrowUp,
-    TermKey_ArrowDown
+    TermKey_ArrowDown,
+    TermKey_F1,
+    TermKey_F2,
+    TermKey_F3,
+    TermKey_F4,
+    TermKey_F5,
+    TermKey_F6,
+    TermKey_F7,
+    TermKey_F8,
+    TermKey_F9,
+    TermKey_F10,
+    TermKey_F11,
+    TermKey_F12,
+    TermKey_Home,
+    TermKey_End,
+    TermKey_Delete
 } TermKey;
 
 /******************** Initialization and deinitialization *********************/
