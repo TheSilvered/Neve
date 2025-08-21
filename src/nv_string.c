@@ -2,6 +2,7 @@
 #include <string.h>
 #include "nv_mem.h"
 #include "nv_string.h"
+#include "nv_utils.h"
 
 // NOTE: The actual capacity of the string buffer is one more than Str.cap
 //       to allow for the NUL byte
@@ -298,17 +299,15 @@ endReached:
 #ifdef _WIN32
 #include "nv_unicode.h"
 
-#define bufSize_ 4096
-
-static char g_chBuf[bufSize_];
-static wchar_t g_wchBuf[bufSize_];
+static char g_chBuf[4096];
+static wchar_t g_wchBuf[4096];
 
 const wchar_t *tempWStr(const char *str) {
     (void)ucdCh8StrToCh16Str(
         (const UcdCh8 *)str,
         strlen(str),
         (UcdCh16 *)g_wchBuf,
-        bufSize_
+        NV_ARRLEN(g_wchBuf)
     );
     return g_wchBuf;
 }
@@ -318,11 +317,9 @@ const char *tempStr(const wchar_t *str) {
         (const UcdCh16 *)str,
         wcslen(str),
         (UcdCh8 *)g_chBuf,
-        bufSize_
+        NV_ARRLEN(g_chBuf)
     );
     return g_chBuf;
 }
-
-#undef bufSize_
 
 #endif // !_WIN32

@@ -4,14 +4,12 @@
 #include "nv_string.h"
 
 void test_strBufMake(void) {
-#define BUF_SIZE 10
-    char buf[BUF_SIZE];
-    StrBuf sb = strBufMake(buf, BUF_SIZE);
+    char buf[10];
+    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
 
     testAssert(sb.buf == buf);
     testAssert(sb.len == 0);
-    testAssert(sb.bufSize == BUF_SIZE);
-#undef BUF_SIZE
+    testAssert(sb.bufSize == NV_ARRLEN(buf));
 }
 
 testList(

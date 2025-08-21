@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include "nv_utils.h" // Useful inside the tests
 
 // TODO: testCapture
 

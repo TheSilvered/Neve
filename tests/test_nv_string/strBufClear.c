@@ -3,11 +3,9 @@
 #include "nv_test.h"
 #include "nv_string.h"
 
-#define BUF_SIZE 10
-
 void test_strBufClearEmpty(void) {
-    char buf[BUF_SIZE];
-    StrBuf sb = strBufMake(buf, BUF_SIZE);
+    char buf[10];
+    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
 
     strBufClear(&sb);
     testAssert(strcmp(sb.buf, "") == 0);
@@ -15,11 +13,11 @@ void test_strBufClearEmpty(void) {
 }
 
 void test_strBufClearFull(void) {
-    char buf[BUF_SIZE] = "a";
+    char buf[10] = "a";
     StrBuf sb = {
         .buf = buf,
         .len = 1,
-        .bufSize = BUF_SIZE
+        .bufSize = NV_ARRLEN(buf)
     };
 
     strBufClear(&sb);

@@ -41,7 +41,4 @@ void screenClear(Screen *screen, int32_t line);
 // Display any draw calls to the screen.
 bool screenRefresh(Screen *screen);
 
-void renderFile(void);
-void renderStatusBar(void);
-
 #endif // !NV_RENDER_H_

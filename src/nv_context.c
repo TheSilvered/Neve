@@ -5,6 +5,7 @@
 #include "nv_editor.h"
 #include "nv_mem.h"
 #include "nv_udb.h"
+#include "nv_utils.h"
 
 #define TEXT_ARR_RESIZE_IMPL_(arrName)                                         \
     if (requiredLen == arrName##Len) {                                         \
@@ -96,12 +97,11 @@ bool ctxInitFromFile(Ctx *ctx, File *file) {
     strInit(&ctx->path, file->path.len);
     strAppend(&ctx->path, (StrView *)&file->path);
 
-    #define bufSize_ 4096
-    UcdCh8 buf[bufSize_];
+    UcdCh8 buf[4096];
     size_t bytesRead = 0;
 
     do {
-        FileIOResult result = fileRead(file, buf, bufSize_, &bytesRead);
+        FileIOResult result = fileRead(file, buf, NV_ARRLEN(buf), &bytesRead);
         if (result != FileIOResult_Success) {
             ctxDestroy(ctx);
             return false;
@@ -109,8 +109,7 @@ bool ctxInitFromFile(Ctx *ctx, File *file) {
         if (bytesRead != 0) {
             ctxInsert(ctx, buf, bytesRead);
         }
-    } while (bytesRead == bufSize_);
-#undef bufSize_
+    } while (bytesRead == NV_ARRLEN(buf));
 
     // Reset cursor position
     ctxInitWinAndCur_(ctx);

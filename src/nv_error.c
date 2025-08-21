@@ -10,6 +10,7 @@
 #endif // !_WIN32
 
 #include "nv_error.h"
+#include "nv_utils.h"
 
 static Err g_err = { 0 };
 
@@ -26,11 +27,10 @@ static void printErrMsg_(const char *msg, char *desc) {
 }
 
 #ifdef _WIN32
-#define msgBufSize 512
 
 static void printWindowsError_(const char *msg) {
-    static char msgBuf[msgBufSize];
-    static wchar_t wMsgBuf[msgBufSize];
+    static char msgBuf[512];
+    static wchar_t wMsgBuf[512];
     DWORD formatFlags = FORMAT_MESSAGE_FROM_SYSTEM
                       | FORMAT_MESSAGE_IGNORE_INSERTS;
     DWORD errId = GetLastError();
@@ -40,21 +40,21 @@ static void printWindowsError_(const char *msg) {
         NULL,
         errId,
         0,
-        wMsgBuf, msgBufSize,
+        wMsgBuf, NV_ARRLEN(wMsgBuf),
         NULL
     );
 
     if (fmtResult == FALSE) {
         snprintf(
             msgBuf,
-            msgBufSize,
+            NV_ARRLEN(msgBuf),
             "failed to format message, error 0x%04lX", errId
         );
         printErrMsg_(msg, msgBuf);
     } else {
         ucdCh16StrToCh8Str(
             wMsgBuf, wcslen(wMsgBuf),
-            (UcdCh8 *)msgBuf, msgBufSize
+            (UcdCh8 *)msgBuf, NV_ARRLEN(msgBuf)
         );
         printErrMsg_(msg, msgBuf);
     }

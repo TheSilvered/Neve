@@ -12,6 +12,7 @@
 #include "nv_error.h"
 #include "nv_term.h"
 #include "nv_unicode.h"
+#include "nv_utils.h"
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define UNREACHABLE __assume(0)
@@ -28,11 +29,7 @@ static DWORD g_origOutputMode = 0;
 
 static DWORD g_readTimeoutMs = 0;
 
-#define INPUT_EVENTS_SIZE 512
-
-#define readChunkSize 4096
-
-static INPUT_RECORD g_inputEvents[INPUT_EVENTS_SIZE];
+static INPUT_RECORD g_inputEvents[512];
 static size_t g_eventIdx = 0;
 static size_t g_eventsSize = 0;
 static bool g_initialized = false;
@@ -163,7 +160,7 @@ static int getCh(UcdCh16 *outCh) {
 
     BOOL result = ReadConsoleInputW(
         g_consoleInput,
-        g_inputEvents, INPUT_EVENTS_SIZE,
+        g_inputEvents, NV_ARRLEN(g_inputEvents),
         &eventsRead
     );
     g_eventsSize = eventsRead;
@@ -208,8 +205,8 @@ UcdCP termGetInput(void) {
 }
 
 int64_t termRead(UcdCh8 *buf, size_t bufSize) {
-    TCHAR readBuf[readChunkSize] = { 0 };
-    size_t toRead = min(bufSize, readChunkSize);
+    TCHAR readBuf[4096] = { 0 };
+    size_t toRead = min(bufSize, NV_ARRLEN(readBuf));
     size_t idx = 0;
     uint8_t offsetOutBuf = 0;
 
@@ -250,7 +247,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
         if (charsRead < toRead) {
             toRead = 0;
         } else {
-            toRead = min(bufSize - idx, readChunkSize - offsetOutBuf);
+            toRead = min(bufSize - idx, NV_ARRLEN(readBuf) - offsetOutBuf);
         }
     }
 

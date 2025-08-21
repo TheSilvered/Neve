@@ -3,11 +3,9 @@
 #include "nv_test.h"
 #include "nv_string.h"
 
-#define BUF_SIZE 10
-
 void test_strBufAppendCEmpty(void) {
-    char buf[BUF_SIZE];
-    StrBuf sb = strBufMake(buf, BUF_SIZE);
+    char buf[10];
+    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
 
     testAssert(strBufAppendC(&sb, ""));
     testAssert(sb.len == 0);
@@ -15,11 +13,11 @@ void test_strBufAppendCEmpty(void) {
 }
 
 void test_strBufAppendCEmptyToExisting(void) {
-    char buf[BUF_SIZE] = "a";
+    char buf[10] = "a";
     StrBuf sb = {
         .buf = buf,
         .len = 1,
-        .bufSize = BUF_SIZE
+        .bufSize = NV_ARRLEN(buf)
     };
     testAssert(strBufAppendC(&sb, ""));
     testAssert(sb.len == 1);
@@ -27,8 +25,8 @@ void test_strBufAppendCEmptyToExisting(void) {
 }
 
 void test_strBufAppendCFull(void) {
-    char buf[BUF_SIZE];
-    StrBuf sb = strBufMake(buf, BUF_SIZE);
+    char buf[10];
+    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
 
     testAssert(strBufAppendC(&sb, "a"));
     testAssert(sb.len == 1);
@@ -36,11 +34,11 @@ void test_strBufAppendCFull(void) {
 }
 
 void test_strBufAppendCFullToExisting(void) {
-    char buf[BUF_SIZE] = "a";
+    char buf[10] = "a";
     StrBuf sb = {
         .buf = buf,
         .len = 1,
-        .bufSize = BUF_SIZE
+        .bufSize = NV_ARRLEN(buf)
     };
 
     testAssert(strBufAppendC(&sb, "b"));
@@ -48,17 +46,13 @@ void test_strBufAppendCFullToExisting(void) {
     testAssert(strcmp(sb.buf, "ab") == 0);
 }
 
-#undef BUF_SIZE
-
 void test_strBufAppendCTooBig(void) {
-#define BUF_SIZE 1
-    char buf[BUF_SIZE];
-    StrBuf sb = strBufMake(buf, BUF_SIZE);
+    char buf[1];
+    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
 
     testAssert(!strBufAppendC(&sb, "ab"));
     testAssert(sb.len == 0);
     testAssert(strcmp(sb.buf, "") == 0);
-#undef BUF_SIZE
 }
 
 testList(

@@ -12,9 +12,9 @@
 #include "nv_escapes.h"
 #include "nv_term.h"
 #include "nv_unicode.h"
+#include "nv_utils.h"
 
 #define UNREACHABLE __builtin_unreachable()
-#define CURSOR_POS_BUF_SIZE 12 // len(65535) + ';' + len(65535) + '\0'
 
 static struct termios g_origTermios = { 0 };
 static bool g_initialized = false;
@@ -123,7 +123,7 @@ bool termSize(uint16_t *outRows, uint16_t *outCols) {
 }
 
 bool termCursorGetPos(uint16_t *outX, uint16_t *outY) {
-    char buf[CURSOR_POS_BUF_SIZE];
+    char buf[12]; // 12 = len(65535) + ';' + len(65535) + '\0'
     if (!termWrite(escCursorGetPos, 4)) {
         goto failure;
     }
@@ -145,10 +145,10 @@ bool termCursorGetPos(uint16_t *outX, uint16_t *outY) {
     }
 
     // In buf there will be <y>;<x>
-    for (size_t i = 0; i < CURSOR_POS_BUF_SIZE; i++) {
+    for (size_t i = 0; i < NV_ARRLEN(buf); i++) {
         // Going over the buffer size should not be possible considering a max
         // position of 16 bits (like the struct winsize fields).
-        if (i == CURSOR_POS_BUF_SIZE - 1) {
+        if (i == NV_ARRLEN(buf) - 1) {
             goto failure_msg;
         }
 
@@ -201,7 +201,7 @@ failure:
 }
 
 bool termCursorSetPos(uint16_t x, uint16_t y) {
-    char buf[CURSOR_POS_BUF_SIZE + 3];
+    char buf[15]; // 15 = ESC '[' len(65535) + ';' + len(65535) + '\0'
     x++;
     y++;
 
@@ -213,7 +213,7 @@ bool termCursorSetPos(uint16_t x, uint16_t y) {
     }
 
     size_t bufLen = snprintf(
-        buf, CURSOR_POS_BUF_SIZE + 3,
+        buf, NV_ARRLEN(buf),
         escCursorSetPos("%u", "%u"), y, x
     );
 
