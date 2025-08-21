@@ -220,7 +220,7 @@ static void renderLine_(
                 width - scrollX - 1, ""
             );
             strAppend(outBuf, &fmtView);
-        } else if (width > maxWidth) {
+        } else if (width > maxWidth + scrollX) {
             // Draw a gray '>' at the end if a character is cut off
             // If the character is a tab it can just draw a '»'
             fmtView.len = snprintf(
@@ -245,7 +245,7 @@ static void renderLine_(
             strAppend(outBuf, &sv);
         }
 
-        if (width == maxWidth) {
+        if (width == maxWidth + scrollX) {
             break;
         }
     }
