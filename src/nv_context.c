@@ -591,8 +591,11 @@ void ctxRemoveForeward(Ctx *ctx) {
         .len = ctx->text.bufLen
     };
     size_t startIdx = ctx->cur.idx;
-    size_t endIdx = strViewNext(&content, ctx->cur.idx, NULL);
-    ctxRemove_(ctx, startIdx, endIdx);
+    ptrdiff_t endIdx = strViewNext(&content, ctx->cur.idx, NULL);
+    if (endIdx < 0) {
+        endIdx = ctx->text.bufLen;
+    }
+    ctxRemove_(ctx, startIdx, (size_t)endIdx);
 }
 
 
