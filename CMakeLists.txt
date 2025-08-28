@@ -16,6 +16,7 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 include_directories(neve include)
 
 add_executable(neve
+    src/nv_buffer.c
     src/nv_context.c
     src/nv_editor.c
     src/nv_error.c

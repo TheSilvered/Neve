@@ -35,14 +35,16 @@ void quitNeve(void) {
 
 void loadOrCreateFile(const char *path) {
     File file;
+
     switch (fileOpen(&file, path, FileMode_Read)) {
-    case FileIOResult_FileNotFound:
-        ctxDestroy(&g_ed.fileCtx);
-        ctxInitNewFile(&g_ed.fileCtx, path);
+    case FileIOResult_FileNotFound: {
+        StrView pathSv = strViewMakeFromC(path);
+        bufSetPath(&g_ed.fileBuf, &pathSv);
         return;
+    }
     case FileIOResult_Success:
-        ctxDestroy(&g_ed.fileCtx);
-        ctxInitFromFile(&g_ed.fileCtx, &file);
+        bufDestroy(&g_ed.fileBuf);
+        bufInitFromFile(&g_ed.fileBuf, &file);
         fileClose(&file);
         return;
     default:

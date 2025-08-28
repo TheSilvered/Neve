@@ -3,12 +3,7 @@
 
 #include "nv_screen.h"
 #include "nv_context.h"
-
-typedef enum EditorMode {
-    EditorMode_Normal,
-    EditorMode_Insert,
-    EditorMode_SaveDialog
-} EditorMode;
+#include "nv_buffer.h"
 
 typedef struct EditorStrings {
     Str savePrompt;
@@ -17,12 +12,12 @@ typedef struct EditorStrings {
 // The state of the editor.
 typedef struct Editor {
     Screen screen;
-    EditorMode mode; // Current editor mode.
-    Ctx fileCtx;
+    Buf fileBuf; // TODO: multiple file buffers
     Ctx saveDialogCtx;
     EditorStrings strings;
     uint8_t tabStop; // Stop multiple for tab characters.
     bool running; // If the editor is running.
+    bool changingName;
 } Editor;
 
 // Global editor variable.
@@ -40,10 +35,8 @@ void editorHandleKey(uint32_t key);
 
 // Refresh the editor screen.
 bool editorRefresh(void);
-
 // Get the current active context.
 Ctx *editorGetActiveCtx(void);
-
 // Save the current file. Fail if no path is set for the file context.
 bool editorSaveFile(void);
 

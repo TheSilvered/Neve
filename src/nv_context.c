@@ -32,7 +32,7 @@
         arrName##Cap = newCap;                                                 \
     }
 
-void ctxInitWinAndCur_(Ctx *ctx) {
+void ctxInit(Ctx *ctx, bool multiline) {
     ctx->win.x = 0;
     ctx->win.y = 0;
     ctx->win.w = 0;
@@ -44,12 +44,6 @@ void ctxInitWinAndCur_(Ctx *ctx) {
     ctx->cur.y = 0;
     ctx->cur.idx = 0;
     ctx->cur.baseX = 0;
-}
-
-void ctxInitLine(Ctx *ctx) {
-    ctxInitWinAndCur_(ctx);
-
-    ctx->kind = CtxKind_Line;
 
     ctx->text.buf = NULL;
     ctx->text.bufLen = 0;
@@ -57,71 +51,9 @@ void ctxInitLine(Ctx *ctx) {
     ctx->text.lines = NULL;
     ctx->text.linesLen = 0;
     ctx->text.linesCap = 0;
-
+    ctx->mode = CtxMode_Normal;
+    ctx->multiline = multiline;
     ctx->edited = false;
-    strInit(&ctx->path, 0);
-}
-
-void ctxInitNewFile(Ctx *ctx, const char *path) {
-    ctxInitWinAndCur_(ctx);
-
-    ctx->kind = CtxKind_File;
-
-    ctx->text.buf = NULL;
-    ctx->text.bufLen = 0;
-    ctx->text.bufCap = 0;
-    ctx->text.lines = NULL;
-    ctx->text.linesLen = 0;
-    ctx->text.linesCap = 0;
-
-    ctx->edited = true;
-    if (path == NULL) {
-        strInit(&ctx->path, 0);
-    } else {
-        strInitFromC(&ctx->path, path);
-    }
-}
-
-bool ctxInitFromFile(Ctx *ctx, File *file) {
-    ctxInitWinAndCur_(ctx);
-
-    ctx->kind = CtxKind_File;
-
-    ctx->text.buf = NULL;
-    ctx->text.bufLen = 0;
-    ctx->text.bufCap = 0;
-    ctx->text.lines = NULL;
-    ctx->text.linesLen = 0;
-    ctx->text.linesCap = 0;
-
-    strInit(&ctx->path, file->path.len);
-    strAppend(&ctx->path, (StrView *)&file->path);
-
-    UcdCh8 buf[4096];
-    size_t bytesRead = 0;
-
-    do {
-        FileIOResult result = fileRead(file, buf, NV_ARRLEN(buf), &bytesRead);
-        if (result != FileIOResult_Success) {
-            ctxDestroy(ctx);
-            return false;
-        }
-        if (bytesRead != 0) {
-            ctxInsert(ctx, buf, bytesRead);
-        }
-    } while (bytesRead == NV_ARRLEN(buf));
-
-    // Reset cursor position
-    ctxInitWinAndCur_(ctx);
-    ctx->edited = false;
-
-    return true;
-}
-
-bool ctxWriteToFile(Ctx *ctx, File *file) {
-    FileIOResult result = fileWrite(file, ctx->text.buf, ctx->text.bufLen);
-    ctx->edited = ctx->edited && result != FileIOResult_Success;
-    return result == FileIOResult_Success;
 }
 
 void ctxDestroy(Ctx *ctx) {
@@ -413,6 +345,58 @@ void ctxMoveCurIdx(Ctx *ctx, ptrdiff_t diffIdx) {
     ctxSetCurIdx_(ctx, endIdx);
 }
 
+void ctxMoveCurLineStart(Ctx *ctx) {
+    // IMPORTANT: do not read from cur.x and cur.idx (see ctxMoveCurFileEnd)
+    ctx->cur.x = 0;
+    ctx->cur.baseX = 0;
+    ctx->cur.idx = textLineChIdx(ctx, ctx->cur.y);
+}
+
+void ctxMoveCurLineEnd(Ctx *ctx) {
+    // Iterate from the cursor position until the end of the line.
+
+    size_t totWidth = ctx->cur.x;
+    StrView line = ctxGetLine(ctx, ctx->cur.y);
+
+    // Include the character right after the cursor
+    // In case totWidth == 0 the function returns -1 which is what we want
+    // anyway.
+    size_t i = strViewPrev(&line, totWidth, NULL);
+
+    UcdCP cp;
+    for (
+        i = strViewNext(&line, i, &cp);
+        i != -1;
+        i = strViewNext(&line, i, &cp)
+    ) {
+        totWidth += ucdCPWidth(cp, g_ed.tabStop, totWidth);
+    }
+
+    if (ctx->cur.y + 1 == ctxLineCount(ctx)) {
+        ctx->cur.idx = ctx->text.bufLen;
+    } else {
+        // Get the index before the '\n'
+        ctx->cur.idx = textLineChIdx(&ctx->text, ctx->cur.y + 1) - 1;
+    }
+    ctx->cur.x = totWidth;
+    ctx->cur.baseX = totWidth;
+}
+
+void ctxMoveCurFileStart(Ctx *ctx) {
+    ctx->cur.x = 0;
+    ctx->cur.baseX = 0;
+    ctx->cur.y = 0;
+    ctx->cur.idx = 0;
+}
+
+void ctxMoveCurFileEnd(Ctx *ctx) {
+    ctx->cur.y = ctxLineCount(ctx) - 1;
+    // NOTE: here 'ctx' is in a bad state, resolve it with ctxMoveCurLineStart
+    // It cannot read from ctx->cur.x or ctx->cur.idx
+    ctxMoveCurLineStart(ctx);
+    ctxMoveCurLineEnd(ctx);
+}
+
 void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     if (len == 0) {
         return;
@@ -422,7 +406,7 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
 
     size_t lineCount = 0;
     size_t trueLen = len;
-    bool ignoreNL = ctx->kind == CtxKind_Line;
+    bool ignoreNL = !ctx->multiline;
 
     for (size_t i = 0; i < len; i++) {
         if (data[i] == '\n' && !ignoreNL) {
@@ -498,6 +482,7 @@ static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, UcdCh8 *outBuf) {
     // Do not insert control characters
     if (
         (cp != '\n' || !allowLF)
+        && cp != '\t'
         && info.category >= UdbCategory_C_First
         && info.category <= UdbCategory_C_Last
     ) {
@@ -513,7 +498,7 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
     }
 
     UcdCh8 buf[4];
-    size_t len = cpToUTF8Filtered_(cp, ctx->kind == CtxKind_File, buf);
+    size_t len = cpToUTF8Filtered_(cp, ctx->multiline, buf);
     if (len == 0) {
         return;
     }
@@ -598,16 +583,10 @@ void ctxRemoveForeward(Ctx *ctx) {
     ctxRemove_(ctx, startIdx, (size_t)endIdx);
 }
 
-
 void ctxSetWinSize(Ctx *ctx, uint16_t width, uint16_t height) {
     ctx->win.w = width;
     ctx->win.h = height;
     ctxUpdateWindow_(ctx);
-}
-
-void ctxSetPath(Ctx *ctx, StrView *path) {
-    strClear(&ctx->path, path->len);
-    strAppend(&ctx->path, path);
 }
 
 size_t ctxLineCount(const Ctx *ctx) {

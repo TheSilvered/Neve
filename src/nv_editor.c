@@ -15,10 +15,9 @@ Editor g_ed = { 0 };
 void editorInit(void) {
     screenInit(&g_ed.screen);
     g_ed.tabStop = 8;
-    g_ed.mode = EditorMode_Normal;
     g_ed.running = true;
-    ctxInitNewFile(&g_ed.fileCtx, NULL);
-    ctxInitLine(&g_ed.saveDialogCtx);
+    bufInit(&g_ed.fileBuf);
+    ctxInit(&g_ed.saveDialogCtx, false);
 
     strInitFromC(&g_ed.strings.savePrompt, "File path: ");
 
@@ -27,7 +26,7 @@ void editorInit(void) {
 
 void editorQuit(void) {
     screenDestroy(&g_ed.screen);
-    ctxDestroy(&g_ed.fileCtx);
+    bufDestroy(&g_ed.fileBuf);
     ctxDestroy(&g_ed.saveDialogCtx);
 }
 
@@ -38,9 +37,9 @@ bool editorUpdateSize(void) {
     }
 
     screenResize(&g_ed.screen, cols, rows);
-    ctxSetWinSize(&g_ed.fileCtx, cols, rows - 1);
+    ctxSetWinSize(&g_ed.fileBuf.ctx, cols, rows - 2);
 
-    if (g_ed.mode == EditorMode_SaveDialog) {
+    if (g_ed.changingName) {
         // TODO: use visual width of savePrompt
         uint16_t saveDialogWidth = cols - g_ed.strings.savePrompt.len;
         ctxSetWinSize(&g_ed.saveDialogCtx, saveDialogWidth, 1);
@@ -51,11 +50,35 @@ bool editorUpdateSize(void) {
     return true;
 }
 
+static void enterFileSaveMode(void) {
+    if (g_ed.changingName) {
+        return;
+    }
+    Ctx *ctx = editorGetActiveCtx();
+    ctx->mode = CtxMode_Normal;
+    g_ed.changingName = true;
+}
+
+static void exitFileSaveMode(void) {
+    if (!g_ed.changingName) {
+        return;
+    }
+    g_ed.saveDialogCtx.mode = CtxMode_Normal;
+    g_ed.changingName = false;
+}
+
 static void handleKeyNormalMode(int32_t key) {
-    Ctx *ctx = &g_ed.fileCtx;
+    Ctx *ctx = editorGetActiveCtx();
     switch (key) {
+    case TermKey_Escape:
+        exitFileSaveMode();
+        return;
     case TermKey_CtrlC:
-        g_ed.running = false;
+        if (g_ed.changingName) {
+            exitFileSaveMode();
+        } else {
+            g_ed.running = false;
+        }
         return;
     case 'i':
         ctxMoveCurY(ctx, -1);
@@ -70,16 +93,17 @@ static void handleKeyNormalMode(int32_t key) {
         ctxMoveCurX(ctx, 1);
         return;
     case 'a':
-        g_ed.mode = EditorMode_Insert;
+        ctx->mode = CtxMode_Insert;
         return;
     case 'W':
-        g_ed.mode = EditorMode_SaveDialog;
+        enterFileSaveMode();
         return;
     case 'w':
-        if (g_ed.fileCtx.path.len == 0) {
-            g_ed.mode = EditorMode_SaveDialog;
+        if (g_ed.fileBuf.path.len == 0) {
+            enterFileSaveMode();
         } else {
             editorSaveFile();
+            exitFileSaveMode();
         }
         return;
     default:
@@ -100,40 +124,18 @@ static void handleInsertionKeys(int32_t key) {
     }
     case '\r':
         key = '\n';
+        // fallthrough
     default:
         ctxInsertCP(ctx, key);
     }
 }
 
 static void handleKeyInsertMode(int32_t key) {
-    Ctx *ctx = &g_ed.fileCtx;
+    Ctx *ctx = editorGetActiveCtx();
     switch (key) {
     case TermKey_CtrlC:
     case TermKey_Escape:
-        g_ed.mode = EditorMode_Normal;
-        return;
-    default:
-        handleInsertionKeys(key);
-    }
-}
-
-static void handleKeySaveDialogMode(int32_t key) {
-    Ctx *ctx = &g_ed.saveDialogCtx;
-    switch (key) {
-    case TermKey_Enter: {
-        StrView path = ctxGetLine(ctx, 0);
-        if (path.len != 0) {
-            ctxSetPath(&g_ed.fileCtx, &path);
-            editorSaveFile();
-            g_ed.mode = EditorMode_Normal;
-        }
-        return;
-    }
-    case TermKey_Escape:
-    case TermKey_CtrlC:
-        g_ed.mode = EditorMode_Normal;
-        return;
-    case '\n':
+        ctx->mode = CtxMode_Normal;
         return;
     default:
         handleInsertionKeys(key);
@@ -141,6 +143,10 @@ static void handleKeySaveDialogMode(int32_t key) {
 }
 
 void editorHandleKey(uint32_t key) {
+    if (key == 0) {
+        return;
+    }
+
     Ctx *ctx = editorGetActiveCtx();
 
     switch (key) {
@@ -156,16 +162,24 @@ void editorHandleKey(uint32_t key) {
     case TermKey_ArrowRight:
         ctxMoveCurX(ctx, 1);
         return;
+    case TermKey_Enter:
+        if (g_ed.changingName) {
+            StrView path = ctxGetLine(ctx, 0);
+            if (path.len != 0) {
+                bufSetPath(&g_ed.fileBuf, &path);
+                editorSaveFile();
+                exitFileSaveMode();
+            }
+            return;
+        }
+        // Fallthrough.
     default:
-        switch (g_ed.mode) {
-        case EditorMode_Normal:
+        switch (ctx->mode) {
+        case CtxMode_Normal:
             handleKeyNormalMode(key);
             return;
-        case EditorMode_Insert:
+        case CtxMode_Insert:
             handleKeyInsertMode(key);
-            return;
-        case EditorMode_SaveDialog:
-            handleKeySaveDialogMode(key);
             return;
         }
     }
@@ -253,13 +267,13 @@ static void renderLine_(
 
 static void renderFile(void) {
     Str lineBuf = { 0 };
-    for (uint16_t i = 0; i < g_ed.fileCtx.win.h; i++) {
-        if (i + g_ed.fileCtx.win.y < ctxLineCount(&g_ed.fileCtx)) {
-            StrView line = ctxGetLine(&g_ed.fileCtx, i + g_ed.fileCtx.win.y);
+    for (uint16_t i = 0; i < g_ed.fileBuf.ctx.win.h; i++) {
+        if (i + g_ed.fileBuf.ctx.win.y < ctxLineCount(&g_ed.fileBuf.ctx)) {
+            StrView line = ctxGetLine(&g_ed.fileBuf.ctx, i + g_ed.fileBuf.ctx.win.y);
             renderLine_(
                 &line,
-                g_ed.fileCtx.win.w,
-                g_ed.fileCtx.win.x,
+                g_ed.fileBuf.ctx.win.w,
+                g_ed.fileBuf.ctx.win.x,
                 &lineBuf
             );
             screenClear(&g_ed.screen, i);
@@ -270,7 +284,7 @@ static void renderFile(void) {
         screenWrite(&g_ed.screen, 0, i, sLen("~"));
     }
 
-    if (g_ed.fileCtx.text.bufLen != 0) {
+    if (g_ed.fileBuf.ctx.text.bufLen != 0) {
         return;
     }
 
@@ -278,12 +292,39 @@ static void renderFile(void) {
     screenWrite(
         &g_ed.screen,
         (g_ed.screen.w - msg.len) / 2,
-        g_ed.fileCtx.win.h / 2,
+        g_ed.fileBuf.ctx.win.h / 2,
         msg.buf, msg.len
     );
 }
 
-static void renderSaveDialog_(void) {
+static void renderStatusBar(void) {
+    Ctx *ctx = editorGetActiveCtx();
+    const char *mode;
+    switch (ctx->mode) {
+    case CtxMode_Insert:
+        mode = "Insert";
+        break;
+    case CtxMode_Normal:
+        mode = "Normal";
+        break;
+    default:
+        assert(false);
+    }
+
+    screenWriteFmt(
+        &g_ed.screen,
+        0, g_ed.screen.h - 2,
+        "%zi:%zi %s %s",
+        ctx->cur.y + 1,
+        ctx->cur.x + 1,
+        mode,
+        g_ed.fileBuf.ctx.edited ? "*" : ""
+    );
+
+    if (!g_ed.changingName) {
+        return;
+    }
+
     screenWrite(
         &g_ed.screen,
         0, g_ed.screen.h - 1,
@@ -308,36 +349,6 @@ static void renderSaveDialog_(void) {
     );
 }
 
-static void renderStatusBar(void) {
-    const char *mode;
-    switch (g_ed.mode) {
-    case EditorMode_Insert:
-        mode = "Insert";
-        break;
-    case EditorMode_Normal:
-        mode = "Normal";
-        break;
-    case EditorMode_SaveDialog: {
-        renderSaveDialog_();
-        return;
-    }
-    default:
-        assert(false);
-    }
-
-    Ctx *ctx = editorGetActiveCtx();
-
-    screenWriteFmt(
-        &g_ed.screen,
-        0, g_ed.screen.h - 1,
-        "%zi:%zi %s %s",
-        ctx->cur.y + 1,
-        ctx->cur.x + 1,
-        mode,
-        g_ed.fileCtx.edited ? "*" : ""
-    );
-}
-
 bool editorRefresh(void) {
     if (!editorUpdateSize()) {
         return false;
@@ -350,29 +361,12 @@ bool editorRefresh(void) {
 }
 
 Ctx *editorGetActiveCtx(void) {
-    if (g_ed.mode == EditorMode_SaveDialog) {
+    if (g_ed.changingName) {
         return &g_ed.saveDialogCtx;
     }
-    return &g_ed.fileCtx;
+    return &g_ed.fileBuf.ctx;
 }
 
 bool editorSaveFile(void) {
-    if (g_ed.fileCtx.path.len == 0) {
-        return false;
-    }
-    File file;
-    FileIOResult result = fileOpen(
-        &file,
-        strAsC(&g_ed.fileCtx.path),
-        FileMode_Write
-    );
-    if (result != FileIOResult_Success) {
-        return false;
-    }
-    if (!ctxWriteToFile(&g_ed.fileCtx, &file)) {
-        fileClose(&file);
-        return false;
-    }
-    fileClose(&file);
-    return true;
+    return bufWriteToDisk(&g_ed.fileBuf);
 }

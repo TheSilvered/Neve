@@ -4,11 +4,11 @@
 #include "nv_file.h"
 #include "nv_string.h"
 
-// Editing context kind.
-typedef enum CtxKind {
-    CtxKind_File,
-    CtxKind_Line
-} CtxKind;
+// Context mode
+typedef enum CtxMode {
+    CtxMode_Normal,
+    CtxMode_Insert
+} CtxMode;
 
 // Window positition (scroll x and y) and size.
 typedef struct CtxWindow {
@@ -32,24 +32,18 @@ typedef struct CtxText {
 
 // Editing context.
 typedef struct Ctx {
-    CtxKind kind;
     CtxWindow win;
     CtxCursor cur;
     CtxText text;
-    Str path;
+    CtxMode mode;
     bool edited;
+    bool multiline;
 } Ctx;
 
 /******************** Initialization and deinitialization *********************/
 
 // Initialize a line context.
-void ctxInitLine(Ctx *ctx);
-// Initialize a context for a new file.
-void ctxInitNewFile(Ctx *ctx, const char *path);
-// Initialize a context with the contents of `file`.
-bool ctxInitFromFile(Ctx *ctx, File *file);
-// Write the contents of a context to a file.
-bool ctxWriteToFile(Ctx *ctx, File *file);
+void ctxInit(Ctx *ctx, bool multiline);
 // Destroy a context.
 void ctxDestroy(Ctx *ctx);
 
@@ -63,6 +57,15 @@ void ctxMoveCurX(Ctx *ctx, ptrdiff_t dx);
 void ctxMoveCurY(Ctx *ctx, ptrdiff_t dy);
 // Move the cursor by `diffIdx` characters across multiple lines.
 void ctxMoveCurIdx(Ctx *ctx, ptrdiff_t diffIdx);
+
+// Move the cursor to the start of the line
+void ctxMoveCurLineStart(Ctx *ctx);
+// Move the cursor to the end of the line
+void ctxMoveCurLineEnd(Ctx *ctx);
+// Move the cursor to the start of the file
+void ctxMoveCurFileStart(Ctx *ctx);
+// Move the cursor to the end of the file
+void ctxMoveCurFileEnd(Ctx *ctx);
 
 /********************************** Editing ***********************************/
 
@@ -79,8 +82,6 @@ void ctxRemoveForeward(Ctx *ctx);
 
 // Set the size of the window.
 void ctxSetWinSize(Ctx *ctx, uint16_t width, uint16_t height);
-// Set the save path of the context.
-void ctxSetPath(Ctx *ctx, StrView *path);
 // Get the number of lines in the text of a context.
 size_t ctxLineCount(const Ctx *ctx);
 // Get a line of the context as a string view.
