@@ -17,7 +17,7 @@ typedef struct Editor {
     EditorStrings strings;
     uint8_t tabStop; // Stop multiple for tab characters.
     bool running; // If the editor is running.
-    bool changingName;
+    bool savingFile;
 } Editor;
 
 // Global editor variable.

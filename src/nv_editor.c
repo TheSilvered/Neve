@@ -39,7 +39,7 @@ bool editorUpdateSize(void) {
     screenResize(&g_ed.screen, cols, rows);
     ctxSetWinSize(&g_ed.fileBuf.ctx, cols, rows - 2);
 
-    if (g_ed.changingName) {
+    if (g_ed.savingFile) {
         // TODO: use visual width of savePrompt
         uint16_t saveDialogWidth = cols - g_ed.strings.savePrompt.len;
         ctxSetWinSize(&g_ed.saveDialogCtx, saveDialogWidth, 1);
@@ -51,20 +51,21 @@ bool editorUpdateSize(void) {
 }
 
 static void enterFileSaveMode(void) {
-    if (g_ed.changingName) {
+    if (g_ed.savingFile) {
         return;
     }
     Ctx *ctx = editorGetActiveCtx();
     ctx->mode = CtxMode_Normal;
-    g_ed.changingName = true;
+    g_ed.savingFile = true;
+    g_ed.saveDialogCtx.mode = CtxMode_Insert;
 }
 
 static void exitFileSaveMode(void) {
-    if (!g_ed.changingName) {
+    if (!g_ed.savingFile) {
         return;
     }
     g_ed.saveDialogCtx.mode = CtxMode_Normal;
-    g_ed.changingName = false;
+    g_ed.savingFile = false;
 }
 
 static void handleKeyNormalMode(int32_t key) {
@@ -74,7 +75,7 @@ static void handleKeyNormalMode(int32_t key) {
         exitFileSaveMode();
         return;
     case TermKey_CtrlC:
-        if (g_ed.changingName) {
+        if (g_ed.savingFile) {
             exitFileSaveMode();
         } else {
             g_ed.running = false;
@@ -163,7 +164,7 @@ void editorHandleKey(uint32_t key) {
         ctxMoveCurX(ctx, 1);
         return;
     case TermKey_Enter:
-        if (g_ed.changingName) {
+        if (g_ed.savingFile) {
             Str *path = ctxGetContent(ctx);
             if (path->len != 0) {
                 bufSetPath(&g_ed.fileBuf, (StrView *)path);
@@ -322,7 +323,7 @@ static void renderStatusBar(void) {
         g_ed.fileBuf.ctx.edited ? "*" : ""
     );
 
-    if (!g_ed.changingName) {
+    if (!g_ed.savingFile) {
         return;
     }
 
@@ -362,7 +363,7 @@ bool editorRefresh(void) {
 }
 
 Ctx *editorGetActiveCtx(void) {
-    if (g_ed.changingName) {
+    if (g_ed.savingFile) {
         return &g_ed.saveDialogCtx;
     }
     return &g_ed.fileBuf.ctx;
