@@ -164,12 +164,13 @@ void editorHandleKey(uint32_t key) {
         return;
     case TermKey_Enter:
         if (g_ed.changingName) {
-            StrView path = ctxGetLine(ctx, 0);
-            if (path.len != 0) {
-                bufSetPath(&g_ed.fileBuf, &path);
+            Str *path = ctxGetContent(ctx);
+            if (path->len != 0) {
+                bufSetPath(&g_ed.fileBuf, (StrView *)path);
                 editorSaveFile();
                 exitFileSaveMode();
             }
+            strFree(path);
             return;
         }
         // Fallthrough.
@@ -187,7 +188,8 @@ void editorHandleKey(uint32_t key) {
 }
 
 static void renderLine_(
-    const StrView *line,
+    const Ctx *ctx,
+    size_t lineIdx,
     size_t maxWidth,
     size_t scrollX,
     Str *outBuf
@@ -217,9 +219,9 @@ static void renderLine_(
 
     UcdCP cp = -1;
     for (
-        ptrdiff_t i = strViewNext(line, -1, &cp);
+        ptrdiff_t i = ctxLineIterNextStart(ctx, lineIdx, &cp);
         i != -1;
-        i = strViewNext(line, i, &cp)
+        i = ctxLineIterNext(ctx, i, &cp)
     ) {
         uint8_t chWidth = ucdCPWidth(cp, g_ed.tabStop, width);
         width += chWidth;
@@ -252,10 +254,9 @@ static void renderLine_(
             );
             strAppend(outBuf, &fmtView);
         } else {
-            StrView sv = {
-                .buf = line->buf + i,
-                .len = ucdCh8CPLen(cp)
-            };
+            UcdCh8 buf[4];
+            size_t len = ucdCh8FromCP(cp, buf);
+            StrView sv = { buf, len };
             strAppend(outBuf, &sv);
         }
 
@@ -269,9 +270,9 @@ static void renderFile(void) {
     Str lineBuf = { 0 };
     for (uint16_t i = 0; i < g_ed.fileBuf.ctx.win.h; i++) {
         if (i + g_ed.fileBuf.ctx.win.y < ctxLineCount(&g_ed.fileBuf.ctx)) {
-            StrView line = ctxGetLine(&g_ed.fileBuf.ctx, i + g_ed.fileBuf.ctx.win.y);
             renderLine_(
-                &line,
+                &g_ed.fileBuf.ctx,
+                i + g_ed.fileBuf.ctx.win.y,
                 g_ed.fileBuf.ctx.win.w,
                 g_ed.fileBuf.ctx.win.x,
                 &lineBuf
@@ -332,10 +333,10 @@ static void renderStatusBar(void) {
         g_ed.strings.savePrompt.len
     );
 
-    StrView path = ctxGetLine(&g_ed.saveDialogCtx, 0);
     Str lineBuf = { 0 };
     renderLine_(
-        &path,
+        &g_ed.saveDialogCtx,
+        0,
         g_ed.saveDialogCtx.win.w,
         g_ed.saveDialogCtx.win.x,
         &lineBuf

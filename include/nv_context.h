@@ -84,7 +84,42 @@ void ctxRemoveForeward(Ctx *ctx);
 void ctxSetWinSize(Ctx *ctx, uint16_t width, uint16_t height);
 // Get the number of lines in the text of a context.
 size_t ctxLineCount(const Ctx *ctx);
-// Get a line of the context as a string view.
-StrView ctxGetLine(const Ctx *ctx, size_t lineIdx);
+
+// Get the content of the context as a heap-allocated string.
+// Use `strFree` on the returned value.
+Str *ctxGetContent(const Ctx *ctx);
+
+// Iterate over the whole content of the context.
+// Use `idx == -1` to begin iterating.
+// Pass the returned value as `idx` to continue iterating.
+// The iteration ends once the return value is `-1`.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxIterNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+// Iterate over the whole content of the context from the end.
+// Use `idx == -1` to begin iterating.
+// Pass the returned value as `idx` to continue iterating.
+// The iteration ends once the return value is `-1`.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+// Start iterating over one line of the context.
+// Pass the returned value as `idx` to `ctxLineIterNext` to continue iterating.
+// If the return value is `-1` there is nothing to iterate.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxLineIterNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+// Start iterating over one line of the context from the end.
+// Pass the returned value as `idx` to `ctxLineIterPrev` to continue iterating.
+// If the return value is `-1` there is nothing to iterate.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxLineIterPrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+// Continue iterating over one line of the context.
+// Pass the returned value as `idx` to continue iterating.
+// The iteration ends once the return value is `-1`.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxLineIterNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+// Continue iterating over one line of the context from the end.
+// Pass the returned value as `idx` to continue iterating.
+// The iteration ends once the return value is `-1`.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxLineIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
 
 #endif // NV_CONTEXT_H_

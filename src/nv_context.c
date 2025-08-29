@@ -349,25 +349,24 @@ void ctxMoveCurLineStart(Ctx *ctx) {
     // IMPORTANT: do not read from cur.x and cur.idx (see ctxMoveCurFileEnd)
     ctx->cur.x = 0;
     ctx->cur.baseX = 0;
-    ctx->cur.idx = textLineChIdx(ctx, ctx->cur.y);
+    ctx->cur.idx = textLineChIdx(&ctx->text, ctx->cur.y);
 }
 
 void ctxMoveCurLineEnd(Ctx *ctx) {
     // Iterate from the cursor position until the end of the line.
 
     size_t totWidth = ctx->cur.x;
-    StrView line = ctxGetLine(ctx, ctx->cur.y);
 
     // Include the character right after the cursor
     // In case totWidth == 0 the function returns -1 which is what we want
     // anyway.
-    size_t i = strViewPrev(&line, totWidth, NULL);
+    ptrdiff_t i = ctxIterPrev(ctx, ctx->cur.idx, NULL);
 
     UcdCP cp;
     for (
-        i = strViewNext(&line, i, &cp);
+        i = ctxLineIterNext(ctx, i, &cp);
         i != -1;
-        i = strViewNext(&line, i, &cp)
+        i = ctxLineIterNext(ctx, i, &cp)
     ) {
         totWidth += ucdCPWidth(cp, g_ed.tabStop, totWidth);
     }
@@ -593,6 +592,70 @@ size_t ctxLineCount(const Ctx *ctx) {
     return textLineCount(&ctx->text);
 }
 
-StrView ctxGetLine(const Ctx *ctx, size_t lineIdx) {
-    return textLine(&ctx->text, lineIdx);
+Str *ctxGetContent(const Ctx *ctx) {
+    Str *str = strNew(ctx->text.bufLen);
+    StrView text = { .buf = ctx->text.buf, .len = ctx->text.bufLen };
+    strAppend(str, &text);
+    return str;
 }
+
+ptrdiff_t ctxIterNext(const Ctx *ctx, ptrdiff_t i, UcdCP *outCP) {
+    StrView text = { .buf = ctx->text.buf, .len = ctx->text.bufLen };
+    return strViewNext(&text, i, outCP);
+}
+
+ptrdiff_t ctxIterPrev(const Ctx *ctx, ptrdiff_t i, UcdCP *outCP) {
+    StrView text = { .buf = ctx->text.buf, .len = ctx->text.bufLen };
+    return strViewPrev(&text, i, outCP);
+}
+
+ptrdiff_t ctxLineIterNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
+    StrView line = textLine(&ctx->text, lineIdx);
+    size_t chIdx = textLineChIdx(&ctx->text, lineIdx);
+    ptrdiff_t i = strViewNext(&line, -1, outCP);
+    if (i < 0) {
+        return i;
+    } else {
+        return i + chIdx;
+    }
+}
+
+ptrdiff_t ctxLineIterPrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
+    StrView line = textLine(&ctx->text, lineIdx);
+    size_t chIdx = textLineChIdx(&ctx->text, lineIdx);
+    ptrdiff_t i = strViewPrev(&line, -1, outCP);
+    if (i < 0) {
+        return i;
+    } else {
+        return i + chIdx;
+    }
+}
+
+ptrdiff_t ctxLineIterNext(const Ctx *ctx, ptrdiff_t i, UcdCP *outCP) {
+    StrView text = { .buf = ctx->text.buf, .len = ctx->text.bufLen };
+    UcdCP cp;
+    ptrdiff_t newI = strViewNext(&text, i, &cp);
+    if (cp == '\n') {
+        cp = 0;
+        newI = -1;
+    }
+    if (outCP != NULL) {
+        *outCP = cp;
+    }
+    return newI;
+}
+
+ptrdiff_t ctxLineIterPrev(const Ctx *ctx, ptrdiff_t i, UcdCP *outCP) {
+    StrView text = { .buf = ctx->text.buf, .len = ctx->text.bufLen };
+    UcdCP cp;
+    ptrdiff_t newI = strViewPrev(&text, i, &cp);
+    if (cp == '\n') {
+        cp = 0;
+        newI = -1;
+    }
+    if (outCP != NULL) {
+        *outCP = cp;
+    }
+    return newI;
+}
+
