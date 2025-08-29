@@ -93,6 +93,12 @@ static void handleKeyNormalMode(int32_t key) {
     case 'l':
         ctxMoveCurX(ctx, 1);
         return;
+    case TermKey_CtrlJ:
+        ctxMoveCurLineStart(ctx);
+        return;
+    case TermKey_CtrlL:
+        ctxMoveCurLineEnd(ctx);
+        return;
     case 'a':
         ctx->mode = CtxMode_Insert;
         return;
@@ -163,6 +169,11 @@ void editorHandleKey(uint32_t key) {
     case TermKey_ArrowRight:
         ctxMoveCurX(ctx, 1);
         return;
+    case TermKey_Home:
+        ctxMoveCurLineStart(ctx);
+        return;
+    case TermKey_End:
+        ctxMoveCurLineEnd(ctx);
     case TermKey_Enter:
         if (g_ed.savingFile) {
             Str *path = ctxGetContent(ctx);
