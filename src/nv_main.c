@@ -5,6 +5,7 @@
 #include "nv_error.h"
 #include "nv_escapes.h"
 #include "nv_file.h"
+#include "nv_log.h"
 #include "nv_term.h"
 
 bool initNeve(void) {
@@ -54,6 +55,8 @@ void loadOrCreateFile(const char *path) {
 
 // TODO: use wmain on Windows
 int main(int argc, char **argv) {
+    logInit(NULL);
+
     if (argc > 2) {
         printf("Usage: neve [file]\n");
         return 1;
@@ -78,5 +81,6 @@ int main(int argc, char **argv) {
     }
 
     quitNeve();
+    logQuit();
     return 0;
 }

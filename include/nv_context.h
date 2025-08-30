@@ -3,6 +3,7 @@
 
 #include "nv_file.h"
 #include "nv_string.h"
+#include "nv_gapbuffer.h"
 
 // Context mode
 typedef enum CtxMode {
@@ -11,28 +12,31 @@ typedef enum CtxMode {
 } CtxMode;
 
 // Window positition (scroll x and y) and size.
-typedef struct CtxWindow {
+typedef struct CtxFrame {
     size_t x, y;
     uint16_t termX, termY;
     uint16_t w, h;
-} CtxWindow;
+} CtxFrame;
 
 // Cursor position.
 typedef struct CtxCursor {
     size_t x, y, baseX, idx;
 } CtxCursor;
 
+typedef struct CtxTextLines {
+    size_t *items;
+    size_t len, cap;
+} CtxTextLines;
+
 // Text content of an editing context.
 typedef struct CtxText {
-    UcdCh8 *buf;
-    size_t bufLen, bufCap;
-    size_t *lines;
-    size_t linesLen, linesCap;
+    GBuf buf;
+    CtxTextLines m_lines;
 } CtxText;
 
 // Editing context.
 typedef struct Ctx {
-    CtxWindow win;
+    CtxFrame frame;
     CtxCursor cur;
     CtxText text;
     CtxMode mode;
@@ -81,13 +85,13 @@ void ctxRemoveForeward(Ctx *ctx);
 /*********************************** Other ************************************/
 
 // Set the size of the window.
-void ctxSetWinSize(Ctx *ctx, uint16_t width, uint16_t height);
+void ctxSetFrameSize(Ctx *ctx, uint16_t width, uint16_t height);
 // Get the number of lines in the text of a context.
 size_t ctxLineCount(const Ctx *ctx);
 
-// Get the content of the context as a heap-allocated string.
-// Use `strFree` on the returned value.
-Str *ctxGetContent(const Ctx *ctx);
+// Get the content of the context as a string view.
+// The view lives until the text is edited.
+StrView *ctxGetContent(Ctx *ctx);
 
 // Iterate over the whole content of the context.
 // Use `idx == -1` to begin iterating.

@@ -55,10 +55,12 @@ bool bufWriteToDisk(Buf *buf) {
         return false;
     }
 
+    StrView *content = ctxGetContent(&buf->ctx);
+
     ioResult = fileWrite(
         &file,
-        buf->ctx.text.buf,
-        buf->ctx.text.bufLen
+        content->buf,
+        content->len
     );
     fileClose(&file);
 

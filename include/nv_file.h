@@ -40,6 +40,6 @@ FileIOResult fileRead(
 );
 
 // Write to a file.
-FileIOResult fileWrite(File *file, uint8_t *buf, size_t bufSize);
+FileIOResult fileWrite(File *file, const uint8_t *buf, size_t bufSize);
 
 #endif // !NV_FILE_H_

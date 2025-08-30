@@ -87,7 +87,7 @@ FileIOResult fileRead(
     return FileIOResult_OtherIOError;
 }
 
-FileIOResult fileWrite(File *file, uint8_t *buf, size_t bufSize) {
+FileIOResult fileWrite(File *file, const uint8_t *buf, size_t bufSize) {
     if (file->fp == NULL || file->mode != FileMode_Write) {
         return FileIOResult_OperationNotAllowed;
     }

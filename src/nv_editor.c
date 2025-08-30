@@ -37,14 +37,14 @@ bool editorUpdateSize(void) {
     }
 
     screenResize(&g_ed.screen, cols, rows);
-    ctxSetWinSize(&g_ed.fileBuf.ctx, cols, rows - 2);
+    ctxSetFrameSize(&g_ed.fileBuf.ctx, cols, rows - 2);
 
     if (g_ed.savingFile) {
         // TODO: use visual width of savePrompt
         uint16_t saveDialogWidth = cols - g_ed.strings.savePrompt.len;
-        ctxSetWinSize(&g_ed.saveDialogCtx, saveDialogWidth, 1);
-        g_ed.saveDialogCtx.win.termX = g_ed.strings.savePrompt.len;
-        g_ed.saveDialogCtx.win.termY = rows - 1;
+        ctxSetFrameSize(&g_ed.saveDialogCtx, saveDialogWidth, 1);
+        g_ed.saveDialogCtx.frame.termX = g_ed.strings.savePrompt.len;
+        g_ed.saveDialogCtx.frame.termY = rows - 1;
     }
 
     return true;
@@ -176,13 +176,12 @@ void editorHandleKey(uint32_t key) {
         ctxMoveCurLineEnd(ctx);
     case TermKey_Enter:
         if (g_ed.savingFile) {
-            Str *path = ctxGetContent(ctx);
+            StrView *path = ctxGetContent(ctx);
             if (path->len != 0) {
-                bufSetPath(&g_ed.fileBuf, (StrView *)path);
+                bufSetPath(&g_ed.fileBuf, path);
                 editorSaveFile();
                 exitFileSaveMode();
             }
-            strFree(path);
             return;
         }
         // Fallthrough.
@@ -280,13 +279,13 @@ static void renderLine_(
 
 static void renderFile(void) {
     Str lineBuf = { 0 };
-    for (uint16_t i = 0; i < g_ed.fileBuf.ctx.win.h; i++) {
-        if (i + g_ed.fileBuf.ctx.win.y < ctxLineCount(&g_ed.fileBuf.ctx)) {
+    for (uint16_t i = 0; i < g_ed.fileBuf.ctx.frame.h; i++) {
+        if (i + g_ed.fileBuf.ctx.frame.y < ctxLineCount(&g_ed.fileBuf.ctx)) {
             renderLine_(
                 &g_ed.fileBuf.ctx,
-                i + g_ed.fileBuf.ctx.win.y,
-                g_ed.fileBuf.ctx.win.w,
-                g_ed.fileBuf.ctx.win.x,
+                i + g_ed.fileBuf.ctx.frame.y,
+                g_ed.fileBuf.ctx.frame.w,
+                g_ed.fileBuf.ctx.frame.x,
                 &lineBuf
             );
             screenClear(&g_ed.screen, i);
@@ -297,7 +296,7 @@ static void renderFile(void) {
         screenWrite(&g_ed.screen, 0, i, sLen("~"));
     }
 
-    if (g_ed.fileBuf.ctx.text.bufLen != 0) {
+    if (g_ed.fileBuf.ctx.text.buf.len != 0) {
         return;
     }
 
@@ -305,7 +304,7 @@ static void renderFile(void) {
     screenWrite(
         &g_ed.screen,
         (g_ed.screen.w - msg.len) / 2,
-        g_ed.fileBuf.ctx.win.h / 2,
+        g_ed.fileBuf.ctx.frame.h / 2,
         msg.buf, msg.len
     );
 }
@@ -349,8 +348,8 @@ static void renderStatusBar(void) {
     renderLine_(
         &g_ed.saveDialogCtx,
         0,
-        g_ed.saveDialogCtx.win.w,
-        g_ed.saveDialogCtx.win.x,
+        g_ed.saveDialogCtx.frame.w,
+        g_ed.saveDialogCtx.frame.x,
         &lineBuf
     );
     screenWrite(
