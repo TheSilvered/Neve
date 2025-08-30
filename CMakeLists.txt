@@ -16,20 +16,7 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 include_directories(neve include)
 
 add_executable(neve
-    src/nv_buffer.c
-    src/nv_context.c
-    src/nv_editor.c
-    src/nv_error.c
-    src/nv_file.c
-    src/nv_gapbuffer.c
-    src/nv_log.c
-    src/nv_main.c
-    src/nv_mem.c
-    src/nv_screen.c
-    src/nv_string.c
-    src/nv_term.c
-    src/nv_udb.c
-    src/nv_unicode.c
+    src/unitybuild.c
 )
 
 if(MSVC)
