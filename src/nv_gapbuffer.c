@@ -73,7 +73,7 @@ void gBufRemove(GBuf *buf, size_t len) {
     buf->gapIdx -= len;
     buf->len -= len;
 
-    assert(ucdCh8CPLen(gBufGet(buf, buf->gapIdx)));
+    assert(buf->gapIdx == buf->len || ucdCh8CPLen(gBufGet(buf, buf->gapIdx)));
 
     gBufShrink_(buf);
 }
