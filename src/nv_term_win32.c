@@ -205,7 +205,7 @@ UcdCP termGetInput(void) {
 }
 
 int64_t termRead(UcdCh8 *buf, size_t bufSize) {
-    TCHAR readBuf[4096] = { 0 };
+    wchar_t readBuf[4096] = { 0 };
     size_t toRead = min(bufSize, NV_ARRLEN(readBuf));
     size_t idx = 0;
     uint8_t offsetOutBuf = 0;
