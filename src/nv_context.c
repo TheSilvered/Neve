@@ -120,7 +120,9 @@ void ctxSetCurIdx_(Ctx *ctx, size_t idx) {
     size_t width = 0;
     UcdCP cp = -1;
     ptrdiff_t i;
-    if (lineIdx != ctx->cur.y) {
+    // The width has to be re-calculated when going backwards because there is
+    // No way of knowing the width of a tab to subtract it.
+    if (lineIdx != ctx->cur.y || ctx->cur.idx > idx) {
         i = ctxLineIterNextStart(ctx, lineIdx, &cp);
     } else {
         width = ctx->cur.x;
