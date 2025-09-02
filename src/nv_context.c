@@ -119,11 +119,16 @@ void ctxSetCurIdx_(Ctx *ctx, size_t idx) {
 
     size_t width = 0;
     UcdCP cp = -1;
-    for (
-        ptrdiff_t i = ctxLineIterNextStart(ctx, lineIdx, &cp);
-        i >= 0 && (size_t)i < idx;
-        i = ctxLineIterNext(ctx, i, &cp)
-    ) {
+    ptrdiff_t i;
+    if (lineIdx != ctx->cur.y) {
+        i = ctxLineIterNextStart(ctx, lineIdx, &cp);
+    } else {
+        width = ctx->cur.x;
+        i = ctxIterPrev(ctx, ctx->cur.idx, NULL);
+        i = ctxIterNext(ctx, i, &cp);
+    }
+
+    for (; i >= 0 && (size_t)i < idx; i = ctxLineIterNext(ctx, i, &cp)) {
         width += ucdCPWidth(cp, g_ed.tabStop, width);
     }
 
@@ -357,12 +362,17 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     // Insert the data in the buf
     gBufSetGapIdx(buf, ctx->cur.idx);
 
+    size_t lineStart = 0;
     for (size_t i = 0; i < len; i++) {
         // Normalize all line endings to `\n`
         if (data[i] == '\r' || (data[i] == '\n' && ignoreNL)) {
-            continue;
+            gBufInsert(buf, &data[lineStart], i - lineStart - 1);
+            lineStart = i + 1;
         }
-        gBufInsert(buf, &data[i], 1);
+    }
+
+    if (lineStart < len) {
+        gBufInsert(buf, &data[lineStart], len - lineStart);
     }
 
     // Update the line indices
