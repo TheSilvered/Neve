@@ -23,22 +23,18 @@ typedef struct CtxCursor {
     size_t x, y, baseX, idx;
 } CtxCursor;
 
-typedef struct CtxTextLines {
+// Dynamic array of size_t for storing line indices.
+typedef struct CtxLines {
     size_t *items;
     size_t len, cap;
-} CtxTextLines;
-
-// Text content of an editing context.
-typedef struct CtxText {
-    GBuf buf;
-    CtxTextLines m_lines;
-} CtxText;
+} CtxLines;
 
 // Editing context.
 typedef struct Ctx {
     CtxFrame frame;
     CtxCursor cur;
-    CtxText text;
+    GBuf buf;
+    CtxLines m_lines;
     CtxMode mode;
     bool edited;
     bool multiline;
@@ -75,6 +71,8 @@ void ctxMoveCurFileEnd(Ctx *ctx);
 
 // Write in a context.
 void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len);
+// Append to a context, does not change the cursor position.
+void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len);
 // Insert a codepoint. Any invalid codepoint is ignored.
 void ctxInsertCP(Ctx *ctx, UcdCP cp);
 // Remove the cahracter before the cursor.

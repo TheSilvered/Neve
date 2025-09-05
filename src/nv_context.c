@@ -24,60 +24,56 @@ void ctxInit(Ctx *ctx, bool multiline) {
         .baseX = 0
     };
 
-    ctx->text.buf = (GBuf){ 0 };
-    ctx->text.m_lines = (CtxTextLines){ 0 };
+    ctx->buf = (GBuf){ 0 };
+    ctx->m_lines = (CtxLines){ 0 };
     ctx->mode = CtxMode_Normal;
     ctx->multiline = multiline;
     ctx->edited = false;
 }
 
 void ctxDestroy(Ctx *ctx) {
-    memFree(ctx->text.buf.bytes);
-    arrDestroy(&ctx->text.m_lines);
+    memFree(ctx->buf.bytes);
+    arrDestroy(&ctx->m_lines);
 
     memset(ctx, 0, sizeof(*ctx));
 }
 
-size_t textLineCount(const CtxText *text) {
-    return text->m_lines.len + 1;
-}
-
-size_t textLineChIdx(const CtxText *text, size_t lineIdx) {
-    assert(lineIdx <= text->m_lines.len);
+size_t ctxLineChIdx_(const Ctx *ctx, size_t lineIdx) {
+    assert(lineIdx <= ctx->m_lines.len);
     if (lineIdx == 0) {
         return 0;
     } else {
-        return text->m_lines.items[lineIdx - 1];
+        return ctx->m_lines.items[lineIdx - 1];
     }
 }
 
-size_t textLineLastChIdx(const CtxText *text, size_t lineIdx) {
-    assert(lineIdx <= text->m_lines.len);
-    if (lineIdx == text->m_lines.len) {
-        return text->buf.len;
+size_t ctxLineLastChIdx_(const Ctx *ctx, size_t lineIdx) {
+    assert(lineIdx <= ctx->m_lines.len);
+    if (lineIdx == ctx->m_lines.len) {
+        return ctx->buf.len;
     } else {
-        return textLineChIdx(text, lineIdx + 1) - 1; // Do not consider the \n
+        return ctxLineChIdx_(ctx, lineIdx + 1) - 1; // Do not consider the \n
     }
 }
 
-size_t textLineLen(const CtxText *text, size_t lineIdx) {
-    assert(lineIdx <= text->m_lines.len);
-    return textLineLastChIdx(text, lineIdx) - textLineChIdx(text, lineIdx);
+size_t ctxLineLen_(const Ctx *ctx, size_t lineIdx) {
+    assert(lineIdx <= ctx->m_lines.len);
+    return ctxLineLastChIdx_(ctx, lineIdx) - ctxLineChIdx_(ctx, lineIdx);
 }
 
-size_t textLineFromBufIdx_(const CtxText *text, size_t bufIdx) {
-    if (text->m_lines.len == 0 || text->m_lines.items[0] > bufIdx) {
+size_t ctxLineFromBufIdx_(const Ctx *ctx, size_t bufIdx) {
+    if (ctx->m_lines.len == 0 || ctx->m_lines.items[0] > bufIdx) {
         return 0;
-    } else if (bufIdx == text->buf.len) {
-        return text->m_lines.len;
+    } else if (bufIdx == ctx->buf.len) {
+        return ctx->m_lines.len;
     }
 
     size_t lo = 0;
-    size_t hi = text->m_lines.len;
+    size_t hi = ctx->m_lines.len;
 
     while (lo + 1 != hi) {
         size_t idx = (hi + lo) / 2;
-        size_t line = text->m_lines.items[idx];
+        size_t line = ctx->m_lines.items[idx];
         if (line < bufIdx) {
             lo = idx;
         } else if (line > bufIdx) {
@@ -111,11 +107,11 @@ void ctxUpdateWindow_(Ctx *ctx) {
 }
 
 void ctxSetCurIdx_(Ctx *ctx, size_t idx) {
-    if (idx > ctx->text.buf.len) {
-        idx = ctx->text.buf.len;
+    if (idx > ctx->buf.len) {
+        idx = ctx->buf.len;
     }
 
-    size_t lineIdx = textLineFromBufIdx_(&ctx->text, idx);
+    size_t lineIdx = ctxLineFromBufIdx_(ctx, idx);
 
     size_t width = 0;
     UcdCP cp = -1;
@@ -150,7 +146,7 @@ void ctxMoveCurX(Ctx *ctx, ptrdiff_t dx) {
     // Move the cursor by dx characters, it may be more than dx columns.
 
     if (dx > 0) {
-        ptrdiff_t lastCh = textLineLastChIdx(&ctx->text, ctx->cur.y);
+        ptrdiff_t lastCh = ctxLineLastChIdx_(ctx, ctx->cur.y);
         ptrdiff_t i;
         for (
             i = ctxLineIterNext(ctx, ctx->cur.idx, NULL);
@@ -167,7 +163,7 @@ void ctxMoveCurX(Ctx *ctx, ptrdiff_t dx) {
             ctx->cur.idx = i;
         }
     } else {
-        ptrdiff_t firstCh = textLineChIdx(&ctx->text, ctx->cur.y);
+        ptrdiff_t firstCh = ctxLineChIdx_(ctx, ctx->cur.y);
         ptrdiff_t i;
         for (
             i = ctxLineIterPrev(ctx, ctx->cur.idx, NULL);
@@ -208,7 +204,7 @@ void ctxMoveCurY(Ctx *ctx, ptrdiff_t dy) {
         return;
     }
 
-    size_t lineCount = textLineCount(&ctx->text);
+    size_t lineCount = ctxLineCount(ctx);
     ptrdiff_t endY = (ptrdiff_t)ctx->cur.y + dy;
 
     if (endY < 0) {
@@ -219,7 +215,7 @@ void ctxMoveCurY(Ctx *ctx, ptrdiff_t dy) {
 
     ctx->cur.y = endY;
 
-    size_t lineIdx = textLineLastChIdx(&ctx->text, endY);
+    size_t lineIdx = ctxLineLastChIdx_(ctx, endY);
 
     size_t width = 0;
     UcdCP cp = -1;
@@ -260,7 +256,7 @@ void ctxMoveCurIdx(Ctx *ctx, ptrdiff_t diffIdx) {
             }
         }
         if (i < 0) {
-            endIdx = ctx->text.buf.len;
+            endIdx = ctx->buf.len;
         } else {
             endIdx = i;
         }
@@ -289,7 +285,7 @@ void ctxMoveCurLineStart(Ctx *ctx) {
     // IMPORTANT: do not read from cur.x and cur.idx (see ctxMoveCurFileEnd)
     ctx->cur.x = 0;
     ctx->cur.baseX = 0;
-    ctx->cur.idx = textLineChIdx(&ctx->text, ctx->cur.y);
+    ctx->cur.idx = ctxLineChIdx_(ctx, ctx->cur.y);
 }
 
 void ctxMoveCurLineEnd(Ctx *ctx) {
@@ -312,10 +308,10 @@ void ctxMoveCurLineEnd(Ctx *ctx) {
     }
 
     if (ctx->cur.y + 1 == ctxLineCount(ctx)) {
-        ctx->cur.idx = ctx->text.buf.len;
+        ctx->cur.idx = ctx->buf.len;
     } else {
         // Get the index before the '\n'
-        ctx->cur.idx = textLineChIdx(&ctx->text, ctx->cur.y + 1) - 1;
+        ctx->cur.idx = ctxLineChIdx_(ctx, ctx->cur.y + 1) - 1;
     }
     ctx->cur.x = totWidth;
     ctx->cur.baseX = totWidth;
@@ -356,9 +352,9 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     }
 
     // Preallocate all necessary space
-    arrResize(&ctx->text.m_lines, ctx->text.m_lines.len + lineCount);
+    arrResize(&ctx->m_lines, ctx->m_lines.len + lineCount);
 
-    GBuf *buf = &ctx->text.buf;
+    GBuf *buf = &ctx->buf;
     size_t idx = ctx->cur.idx;
 
     // Insert the data in the buf
@@ -379,11 +375,11 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
 
     // Update the line indices
 
-    size_t *lines = ctx->text.m_lines.items;
+    size_t *lines = ctx->m_lines.items;
 
     // Offset the indices after the data
-    size_t lineIdx = textLineFromBufIdx_(&ctx->text, idx);
-    for (size_t i = lineIdx; i < ctx->text.m_lines.len; i++) {
+    size_t lineIdx = ctxLineFromBufIdx_(ctx, idx);
+    for (size_t i = lineIdx; i < ctx->m_lines.len; i++) {
         lines[i] += len;
     }
 
@@ -396,9 +392,9 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     memmove(
         lines + lineIdx + lineCount,
         lines + lineIdx,
-        sizeof(*lines) * (ctx->text.m_lines.len - lineIdx)
+        sizeof(*lines) * (ctx->m_lines.len - lineIdx)
     );
-    ctx->text.m_lines.len += lineCount;
+    ctx->m_lines.len += lineCount;
 
     // Add the new lines
     for (size_t i = 0; i < trueLen && lineCount != 0; i++) {
@@ -409,6 +405,34 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
         }
     }
     ctxSetCurIdx_(ctx, ctx->cur.idx + len);
+}
+
+void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
+    if (len == 0) {
+        return;
+    }
+
+    ctx->edited = true;
+
+    size_t lineStart = 0;
+    size_t ignoredCharCount = 0;
+    bool ignoreNL = !ctx->multiline;
+
+    GBuf *buf = &ctx->buf;
+
+    for (size_t i = 0; i < len; i++) {
+        if (data[i] == '\n' && !ignoreNL) {
+            gBufInsert(buf, &data[lineStart], i - lineStart - 1);
+            lineStart = i + 1;
+            arrAppend(&ctx->m_lines, i + 1 - ignoredCharCount);
+        } else if (data[i] == '\r' || data[i] == '\n') {
+            ignoredCharCount++;
+        }
+    }
+
+    if (lineStart < len) {
+        gBufInsert(buf, &data[lineStart], len - lineStart);
+    }
 }
 
 static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, UcdCh8 *outBuf) {
@@ -448,38 +472,36 @@ void ctxRemove_(Ctx *ctx, size_t startIdx, size_t endIdx) {
     if (startIdx >= endIdx) {
         return;
     }
-    assert(endIdx <= ctx->text.buf.len);
+    assert(endIdx <= ctx->buf.len);
 
     ctx->edited = true;
 
-    gBufSetGapIdx(&ctx->text.buf, endIdx);
+    gBufSetGapIdx(&ctx->buf, endIdx);
 
     size_t lineCount = 0;
     for (size_t i = startIdx; i < endIdx; i++) {
-        if (ctx->text.buf.bytes[i] == '\n') {
+        if (ctx->buf.bytes[i] == '\n') {
             lineCount++;
         }
     }
 
-    CtxText *text = &ctx->text;
+    gBufRemove(&ctx->buf, endIdx - startIdx);
 
-    gBufRemove(&ctx->text.buf, endIdx - startIdx);
-
-    size_t lineIdx = textLineFromBufIdx_(text, startIdx);
-    size_t *lines = text->m_lines.items;
+    size_t lineIdx = ctxLineFromBufIdx_(ctx, startIdx);
+    size_t *lines = ctx->m_lines.items;
 
     if (lineCount != 0) {
         memmove(
             lines + lineIdx,
             lines + lineIdx + lineCount,
-            sizeof(*lines) * (text->m_lines.len + 1 - lineIdx - lineCount)
+            sizeof(*lines) * (ctx->m_lines.len + 1 - lineIdx - lineCount)
         );
-        text->m_lines.len -= lineCount;
-        arrResize(&text->m_lines, text->m_lines.len);
+        ctx->m_lines.len -= lineCount;
+        arrResize(&ctx->m_lines, ctx->m_lines.len);
     }
 
-    for (size_t i = lineIdx; i < text->m_lines.len; i++) {
-        text->m_lines.items[i] -= endIdx - startIdx;
+    for (size_t i = lineIdx; i < ctx->m_lines.len; i++) {
+        ctx->m_lines.items[i] -= endIdx - startIdx;
     }
 }
 
@@ -497,14 +519,14 @@ void ctxRemoveBack(Ctx *ctx) {
 }
 
 void ctxRemoveForeward(Ctx *ctx) {
-    if (ctx->cur.idx == ctx->text.buf.len) {
+    if (ctx->cur.idx == ctx->buf.len) {
         return;
     }
 
     size_t startIdx = ctx->cur.idx;
     ptrdiff_t endIdx = ctxIterNext(ctx, ctx->cur.idx, NULL);
     if (endIdx < 0) {
-        endIdx = ctx->text.buf.len;
+        endIdx = ctx->buf.len;
     }
     ctxRemove_(ctx, startIdx, (size_t)endIdx);
 }
@@ -516,30 +538,30 @@ void ctxSetFrameSize(Ctx *ctx, uint16_t width, uint16_t height) {
 }
 
 size_t ctxLineCount(const Ctx *ctx) {
-    return textLineCount(&ctx->text);
+    return ctx->m_lines.len + 1;
 }
 
 StrView *ctxGetContent(Ctx *ctx) {
-    gBufUnite(&ctx->text.buf);
-    return (StrView *)&ctx->text.buf;
+    gBufUnite(&ctx->buf);
+    return (StrView *)&ctx->buf;
 }
 
 ptrdiff_t ctxIterNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
-    return gBufNext(&ctx->text.buf, idx, outCP);
+    return gBufNext(&ctx->buf, idx, outCP);
 }
 
 ptrdiff_t ctxIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
-    return gBufPrev(&ctx->text.buf, idx, outCP);
+    return gBufPrev(&ctx->buf, idx, outCP);
 }
 
 ptrdiff_t ctxLineIterNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    ptrdiff_t i = (ptrdiff_t)textLineChIdx(&ctx->text, lineIdx) - 1;
+    ptrdiff_t i = (ptrdiff_t)ctxLineChIdx_(ctx, lineIdx) - 1;
     return ctxLineIterNext(ctx, i, outCP);
 }
 
 ptrdiff_t ctxLineIterPrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    ptrdiff_t i = textLineLastChIdx(&ctx->text, lineIdx) + 1;
-    if ((size_t)i > ctx->text.buf.len) {
+    ptrdiff_t i = ctxLineLastChIdx_(ctx, lineIdx) + 1;
+    if ((size_t)i > ctx->buf.len) {
         i = -1;
     }
     return ctxLineIterPrev(ctx, i, outCP);

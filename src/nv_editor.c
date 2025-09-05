@@ -296,7 +296,7 @@ static void renderFile(void) {
         screenWrite(&g_ed.screen, 0, i, sLen("~"));
     }
 
-    if (g_ed.fileBuf.ctx.text.buf.len != 0) {
+    if (g_ed.fileBuf.ctx.buf.len != 0) {
         return;
     }
 
