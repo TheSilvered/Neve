@@ -7,37 +7,45 @@ static File logFile = { 0 };
 
 #ifdef _WIN32
 
+#define DEST_ENV "LOCALAPPDATA"
+#define SEP '\\'
+#define ALT_SEP '/'
+#define FILE_NAME "neve.log"
+
+#else
+
+#define DEST_ENV "HOME"
+#define SEP '/'
+#define ALT_SEP '\0' // POSIX only supports /
+#define FILE_NAME ".neve.log"
+
+#endif
+
 bool logInit(const char *filePath) {
-    if (filePath =! NULL) {
+    if (filePath != NULL) {
         return fileOpen(&logFile, filePath, FileMode_Write)
             == FileIOResult_Success;
     }
 
-    UcdCh8 buf[1024];
+    char buf[1024];
     StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
-    const char *appdata = getenv("LOCALAPPDATA");
-    if (appdata == NULL) {
+    const char *dest = getenv(DEST_ENV);
+    if (dest == NULL) {
         return false;
     }
-
-    strBufAppendC(&sb, appdata);
-    if (sb.buf[sb.len - 1] != '\\' && sb.buf[sb.len - 1] != '/') {
-        strBufAppendC(&sb, "\\");
+    const char sepStr[] = { SEP, '\0' };
+    strBufAppendC(&sb, dest);
+    if (sb.buf[sb.len - 1] != SEP && sb.buf[sb.len - 1] != ALT_SEP) {
+        strBufAppendC(&sb, sepStr);
     }
-    strBufAppendC(&sb, "neve.log.txt");
-    return fileOpen(&logFile, filePath, FileMode_Write) == FileIOResult_Success;
+    strBufAppendC(&sb, FILE_NAME);
+    return fileOpen(&logFile, sb.buf, FileMode_Write) == FileIOResult_Success;
 }
 
-#else
-
-bool logInit(const char *filePath) {
-    if (filePath == NULL) {
-        filePath = "~/.neve.log.txt";
-    }
-    return fileOpen(&logFile, filePath, FileMode_Write) == FileIOResult_Success;
-}
-
-#endif
+#undef DEST_ENV
+#undef SEP
+#undef ALT_SEP
+#undef FILE_NAME
 
 void logQuit(void) {
     fileClose(&logFile);

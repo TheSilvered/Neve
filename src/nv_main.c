@@ -55,7 +55,10 @@ void loadOrCreateFile(const char *path) {
 
 // TODO: use wmain on Windows
 int main(int argc, char **argv) {
-    logInit(NULL);
+    if (!logInit(NULL)) {
+        printf("Failed to generate log.\n");
+        return 1;
+    }
 
     if (argc > 2) {
         printf("Usage: neve [file]\n");
