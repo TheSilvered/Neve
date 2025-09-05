@@ -14,7 +14,6 @@ Editor g_ed = { 0 };
 
 void editorInit(void) {
     screenInit(&g_ed.screen);
-    g_ed.tabStop = 8;
     g_ed.running = true;
     bufInit(&g_ed.fileBuf);
     ctxInit(&g_ed.saveDialogCtx, false);
@@ -215,18 +214,9 @@ static void renderLine_(
 
     size_t width = 0;
 
-    const char *tabFmt =
-        escSetStyle(colorBrightBlackFg)
-        "\xc2\xbb%*s" // »%*s
-        escSetStyle(styleDefault);
-    const char *startCutoffFmt =
-        escSetStyle(colorBrightBlackFg)
-        "<%*s"
-        escSetStyle(styleDefault);
-    const char *endCutoffFmt =
-        escSetStyle(colorBrightBlackFg)
-        "%*s>"
-        escSetStyle(styleDefault);
+    const char *tabFmt = "\xc2\xbb%*s"; // »%*s
+    const char *startCutoffFmt = "<%*s";
+    const char *endCutoffFmt = "%*s>";
 
     UcdCP cp = -1;
     for (
@@ -234,7 +224,7 @@ static void renderLine_(
         i != -1;
         i = ctxLineIterNext(ctx, i, &cp)
     ) {
-        uint8_t chWidth = ucdCPWidth(cp, g_ed.tabStop, width);
+        uint8_t chWidth = ucdCPWidth(cp, ctx->tabStop, width);
         width += chWidth;
 
         if (width <= scrollX) {
@@ -277,7 +267,7 @@ static void renderLine_(
     }
 }
 
-static void renderFile(void) {
+static void renderFile_(void) {
     Str lineBuf = { 0 };
     for (uint16_t i = 0; i < g_ed.fileBuf.ctx.frame.h; i++) {
         if (i + g_ed.fileBuf.ctx.frame.y < ctxLineCount(&g_ed.fileBuf.ctx)) {
@@ -309,7 +299,7 @@ static void renderFile(void) {
     );
 }
 
-static void renderStatusBar(void) {
+static void renderStatusBar_(void) {
     Ctx *ctx = editorGetActiveCtx();
     const char *mode;
     switch (ctx->mode) {
@@ -366,8 +356,8 @@ bool editorRefresh(void) {
         return false;
     }
 
-    renderFile();
-    renderStatusBar();
+    renderFile_();
+    renderStatusBar_();
 
     return screenRefresh(&g_ed.screen);
 }

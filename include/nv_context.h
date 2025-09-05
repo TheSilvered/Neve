@@ -38,6 +38,7 @@ typedef struct Ctx {
     CtxMode mode;
     bool edited;
     bool multiline;
+    uint8_t tabStop;
 } Ctx;
 
 /******************** Initialization and deinitialization *********************/

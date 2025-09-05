@@ -15,7 +15,6 @@ typedef struct Editor {
     Buf fileBuf; // TODO: multiple file buffers
     Ctx saveDialogCtx;
     EditorStrings strings;
-    uint8_t tabStop; // Stop multiple for tab characters.
     bool running; // If the editor is running.
     bool savingFile;
 } Editor;

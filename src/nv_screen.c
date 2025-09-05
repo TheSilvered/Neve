@@ -84,7 +84,8 @@ static size_t cutStr(StrView *sv, size_t maxWidth, size_t w) {
         i != -1;
         i = strViewNext(sv, i, &cp)
     ) {
-        cpWidth = ucdCPWidth(cp, g_ed.tabStop, w);
+        // Assume tabs have been filtered out
+        cpWidth = ucdCPWidth(cp, 0, w);
         if (w + cpWidth > maxWidth) {
             break;
         }
@@ -119,7 +120,8 @@ void screenWrite(
         x != 0 && startIdx != -1;
         startIdx = strViewNext((StrView *)row, startIdx, &cp)
     ) {
-        cpWidth = ucdCPWidth(cp, g_ed.tabStop, w);
+        // Assume tabs have been filtered out
+        cpWidth = ucdCPWidth(cp, 0, w);
         if (w + cpWidth > x) {
             break;
         }
@@ -154,7 +156,7 @@ void screenWrite(
         rowIdx != -1 && rowW < w;
         rowIdx = strViewNext((StrView *)row, rowIdx, &cp)
     ) {
-        rowW += ucdCPWidth(cp, g_ed.tabStop, rowW);
+        rowW += ucdCPWidth(cp, 0, rowW);
     }
 
     if (rowIdx == -1) {

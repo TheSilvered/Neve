@@ -29,6 +29,7 @@ void ctxInit(Ctx *ctx, bool multiline) {
     ctx->mode = CtxMode_Normal;
     ctx->multiline = multiline;
     ctx->edited = false;
+    ctx->tabStop = 8;
 }
 
 void ctxDestroy(Ctx *ctx) {
@@ -127,7 +128,7 @@ void ctxSetCurIdx_(Ctx *ctx, size_t idx) {
     }
 
     for (; i >= 0 && (size_t)i < idx; i = ctxLineIterNext(ctx, i, &cp)) {
-        width += ucdCPWidth(cp, g_ed.tabStop, width);
+        width += ucdCPWidth(cp, ctx->tabStop, width);
     }
 
     ctx->cur.x = width;
@@ -190,7 +191,7 @@ void ctxMoveCurX(Ctx *ctx, ptrdiff_t dx) {
         i >= 0 && (size_t)i < ctx->cur.idx;
         i = ctxLineIterNext(ctx, i, &cp)
     ) {
-        width += ucdCPWidth(cp, g_ed.tabStop, width);
+        width += ucdCPWidth(cp, ctx->tabStop, width);
     }
 
     ctx->cur.x = width;
@@ -224,7 +225,7 @@ void ctxMoveCurY(Ctx *ctx, ptrdiff_t dy) {
         i != -1;
         i = ctxLineIterNext(ctx, i, &cp)
     ) {
-        uint8_t chWidth = ucdCPWidth(cp, g_ed.tabStop, width);
+        uint8_t chWidth = ucdCPWidth(cp, ctx->tabStop, width);
         if (width + chWidth > ctx->cur.baseX) {
             lineIdx = i;
             break;
@@ -304,7 +305,7 @@ void ctxMoveCurLineEnd(Ctx *ctx) {
         i != -1;
         i = ctxLineIterNext(ctx, i, &cp)
     ) {
-        totWidth += ucdCPWidth(cp, g_ed.tabStop, totWidth);
+        totWidth += ucdCPWidth(cp, ctx->tabStop, totWidth);
     }
 
     if (ctx->cur.y + 1 == ctxLineCount(ctx)) {
