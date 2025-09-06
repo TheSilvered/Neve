@@ -578,6 +578,7 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
 
     size_t lineStart = 0;
     size_t ignoredCharCount = 0;
+    size_t lineIdxOffset = ctx->buf.len;
     bool ignoreNL = !ctx->multiline;
 
     GBuf *buf = &ctx->buf;
@@ -587,7 +588,7 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
             gBufInsert(buf, &data[lineStart], i - lineStart);
             gBufInsert(buf, (const UcdCh8 *)"\n", 1);
             lineStart = i + 1;
-            arrAppend(&ctx->m_lines, i + 1 - ignoredCharCount);
+            arrAppend(&ctx->m_lines, buf->len);
         } else if (data[i] == '\r' || data[i] == '\n') {
             gBufInsert(buf, &data[lineStart], i - lineStart);
             lineStart = i + 1;
