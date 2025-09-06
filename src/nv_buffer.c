@@ -32,11 +32,10 @@ bool bufInitFromFile(Buf *buf, File *file) {
             return false;
         }
         if (bytesRead != 0) {
-            ctxInsert(&buf->ctx, readBuf, bytesRead);
+            ctxAppend(&buf->ctx, readBuf, bytesRead);
         }
     } while (bytesRead == NV_ARRLEN(readBuf));
     buf->ctx.edited = false;
-    ctxMoveCurFileStart(&buf->ctx);
     return true;
 }
 

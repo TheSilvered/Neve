@@ -423,10 +423,13 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
 
     for (size_t i = 0; i < len; i++) {
         if (data[i] == '\n' && !ignoreNL) {
-            gBufInsert(buf, &data[lineStart], i - lineStart - 1);
+            gBufInsert(buf, &data[lineStart], i - lineStart);
+            gBufInsert(buf, (const UcdCh8 *)"\n", 1);
             lineStart = i + 1;
             arrAppend(&ctx->m_lines, i + 1 - ignoredCharCount);
         } else if (data[i] == '\r' || data[i] == '\n') {
+            gBufInsert(buf, &data[lineStart], i - lineStart);
+            lineStart = i + 1;
             ignoredCharCount++;
         }
     }
