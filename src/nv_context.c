@@ -470,6 +470,30 @@ void ctxMoveCurWordEndB(Ctx *ctx) {
     ctxSetCurIdx_(ctx, i);
 }
 
+void ctxMoveCurParagraphF(Ctx *ctx) {
+    if (ctx->cur.y + 1 >= ctxLineCount(ctx)) {
+        ctxMoveCurLineEnd(ctx);
+        return;
+    }
+
+    size_t i = ctx->cur.y + 1;
+    for (; i < ctxLineCount(ctx) - 1 && ctxLineLen(ctx, i) != 0; i++) {}
+
+    ctxSetCurIdx_(ctx, ctxLineLastChIdx_(ctx, i));
+}
+
+void ctxMoveCurParagraphB(Ctx *ctx) {
+    if (ctx->cur.y == 0) {
+        ctxMoveCurLineStart(ctx);
+        return;
+    }
+
+    size_t i = ctx->cur.y - 1;
+    for (; i > 0 && ctxLineLen(ctx, i) != 0; i--) {}
+
+    ctxSetCurIdx_(ctx, ctxLineChIdx_(ctx, i));
+}
+
 void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     if (len == 0) {
         return;

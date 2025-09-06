@@ -83,8 +83,20 @@ static void handleKeyNormalMode(int32_t key) {
     case 'i':
         ctxMoveCurY(ctx, -1);
         return;
+    case 'I':
+        ctxMoveCurParagraphB(ctx);
+        return;
+    case TermKey_CtrlI:
+        ctxMoveCurFileStart(ctx);
+        return;
     case 'k':
         ctxMoveCurY(ctx, 1);
+        return;
+    case 'K':
+        ctxMoveCurParagraphF(ctx);
+        return;
+    case TermKey_CtrlK:
+        ctxMoveCurFileEnd(ctx);
         return;
     case 'j':
         ctxMoveCurX(ctx, -1);

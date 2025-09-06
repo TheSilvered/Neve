@@ -77,6 +77,11 @@ void ctxMoveCurWordStartB(Ctx *ctx);
 // Move to the start of the previous word.
 void ctxMoveCurWordEndB(Ctx *ctx);
 
+// Move to the next blank linke.
+void ctxMoveCurParagraphF(Ctx *ctx);
+// Move to the previous blank line.
+void ctxMoveCurParagraphB(Ctx *ctx);
+
 /********************************** Editing ***********************************/
 
 // Write in a context.
