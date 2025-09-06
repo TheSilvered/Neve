@@ -89,13 +89,25 @@ static void handleKeyNormalMode(int32_t key) {
     case 'j':
         ctxMoveCurX(ctx, -1);
         return;
+    case 'J':
+        ctxMoveCurWordStartB(ctx);
+        return;
+    case TermKey_CtrlJ:
+        ctxMoveCurWordEndB(ctx);
+        return;
     case 'l':
         ctxMoveCurX(ctx, 1);
         return;
-    case TermKey_CtrlJ:
-        ctxMoveCurLineStart(ctx);
+    case 'L':
+        ctxMoveCurWordEndF(ctx);
         return;
     case TermKey_CtrlL:
+        ctxMoveCurWordStartF(ctx);
+        return;
+    case 'u':
+        ctxMoveCurLineStart(ctx);
+        return;
+    case 'o':
         ctxMoveCurLineEnd(ctx);
         return;
     case 'a':

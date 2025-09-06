@@ -15,6 +15,9 @@ typedef struct GBuf {
 
 // Get a character from a gap buffer.
 UcdCh8 gBufGet(const GBuf *buf, size_t idx);
+// Get the pointer to a character in the gap buffer.
+// The pointer is valid as long as the buffer is not edited.
+UcdCh8 *gBufGetPtr(const GBuf *buf, size_t idx);
 // Insert data into the gap buffer. The data is inserted at `gapIdx` and
 // `gapIdx` itself is added after the newly inserted data.
 void gBufInsert(GBuf *buf, const UcdCh8 *text, size_t len);

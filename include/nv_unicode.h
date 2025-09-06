@@ -30,6 +30,11 @@ bool ucdIsCPValid(UcdCP cp);
 // If `currWidth` is `0` the width of `\t` will always be `tabStop`.
 uint8_t ucdCPWidth(UcdCP cp, uint8_t tabStop, size_t currWidth);
 
+// Check if a character is alphanumeric.
+bool ucdIsCPAlphanumeric(UcdCP cp);
+// Check if a character is white space.
+bool ucdIsCPWhiteSpace(UcdCP cp);
+
 // Translate a UTF16-encoded string to UTF8 adding a NUL character at the end.
 // Encoding errors in `str` are ignored.
 // Returns the length of the UTF8 string written to `buf`.

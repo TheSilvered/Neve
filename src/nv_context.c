@@ -39,7 +39,7 @@ void ctxDestroy(Ctx *ctx) {
     memset(ctx, 0, sizeof(*ctx));
 }
 
-size_t ctxLineChIdx_(const Ctx *ctx, size_t lineIdx) {
+static size_t ctxLineChIdx_(const Ctx *ctx, size_t lineIdx) {
     assert(lineIdx <= ctx->m_lines.len);
     if (lineIdx == 0) {
         return 0;
@@ -48,7 +48,7 @@ size_t ctxLineChIdx_(const Ctx *ctx, size_t lineIdx) {
     }
 }
 
-size_t ctxLineLastChIdx_(const Ctx *ctx, size_t lineIdx) {
+static size_t ctxLineLastChIdx_(const Ctx *ctx, size_t lineIdx) {
     assert(lineIdx <= ctx->m_lines.len);
     if (lineIdx == ctx->m_lines.len) {
         return ctx->buf.len;
@@ -57,12 +57,28 @@ size_t ctxLineLastChIdx_(const Ctx *ctx, size_t lineIdx) {
     }
 }
 
-size_t ctxLineLen_(const Ctx *ctx, size_t lineIdx) {
+size_t ctxLineLen(const Ctx *ctx, size_t lineIdx) {
     assert(lineIdx <= ctx->m_lines.len);
     return ctxLineLastChIdx_(ctx, lineIdx) - ctxLineChIdx_(ctx, lineIdx);
 }
 
-size_t ctxLineFromBufIdx_(const Ctx *ctx, size_t bufIdx) {
+UcdCP ctxGetChF(const Ctx *ctx) {
+    if (ctx->cur.idx == ctx->buf.len) {
+        return -1;
+    }
+    return ucdCh8ToCP(gBufGetPtr(&ctx->buf, ctx->cur.idx));
+}
+
+UcdCP ctxGetChB(const Ctx *ctx) {
+    if (ctx->cur.idx == 0) {
+        return -1;
+    }
+    UcdCP cp;
+    (void)ctxIterPrev(ctx, ctx->cur.idx, &cp);
+    return cp;
+}
+
+static size_t ctxLineFromBufIdx_(const Ctx *ctx, size_t bufIdx) {
     if (ctx->m_lines.len == 0 || ctx->m_lines.items[0] > bufIdx) {
         return 0;
     } else if (bufIdx == ctx->buf.len) {
@@ -93,7 +109,7 @@ void ctxGetCurTermPos(const Ctx *ctx, uint16_t *outCol, uint16_t *outRow) {
     *outRow = y;
 }
 
-void ctxUpdateWindow_(Ctx *ctx) {
+static void ctxUpdateWindow_(Ctx *ctx) {
     if (ctx->cur.y >= ctx->frame.h + ctx->frame.y) {
         ctx->frame.y = ctx->cur.y - ctx->frame.h + 1;
     } else if (ctx->cur.y < ctx->frame.y) {
@@ -107,7 +123,7 @@ void ctxUpdateWindow_(Ctx *ctx) {
     }
 }
 
-void ctxSetCurIdx_(Ctx *ctx, size_t idx) {
+static void ctxSetCurIdx_(Ctx *ctx, size_t idx) {
     if (idx > ctx->buf.len) {
         idx = ctx->buf.len;
     }
@@ -283,7 +299,6 @@ void ctxMoveCurIdx(Ctx *ctx, ptrdiff_t diffIdx) {
 }
 
 void ctxMoveCurLineStart(Ctx *ctx) {
-    // IMPORTANT: do not read from cur.x and cur.idx (see ctxMoveCurFileEnd)
     ctx->cur.x = 0;
     ctx->cur.baseX = 0;
     ctx->cur.idx = ctxLineChIdx_(ctx, ctx->cur.y);
@@ -326,11 +341,133 @@ void ctxMoveCurFileStart(Ctx *ctx) {
 }
 
 void ctxMoveCurFileEnd(Ctx *ctx) {
-    ctx->cur.y = ctxLineCount(ctx) - 1;
-    // NOTE: here 'ctx' is in a bad state, resolve it with ctxMoveCurLineStart
-    // It cannot read from ctx->cur.x or ctx->cur.idx
-    ctxMoveCurLineStart(ctx);
-    ctxMoveCurLineEnd(ctx);
+    ctxSetCurIdx_(ctx, ctx->buf.len);
+}
+
+void ctxMoveCurWordStartF(Ctx *ctx) {
+    if (ctx->cur.idx == ctx->buf.len) {
+        return;
+    }
+    ptrdiff_t i = ctx->cur.idx;
+    UcdCP cp = ctxGetChF(ctx);
+
+    if (ucdIsCPAlphanumeric(cp)) {
+        for (
+            i = ctxIterNext(ctx, i, &cp);
+            i != -1 && ucdIsCPAlphanumeric(cp);
+            i = ctxIterNext(ctx, i, &cp)
+        ) { }
+    } else {
+        for (
+            i = ctxIterNext(ctx, i, &cp);
+            i != -1 && !ucdIsCPWhiteSpace(cp) && !ucdIsCPAlphanumeric(cp);
+            i = ctxIterNext(ctx, i, &cp)
+        ) { }
+    }
+
+    // Skip white space
+    for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxIterNext(ctx, i, &cp)) { }
+
+    if (i == -1) {
+        i = ctx->buf.len;
+    }
+    ctxSetCurIdx_(ctx, i);
+}
+
+void ctxMoveCurWordEndF(Ctx *ctx) {
+    if (ctx->cur.idx == ctx->buf.len) {
+        return;
+    }
+    ptrdiff_t i = ctx->cur.idx;
+    UcdCP cp = ctxGetChF(ctx);
+
+    // Skip white space
+    for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxIterNext(ctx, i, &cp)) { }
+
+    if (ucdIsCPAlphanumeric(cp) && i != -1) {
+        for (
+            i = ctxIterNext(ctx, i, &cp);
+            i != -1 && ucdIsCPAlphanumeric(cp);
+            i = ctxIterNext(ctx, i, &cp)
+        ) { }
+    } else if (i != -1) {
+        for (
+            i = ctxIterNext(ctx, i, &cp);
+            i != -1 && !ucdIsCPWhiteSpace(cp) && !ucdIsCPAlphanumeric(cp);
+            i = ctxIterNext(ctx, i, &cp)
+        ) { }
+    }
+    if (i == -1) {
+        i = ctx->buf.len;
+    }
+    ctxSetCurIdx_(ctx, i);
+}
+
+void ctxMoveCurWordStartB(Ctx *ctx) {
+    if (ctx->cur.idx == 0) {
+        return;
+    }
+    ptrdiff_t i = ctx->cur.idx;
+    UcdCP cp = ctxGetChB(ctx);
+
+    // Skip white space
+    for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxIterPrev(ctx, i, &cp)) { }
+
+    if (ucdIsCPAlphanumeric(cp) && i != -1) {
+        for (
+            i = ctxIterPrev(ctx, i, &cp);
+            i != -1 && ucdIsCPAlphanumeric(cp);
+            i = ctxIterPrev(ctx, i, &cp)
+        ) { }
+    } else if (i != -1) {
+        for (
+            i = ctxIterPrev(ctx, i, &cp);
+            i != -1 && !ucdIsCPWhiteSpace(cp) && !ucdIsCPAlphanumeric(cp);
+            i = ctxIterPrev(ctx, i, &cp)
+        ) { }
+    }
+    if (i == -1) {
+        i = 0;
+    } else {
+        // Get the index of the character after the character found. Because the
+        // cursor is displayed to the left of the character.
+        i = ctxIterNext(ctx, i, NULL);
+    }
+    ctxSetCurIdx_(ctx, i);
+}
+
+void ctxMoveCurWordEndB(Ctx *ctx) {
+    if (ctx->cur.idx == 0) {
+        return;
+    }
+    ptrdiff_t i = ctx->cur.idx;
+    UcdCP cp = ctxGetChB(ctx);
+
+    if (ucdIsCPAlphanumeric(cp)) {
+        for (
+            i = ctxIterPrev(ctx, i, &cp);
+            i != -1 && ucdIsCPAlphanumeric(cp);
+            i = ctxIterPrev(ctx, i, &cp)
+        ) { }
+    } else {
+        for (
+            i = ctxIterPrev(ctx, i, &cp);
+            i != -1 && !ucdIsCPWhiteSpace(cp) && !ucdIsCPAlphanumeric(cp);
+            i = ctxIterPrev(ctx, i, &cp)
+        ) { }
+    }
+
+    // Skip white space
+    for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxIterPrev(ctx, i, &cp)) { }
+
+    if (i == -1) {
+        i = 0;
+    } else {
+        // Get the index of the character after the character found. Because the
+        // cursor is displayed to the left of the character.
+        i = ctxIterNext(ctx, i, NULL);
+    }
+    ctxSetCurIdx_(ctx, i);
 }
 
 void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
@@ -449,8 +586,7 @@ static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, UcdCh8 *outBuf) {
     if (
         (cp != '\n' || !allowLF)
         && cp != '\t'
-        && info.category >= UdbCategory_C_First
-        && info.category <= UdbCategory_C_Last
+        && UdbMajorCategory(info.category) == UdbCategory_C
     ) {
         return 0;
     }

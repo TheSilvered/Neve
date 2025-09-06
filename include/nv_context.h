@@ -68,6 +68,15 @@ void ctxMoveCurFileStart(Ctx *ctx);
 // Move the cursor to the end of the file
 void ctxMoveCurFileEnd(Ctx *ctx);
 
+// Move to the beginning of the next word.
+void ctxMoveCurWordStartF(Ctx *ctx);
+// Move to the end of the word.
+void ctxMoveCurWordEndF(Ctx *ctx);
+// Move to the beginning of the word.
+void ctxMoveCurWordStartB(Ctx *ctx);
+// Move to the start of the previous word.
+void ctxMoveCurWordEndB(Ctx *ctx);
+
 /********************************** Editing ***********************************/
 
 // Write in a context.
@@ -87,9 +96,18 @@ void ctxRemoveForeward(Ctx *ctx);
 void ctxSetFrameSize(Ctx *ctx, uint16_t width, uint16_t height);
 // Get the number of lines in the text of a context.
 size_t ctxLineCount(const Ctx *ctx);
+// Get the length of a line in characters.
+size_t ctxLineLen(const Ctx *ctx, size_t lineIdx);
+
+// Get the character after the cursor.
+// Return -1 if the cursor is at the end of the text.
+UcdCP ctxGetChF(const Ctx *ctx);
+// Get the character before the cursor.
+// Return -1 if the cursor is at the start of the text.
+UcdCP ctxGetChB(const Ctx *ctx);
 
 // Get the content of the context as a string view.
-// The view lives until the text is edited.
+// The view is valid until the text is edited.
 StrView *ctxGetContent(Ctx *ctx);
 
 // Iterate over the whole content of the context.

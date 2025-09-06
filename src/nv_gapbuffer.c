@@ -12,6 +12,15 @@ UcdCh8 gBufGet(const GBuf *buf, size_t idx) {
     return buf->bytes[idx];
 }
 
+UcdCh8 *gBufGetPtr(const GBuf *buf, size_t idx) {
+    assert(idx < buf->len);
+    if (idx >= buf->gapIdx) {
+        size_t gapSize = buf->cap - buf->len;
+        idx += gapSize;
+    }
+    return &buf->bytes[idx];
+}
+
 void gBufReserve_(GBuf *buf, size_t amount) {
     size_t requiredLen = buf->len + amount;
     if (requiredLen <= buf->cap) {
