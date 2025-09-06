@@ -40,10 +40,14 @@ void *memAllocZeroedBytes(size_t byteCount) {
 }
 
 void *memExpand(void *block, size_t objectSize, size_t newCount) {
-    assert(block != NULL);
     assert(objectSize != 0);
     assert(newCount != 0);
-    void *newBlock = realloc(block, objectSize * newCount);
+    void *newBlock;
+    if (block == NULL) {
+        newBlock = malloc(objectSize * newCount);
+    } else {
+        newBlock = realloc(block, objectSize * newCount);
+    }
     if (newBlock == NULL) {
         fprintf(stderr, "Out of memory.");
         abort();
@@ -52,9 +56,13 @@ void *memExpand(void *block, size_t objectSize, size_t newCount) {
 }
 
 void *memExpandBytes(void *block, size_t newByteCount) {
-    assert(block != NULL);
     assert(newByteCount != 0);
-    void *newBlock = realloc(block, newByteCount);
+    void *newBlock;
+    if (block == NULL) {
+        newBlock = malloc(newByteCount);
+    } else {
+        newBlock = realloc(block, newByteCount);
+    }
     if (newBlock == NULL) {
         fprintf(stderr, "Out of memory.");
         abort();
