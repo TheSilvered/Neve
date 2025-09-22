@@ -26,6 +26,7 @@ bool initNeve(void) {
 void quitNeve(void) {
     termWrite(sLen(
         escScreenClear
+        escDisableAltBuffer
         escCursorShow
         escCursorShapeDefault
     ));

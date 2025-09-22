@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "nv_context.h"
@@ -7,6 +8,7 @@
 #include "nv_escapes.h"
 #include "nv_mem.h"
 #include "nv_screen.h"
+#include "nv_string.h"
 #include "nv_term.h"
 #include "nv_utils.h"
 
@@ -16,6 +18,8 @@ void screenInit(Screen *screen) {
     strInit(&screen->buf, 0);
     screen->editRows = NULL;
     screen->displayRows = NULL;
+    screen->editStyles = NULL;
+    screen->displayStyles = NULL;
 }
 
 void screenDestroy(Screen *screen) {
@@ -33,38 +37,53 @@ void screenDestroy(Screen *screen) {
     screen->displayRows = NULL;
 }
 
-void screenResize(Screen *screen, uint16_t w, uint16_t h) {
-    if (h < screen->h) {
-        for (uint16_t y = h; y < screen->h; y++) {
-            strDestroy(&screen->editRows[y]);
-            strDestroy(&screen->displayRows[y]);
-        }
-        screen->editRows = memShrink(
-            screen->editRows,
-            h,
-            sizeof(*screen->editRows)
-        );
-        screen->displayRows = memShrink(
-            screen->displayRows,
-            h,
-            sizeof(*screen->displayRows)
-        );
-    } else if (h > screen->h) {
-        screen->editRows = memChange(
-            screen->editRows,
-            h,
-            sizeof(*screen->editRows)
-        );
-        screen->displayRows = memChange(
-            screen->displayRows,
-            h,
-            sizeof(*screen->displayRows)
-        );
-        for (uint16_t y = screen->h; y < h; y++) {
-            strInit(&screen->editRows[y], 0);
-            strInit(&screen->displayRows[y], 0);
-        }
+ScreenStyle *resizeStyles_(ScreenStyle *styles, size_t oldLen, size_t newLen) {
+    if (oldLen == newLen) {
+        return styles;
     }
+    if (oldLen > newLen) {
+        return memShrink(styles, newLen, sizeof(*styles));
+    } else {
+        ScreenStyle *newStyles = memChange(styles, newLen, sizeof(*styles));
+        memset(newStyles + oldLen, 0, (newLen - oldLen) * sizeof(*styles));
+        return newStyles;
+    }
+}
+
+Str *resizeRows_(Str *rows, size_t oldLen, size_t newLen) {
+    if (oldLen == newLen) {
+        return rows;
+    }
+    if (oldLen > newLen) {
+        for (uint16_t i = newLen; i < oldLen; i++) {
+            strDestroy(&rows[i]);
+        }
+        return memShrink(rows, newLen, sizeof(*rows));
+    } else {
+        Str *newRows = memChange(rows, newLen, sizeof(*rows));
+        for (uint16_t i = oldLen; i < newLen; i++) {
+            strInit(&newRows[i], 0);
+        }
+        return newRows;
+    }
+}
+
+void screenResize(Screen *screen, uint16_t w, uint16_t h) {
+    // The terminal should not be resized too often, no need to have a buffered
+    // allocation, just reallocate each time
+    screen->editRows = resizeRows_(screen->editRows, screen->h, h);
+    screen->displayRows = resizeRows_(screen->displayRows, screen->h, h);
+    screen->editStyles = resizeStyles_(
+        screen->editStyles,
+        screen->w * screen->h,
+        w * h
+    );
+    screen->displayStyles = resizeStyles_(
+        screen->displayStyles,
+        screen->w * screen->h,
+        w * h
+    );
+
     if (w != screen->w || h != screen->h) {
         screen->resized = true;
     } else {
@@ -200,23 +219,148 @@ void screenClear(Screen *screen, int32_t line) {
 
     if (line >= 0) {
         strClear(&screen->editRows[line], screen->w);
+        memset(
+            &screen->editStyles[screen->w * line],
+            0,
+            screen->w * sizeof(*screen->editStyles)
+        );
         return;
     }
     for (uint16_t y = 0; y < screen->h; y++) {
         strClear(&screen->editRows[y], screen->w);
     }
+    memset(
+        screen->editStyles,
+        0,
+        screen->w * screen->h * sizeof(*screen->editStyles)
+    );
 }
 
-static bool rowChanged(Str *editRow, Str *displayRow) {
+static bool rowChanged_(Screen *screen, uint16_t idx) {
+    Str *editRow = &screen->editRows[idx];
+    Str *displayRow = &screen->displayRows[idx];
+
     if (editRow->len != displayRow->len) {
         return true;
     }
-    for (size_t i = 0, n = editRow->len; i < n; i++) {
-        if (editRow->buf[i] != displayRow->buf[i]) {
-            return true;
+
+    if (memcmp(editRow->buf, displayRow->buf, editRow->len) != 0) {
+        return true;
+    }
+    return memcmp(
+        &screen->editStyles[idx * screen->w],
+        &screen->displayStyles[idx * screen->w],
+        sizeof(*screen->editStyles) * screen->w
+    );
+}
+
+void screenSetStyle(Screen *screen, ScreenStyle st, ScreenRect rect) {
+    if (rect.x >= screen->w || rect.y >= screen->h) {
+        return;
+    }
+
+    uint16_t maxX = rect.x + rect.w > screen->w ? screen->w : rect.x + rect.w;
+    uint16_t maxY = rect.y + rect.h > screen->h ? screen->h : rect.y + rect.h;
+    for (uint16_t y = rect.y; y < maxY; y++) {
+        for (uint16_t x = rect.x; x < maxX; x++) {
+            screen->editStyles[screen->w * y + x] = st;
         }
     }
-    return false;
+}
+
+static bool screenStyleEq_(ScreenStyle st1, ScreenStyle st2) {
+    return memcmp(&st1, &st2, sizeof(st1)) == 0;
+}
+
+static void screenChangeStyle_(Screen *screen, ScreenStyle st) {
+    char buf[32];
+    strAppendC(&screen->buf, "\x1b[0");
+    if (st.bold) {
+        strAppendC(&screen->buf, ";1");
+    }
+    if (st.italic) {
+        strAppendC(&screen->buf, ";3");
+    }
+    if (st.underline) {
+        strAppendC(&screen->buf, ";4");
+    }
+    if (st.reverse) {
+        strAppendC(&screen->buf, ";7");
+    }
+    if (st.strike) {
+        strAppendC(&screen->buf, ";9");
+    }
+    if (st.colorMode == SCREEN_COLOR_MODE_TERM16) {
+        if (st.fg.term16 != 0) {
+            snprintf(buf, NV_ARRLEN(buf), ";%d", st.fg.term16 + 29);
+            strAppendC(&screen->buf, buf);
+        }
+        if (st.bg.term16 != 0) {
+            snprintf(buf, NV_ARRLEN(buf), ";%d", st.bg.term16 + 39);
+            strAppendC(&screen->buf, buf);
+        }
+    } else if (st.colorMode == SCREEN_COLOR_MODE_TERM256) {
+        snprintf(buf, NV_ARRLEN(buf), ";38;5;%d", st.fg.term256);
+        strAppendC(&screen->buf, buf);
+        snprintf(buf, NV_ARRLEN(buf), ";48;5;%d", st.bg.term256);
+        strAppendC(&screen->buf, buf);
+    } else if (st.colorMode == SCREEN_COLOR_MODE_RGB) {
+        snprintf(
+            buf,
+            NV_ARRLEN(buf),
+            ";38;2;%d;%d;%d",
+            st.fg.rgb.r, st.fg.rgb.g, st.fg.rgb.b
+        );
+        strAppendC(&screen->buf, buf);
+        snprintf(
+            buf,
+            NV_ARRLEN(buf),
+            ";48;2;%d;%d;%d",
+            st.bg.rgb.r, st.bg.rgb.g, st.bg.rgb.b
+        );
+        strAppendC(&screen->buf, buf);
+    }
+    strAppendC(&screen->buf, "m");
+}
+
+static void writeLine_(Screen *screen, uint16_t idx) {
+    char posBuf[64] = { 0 };
+    StrView *editRow = (StrView *)&screen->editRows[idx];
+    snprintf(
+        posBuf,
+        NV_ARRLEN(posBuf),
+        escCursorSetPos("%u", "%u") escLineClear,
+        idx + 1, 1
+    );
+    strAppendC(&screen->buf, posBuf);
+
+    ScreenStyle currSt = { 0 };
+    StrView span = {
+        .buf = editRow->buf,
+        .len = 0
+    };
+    size_t width = 0;
+    UcdCP cp = 0;
+    for (
+        ptrdiff_t i = strViewNext(editRow, -1, &cp);
+        i != -1;
+        i = strViewNext(editRow, i, &cp)
+    ) {
+        ScreenStyle cellSt = screen->editStyles[idx * screen->w + width];
+        width += ucdCPWidth(cp, 0, 0);
+        if (!screenStyleEq_(cellSt, currSt)) {
+            span.len = i - (span.buf - editRow->buf);
+            strAppend(&screen->buf, &span);
+            span.buf = editRow->buf + i;
+            span.len = 0;
+            currSt = cellSt;
+            screenChangeStyle_(screen, cellSt);
+        }
+    }
+
+    span.len = editRow->len - (span.buf - editRow->buf);
+    strAppend(&screen->buf, &span);
+    screenChangeStyle_(screen, (ScreenStyle) { 0 });
 }
 
 bool screenRefresh(Screen *screen) {
@@ -234,19 +378,11 @@ bool screenRefresh(Screen *screen) {
     }
 
     char posBuf[64] = { 0 };
-    for (uint16_t y = 0; y < screen->h; y++) {
-        Str *editRow = &screen->editRows[y];
-        if (!resized && !rowChanged(editRow, &screen->displayRows[y])) {
+    for (uint16_t i = 0; i < screen->h; i++) {
+        if (!resized && !rowChanged_(screen, i)) {
             continue;
         }
-        snprintf(
-            posBuf,
-            64,
-            escCursorSetPos("%u", "%u") escLineClear,
-            y + 1, 1
-        );
-        strAppendC(&screen->buf, posBuf);
-        strAppend(&screen->buf, (StrView *)editRow);
+        writeLine_(screen, i);
     }
 
     Str *tempRows = screen->editRows;

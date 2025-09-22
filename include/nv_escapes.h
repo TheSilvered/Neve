@@ -8,10 +8,15 @@
 #define sLen(strLit) (UcdCh8 *)(strLit), sizeof(strLit) - 1
 
 // Clear the screen
-#define escScreenClear "\x1b[2J\x1b[3J\x1b[H"
+#define escScreenClear "\x1b[2J\x1b[H"
 
 // Clear the line the cursor is on
 #define escLineClear "\x1b[2K\x1b[G"
+
+// Enable the alternative screen buffer
+#define escEnableAltBuffer "\x1b[?1049h"
+// Disable the alternative screen buffer
+#define escDisableAltBuffer "\x1b[?1049l"
 
 /***************************** Cursor positioning *****************************/
 

@@ -5,8 +5,7 @@
 
 #include "nv_editor.h"
 #include "nv_escapes.h"
-#include "nv_file.h"
-#include "nv_mem.h"
+#include "nv_screen.h"
 #include "nv_term.h"
 #include "nv_utils.h"
 
@@ -20,7 +19,10 @@ void editorInit(void) {
 
     strInitFromC(&g_ed.strings.savePrompt, "File path: ");
 
-    termWrite(sLen(escCursorShapeStillBar));
+    termWrite(sLen(
+        escEnableAltBuffer
+        escCursorShapeStillBar
+    ));
 }
 
 void editorQuit(void) {
@@ -221,13 +223,15 @@ void editorHandleKey(uint32_t key) {
     assert(false);
 }
 
-static void renderLine_(
+static void renderCtxLine_(
     const Ctx *ctx,
     size_t lineIdx,
-    size_t maxWidth,
-    size_t scrollX,
-    Str *outBuf
+    Str *outBuf,
+    uint16_t lineX,
+    uint16_t lineY
 ) {
+    size_t maxWidth = ctx->frame.w;
+    size_t scrollX = ctx->frame.x;
     if (maxWidth == 0) {
         return;
     }
@@ -261,15 +265,30 @@ static void renderLine_(
                 width - scrollX - 1, ""
             );
             strAppend(outBuf, &fmtView);
+            screenSetStyle(
+                &g_ed.screen,
+                (ScreenStyle) { .fg = { .term16 = 61 } },
+                (ScreenRect) { .x = lineX, .y = lineY, .w = 1, .h = 1 }
+            );
         } else if (width > maxWidth + scrollX) {
             // Draw a gray '>' at the end if a character is cut off
             // If the character is a tab it can just draw a '»'
             fmtView.len = snprintf(
                 fmtBuf, NV_ARRLEN(fmtBuf),
                 cp == '\t' ? tabFmt : endCutoffFmt,
-                maxWidth + chWidth - width - 1, ""
+                maxWidth + chWidth + scrollX - width - 1, ""
             );
             strAppend(outBuf, &fmtView);
+            screenSetStyle(
+                &g_ed.screen,
+                (ScreenStyle) { .fg = { .term16 = 61 } },
+                (ScreenRect) {
+                    .x = lineX + width - chWidth - scrollX,
+                    .y = lineY,
+                    .w = 1,
+                    .h = 1
+                }
+            );
             break;
         } else if (cp == '\t') {
             fmtView.len = snprintf(
@@ -278,6 +297,16 @@ static void renderLine_(
                 chWidth - 1, ""
             );
             strAppend(outBuf, &fmtView);
+            screenSetStyle(
+                &g_ed.screen,
+                (ScreenStyle) { .fg = { .term16 = 61 } },
+                (ScreenRect) {
+                    .x = lineX + width - chWidth - scrollX,
+                    .y = lineY,
+                    .w = 1,
+                    .h = 1
+                }
+            );
         } else {
             UcdCh8 buf[4];
             size_t len = ucdCh8FromCP(cp, buf);
@@ -289,21 +318,20 @@ static void renderLine_(
             break;
         }
     }
+
+    screenWrite(&g_ed.screen, lineX, lineY, outBuf->buf, outBuf->len);
 }
 
 static void renderFile_(void) {
     Str lineBuf = { 0 };
     for (uint16_t i = 0; i < g_ed.fileBuf.ctx.frame.h; i++) {
         if (i + g_ed.fileBuf.ctx.frame.y < ctxLineCount(&g_ed.fileBuf.ctx)) {
-            renderLine_(
+            renderCtxLine_(
                 &g_ed.fileBuf.ctx,
                 i + g_ed.fileBuf.ctx.frame.y,
-                g_ed.fileBuf.ctx.frame.w,
-                g_ed.fileBuf.ctx.frame.x,
-                &lineBuf
+                &lineBuf,
+                0, i
             );
-            screenClear(&g_ed.screen, i);
-            screenWrite(&g_ed.screen, 0, i, lineBuf.buf, lineBuf.len);
             continue;
         }
 
@@ -359,12 +387,12 @@ static void renderStatusBar_(void) {
     );
 
     Str lineBuf = { 0 };
-    renderLine_(
+    renderCtxLine_(
         &g_ed.saveDialogCtx,
         0,
-        g_ed.saveDialogCtx.frame.w,
-        g_ed.saveDialogCtx.frame.x,
-        &lineBuf
+        &lineBuf,
+        g_ed.strings.savePrompt.len,
+        g_ed.screen.h - 1
     );
     screenWrite(
         &g_ed.screen,
@@ -380,6 +408,7 @@ bool editorRefresh(void) {
         return false;
     }
 
+    screenClear(&g_ed.screen, -1);
     renderFile_();
     renderStatusBar_();
 

@@ -3,14 +3,58 @@
 
 #include "nv_string.h"
 
+// 16-colors color mode
+#define SCREEN_COLOR_MODE_TERM16 0
+// 256-colors color mode
+#define SCREEN_COLOR_MODE_TERM256 1
+// 24-bit RGB colors color mode
+#define SCREEN_COLOR_MODE_RGB 2
+
+typedef union {
+    struct {
+        uint8_t r, g, b;
+    } rgb;
+    uint8_t term16;
+    uint8_t term256;
+} ScreenColor;
+
+// The color of one cell
+// The IDs for the TERM16 color mode are the following:
+// 0 - default
+// 1 - black
+// 2 - red
+// 3 - green
+// 4 - yellow
+// 5 - blue
+// 6 - magenta
+// 7 - cyan
+// 8 - white
+// 61..68 are the bright variants.
+// This is to make `(ScreenStyle){ 0 }` the default style.
+typedef struct {
+    ScreenColor fg, bg;
+    unsigned int bold : 1;
+    unsigned int underline : 1;
+    unsigned int italic : 1;
+    unsigned int strike: 1;
+    unsigned int reverse : 1;
+    unsigned int colorMode : 2;
+} ScreenStyle;
+
 // The painting surface.
 typedef struct {
     uint16_t w, h;
     Str buf;
     Str *editRows;
     Str *displayRows;
+    ScreenStyle *editStyles;
+    ScreenStyle *displayStyles;
     bool resized;
 } Screen;
+
+typedef struct {
+    uint16_t x, y, w, h;
+} ScreenRect;
 
 // Initialize the screen.
 void screenInit(Screen *screen);
@@ -34,6 +78,9 @@ void screenWriteFmt(
     const char *fmt, ...
 );
 
+// Change the style for a rectangle of the screen
+void screenSetStyle(Screen *screen, ScreenStyle st, ScreenRect rect);
+
 // Clear a line of the screen.
 // If `line == -1` all lines are cleared.
 void screenClear(Screen *screen, int32_t line);
@@ -42,3 +89,4 @@ void screenClear(Screen *screen, int32_t line);
 bool screenRefresh(Screen *screen);
 
 #endif // !NV_RENDER_H_
+

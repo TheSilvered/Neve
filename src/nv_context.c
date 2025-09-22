@@ -3,9 +3,7 @@
 #include <string.h>
 #include "nv_array.h"
 #include "nv_context.h"
-#include "nv_editor.h"
 #include "nv_udb.h"
-#include "nv_utils.h"
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->frame = (CtxFrame) {
@@ -577,8 +575,6 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     ctx->edited = true;
 
     size_t lineStart = 0;
-    size_t ignoredCharCount = 0;
-    size_t lineIdxOffset = ctx->buf.len;
     bool ignoreNL = !ctx->multiline;
 
     GBuf *buf = &ctx->buf;
@@ -592,7 +588,6 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
         } else if (data[i] == '\r' || data[i] == '\n') {
             gBufInsert(buf, &data[lineStart], i - lineStart);
             lineStart = i + 1;
-            ignoredCharCount++;
         }
     }
 
