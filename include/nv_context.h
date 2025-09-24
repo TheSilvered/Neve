@@ -1,7 +1,7 @@
 #ifndef NV_CONTEXT_H_
 #define NV_CONTEXT_H_
 
-#include "nv_file.h"
+#include "nv_array.h"
 #include "nv_string.h"
 #include "nv_gapbuffer.h"
 
@@ -24,10 +24,7 @@ typedef struct CtxCursor {
 } CtxCursor;
 
 // Dynamic array of size_t for storing line indices.
-typedef struct CtxLines {
-    size_t *items;
-    size_t len, cap;
-} CtxLines;
+typedef Arr(size_t) CtxLines;
 
 // Editing context.
 typedef struct Ctx {

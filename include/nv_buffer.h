@@ -1,6 +1,7 @@
 #ifndef NV_BUFFER_H_
 #define NV_BUFFER_H_
 
+#include "nv_file.h"
 #include "nv_context.h"
 
 // Open file buffer.

@@ -7,6 +7,8 @@
 // Define a dynamic array as a struct with the fields `items`, `len` and `cap`.
 // Items is required to be a pointer.
 
+#define Arr(T) struct { T *items; size_t len, cap; }
+
 #define arrReserve(arr, count)                                                 \
     do {                                                                       \
         if ((arr)->len + (count) > (arr)->cap) {                               \
