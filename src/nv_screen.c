@@ -152,7 +152,7 @@ void screenWrite(
     // Append the part before the string to the new row
     StrView sv = {
         .buf = row->buf,
-        .len = startIdx == -1 ? row->len : startIdx
+        .len = startIdx < 0 ? row->len : (size_t)startIdx
     };
     strAppend(&screen->buf, &sv);
     // Pad with spaces if the boundary was in the middle of a character

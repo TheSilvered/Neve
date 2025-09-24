@@ -199,6 +199,7 @@ void editorHandleKey(uint32_t key) {
         return;
     case TermKey_End:
         ctxMoveCurLineEnd(ctx);
+        return;
     case TermKey_Enter:
         if (g_ed.savingFile) {
             StrView *path = ctxGetContent(ctx);

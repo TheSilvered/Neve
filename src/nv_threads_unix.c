@@ -1,18 +1,23 @@
 #include "nv_threads.h"
+#include "nv_error.h"
 
 bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg) {
-    return pthread_create(
-        thread,
-        NULL,
-        (void *(*)(void *))(void *)routine, // safe since ThreadRet is uintptr_t
-        arg) == 0;
+    int res = pthread_create(thread, NULL, routine, arg);
+    if (res != 0) {
+        errSetErrno();
+    }
+    return res == 0;
 }
 
 bool threadJoin(Thread thread, ThreadRet *status) {
-    return pthread_join(thread, (void **)status);
+    int res = pthread_join(thread, status);
+    if (res != 0) {
+        errSetErrno();
+    }
+    return res == 0;
 }
 
 void threadExit(ThreadRet status) {
-    pthread_exit((void *)status);
+    pthread_exit(status);
 }
 

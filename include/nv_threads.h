@@ -16,7 +16,7 @@ typedef DWORD ThreadRet;
 #include <pthread.h>
 
 typedef pthread_t Thread;
-typedef uintptr_t ThreadRet;
+typedef void *ThreadRet;
 
 #endif
 

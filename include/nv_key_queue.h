@@ -7,13 +7,15 @@
 #define keyQueueSize 128
 
 typedef struct {
-    uint16_t len, front, back;
+    uint16_t front, back;
     TermKey keys[keyQueueSize];
 } KeyQueue;
 
 // Add a key to the queue
-void keyQueueEnq(KeyQueue *queue, TermKey key);
+// To be called only by the input thread
+bool keyQueueEnq(KeyQueue *queue, TermKey key);
 // Remove a key from the queue
+// To be calle only by the main thread
 TermKey keyQueueDeq(KeyQueue *queue);
 
 #endif // !NV_KEY_QUEUE_H_
