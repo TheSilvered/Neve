@@ -360,6 +360,10 @@ static void writeLine_(Screen *screen, uint16_t idx) {
 
     span.len = editRow->len - (span.buf - editRow->buf);
     strAppend(&screen->buf, &span);
+    if (width < screen->w) {
+        strRepeat(&screen->buf, ' ', screen->w - width);
+    }
+
     screenChangeStyle_(screen, (ScreenStyle) { 0 });
 }
 

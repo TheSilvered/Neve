@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "nv_editor.h"
 #include "nv_escapes.h"
@@ -323,23 +324,34 @@ static void renderCtxLine_(
     screenWrite(&g_ed.screen, lineX, lineY, outBuf->buf, outBuf->len);
 }
 
-static void renderFile_(void) {
+static void renderFile_(Ctx *ctx) {
     Str lineBuf = { 0 };
-    for (uint16_t i = 0; i < g_ed.fileBuf.ctx.frame.h; i++) {
-        if (i + g_ed.fileBuf.ctx.frame.y < ctxLineCount(&g_ed.fileBuf.ctx)) {
-            renderCtxLine_(
-                &g_ed.fileBuf.ctx,
-                i + g_ed.fileBuf.ctx.frame.y,
-                &lineBuf,
-                0, i
-            );
-            continue;
-        }
+    size_t lineCount = ctxLineCount(ctx);
+    uint8_t linenoWidth = (uint8_t)(log10((double)lineCount) + 1);
+    ctxSetFrameSize(ctx, g_ed.screen.w - linenoWidth - 2, g_ed.screen.h - 2);
+    ctx->frame.termX = linenoWidth + 2;
 
-        screenWrite(&g_ed.screen, 0, i, sLen("~"));
+    size_t totLines = NV_MIN(lineCount - ctx->frame.y, ctx->frame.h);
+    for (size_t i = 0; i < totLines; i++) {
+        screenWriteFmt(
+            &g_ed.screen,
+            0, i,
+            "%*d  ", linenoWidth, i + 1 + ctx->frame.y
+        );
+        screenSetStyle(
+            &g_ed.screen,
+            (ScreenStyle){ .fg = { .term16 = 7 } },
+            (ScreenRect){ .x = 0, .y = i, .w = linenoWidth + 2, .h = 1 }
+        );
+        renderCtxLine_(
+            ctx,
+            i + ctx->frame.y,
+            &lineBuf,
+            linenoWidth + 2, i
+        );
     }
 
-    if (g_ed.fileBuf.ctx.buf.len != 0) {
+    if (ctx->buf.len != 0) {
         return;
     }
 
@@ -347,7 +359,7 @@ static void renderFile_(void) {
     screenWrite(
         &g_ed.screen,
         (g_ed.screen.w - msg.len) / 2,
-        g_ed.fileBuf.ctx.frame.h / 2,
+        ctx->frame.h / 2,
         msg.buf, msg.len
     );
 }
@@ -374,6 +386,17 @@ static void renderStatusBar_(void) {
         ctx->cur.x + 1,
         mode,
         g_ed.fileBuf.ctx.edited ? "*" : ""
+    );
+
+    screenSetStyle(
+        &g_ed.screen,
+        (ScreenStyle){ .reverse = true },
+        (ScreenRect){
+            .x = 0,
+            .y = g_ed.screen.h - 2,
+            .w = g_ed.screen.w,
+            .h = 1
+        }
     );
 
     if (!g_ed.savingFile) {
@@ -410,7 +433,7 @@ bool editorRefresh(void) {
     }
 
     screenClear(&g_ed.screen, -1);
-    renderFile_();
+    renderFile_(editorGetActiveCtx());
     renderStatusBar_();
 
     return screenRefresh(&g_ed.screen);

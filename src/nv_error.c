@@ -10,7 +10,6 @@
 #endif // !_WIN32
 
 #include "nv_error.h"
-#include "nv_utils.h"
 
 static Err g_err = { 0 };
 
