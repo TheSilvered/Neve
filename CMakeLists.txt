@@ -25,7 +25,9 @@ else()
     target_compile_options(neve PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-target_link_libraries(neve PRIVATE m)
+if(!WIN32)
+    target_link_libraries(neve PRIVATE m)
+endif()
 
 enable_testing()
 
