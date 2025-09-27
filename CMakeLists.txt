@@ -25,6 +25,8 @@ else()
     target_compile_options(neve PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+target_link_libraries(neve PRIVATE m)
+
 enable_testing()
 
 add_subdirectory(tests)

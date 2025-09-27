@@ -290,33 +290,33 @@ static void screenChangeStyle_(Screen *screen, ScreenStyle st) {
     if (st.strike) {
         strAppendC(&screen->buf, ";9");
     }
-    if (st.colorMode == SCREEN_COLOR_MODE_TERM16) {
-        if (st.fg.term16 != 0) {
-            snprintf(buf, NV_ARRLEN(buf), ";%d", st.fg.term16 + 29);
+    if (st.colorMode == screenColorModeTerm16) {
+        if (st.fg.r != 0) {
+            snprintf(buf, NV_ARRLEN(buf), ";%d", st.fg.r + 29);
             strAppendC(&screen->buf, buf);
         }
-        if (st.bg.term16 != 0) {
-            snprintf(buf, NV_ARRLEN(buf), ";%d", st.bg.term16 + 39);
+        if (st.bg.r != 0) {
+            snprintf(buf, NV_ARRLEN(buf), ";%d", st.bg.r + 39);
             strAppendC(&screen->buf, buf);
         }
-    } else if (st.colorMode == SCREEN_COLOR_MODE_TERM256) {
-        snprintf(buf, NV_ARRLEN(buf), ";38;5;%d", st.fg.term256);
+    } else if (st.colorMode == screenColorModeTerm256) {
+        snprintf(buf, NV_ARRLEN(buf), ";38;5;%d", st.fg.r);
         strAppendC(&screen->buf, buf);
-        snprintf(buf, NV_ARRLEN(buf), ";48;5;%d", st.bg.term256);
+        snprintf(buf, NV_ARRLEN(buf), ";48;5;%d", st.bg.r);
         strAppendC(&screen->buf, buf);
-    } else if (st.colorMode == SCREEN_COLOR_MODE_RGB) {
+    } else if (st.colorMode == screenColorModeRGB) {
         snprintf(
             buf,
             NV_ARRLEN(buf),
             ";38;2;%d;%d;%d",
-            st.fg.rgb.r, st.fg.rgb.g, st.fg.rgb.b
+            st.fg.r, st.fg.g, st.fg.b
         );
         strAppendC(&screen->buf, buf);
         snprintf(
             buf,
             NV_ARRLEN(buf),
             ";48;2;%d;%d;%d",
-            st.bg.rgb.r, st.bg.rgb.g, st.bg.rgb.b
+            st.bg.r, st.bg.g, st.bg.b
         );
         strAppendC(&screen->buf, buf);
     }
@@ -393,9 +393,18 @@ bool screenRefresh(Screen *screen) {
     screen->editRows = screen->displayRows;
     screen->displayRows = tempRows;
 
+    ScreenStyle *tempStyles = screen->editStyles;
+    screen->editStyles = screen->displayStyles;
+    screen->displayStyles = tempStyles;
+
     for (uint16_t y = 0; y < screen->h; y++) {
         strClear(&screen->editRows[y], screen->w);
     }
+    memset(
+        screen->editStyles,
+        0,
+        sizeof(*screen->editStyles) * screen->w * screen->h
+    );
 
     Ctx *ctx = editorGetActiveCtx();
 

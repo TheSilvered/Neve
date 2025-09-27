@@ -4,19 +4,15 @@
 #include "nv_string.h"
 
 // 16-colors color mode
-#define SCREEN_COLOR_MODE_TERM16 0
+#define screenColorModeTerm16 0
 // 256-colors color mode
-#define SCREEN_COLOR_MODE_TERM256 1
+#define screenColorModeTerm256 1
 // 24-bit RGB colors color mode
-#define SCREEN_COLOR_MODE_RGB 2
+#define screenColorModeRGB 2
 
-typedef union {
-    struct {
-        uint8_t r, g, b;
-    } rgb;
-    uint8_t term16;
-    uint8_t term256;
-} ScreenColor;
+#define screenColRGB(r_, g_, b_) { .r = (r_), .g = (g_), .b = (b_) }
+#define screenColT16(col) { .r = (col) }
+#define screenColT256(col) { .r = (col) }
 
 // The color of one cell
 // The IDs for the TERM16 color mode are the following:
@@ -31,8 +27,11 @@ typedef union {
 // 8 - white
 // 61..68 are the bright variants.
 // This is to make `(ScreenStyle){ 0 }` the default style.
+// Set `fg` and `bg` with the `screenCol*` macros.
 typedef struct {
-    ScreenColor fg, bg;
+    struct {
+        uint8_t r, g, b;
+    } fg, bg;
     unsigned int bold : 1;
     unsigned int underline : 1;
     unsigned int italic : 1;

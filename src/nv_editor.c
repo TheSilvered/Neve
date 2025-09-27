@@ -269,7 +269,7 @@ static void renderCtxLine_(
             strAppend(outBuf, &fmtView);
             screenSetStyle(
                 &g_ed.screen,
-                (ScreenStyle) { .fg = { .term16 = 61 } },
+                (ScreenStyle) { .fg = screenColT16(61) },
                 (ScreenRect) { .x = lineX, .y = lineY, .w = 1, .h = 1 }
             );
         } else if (width > maxWidth + scrollX) {
@@ -283,7 +283,7 @@ static void renderCtxLine_(
             strAppend(outBuf, &fmtView);
             screenSetStyle(
                 &g_ed.screen,
-                (ScreenStyle) { .fg = { .term16 = 61 } },
+                (ScreenStyle) { .fg = screenColT16(61) },
                 (ScreenRect) {
                     .x = lineX + width - chWidth - scrollX,
                     .y = lineY,
@@ -301,7 +301,7 @@ static void renderCtxLine_(
             strAppend(outBuf, &fmtView);
             screenSetStyle(
                 &g_ed.screen,
-                (ScreenStyle) { .fg = { .term16 = 61 } },
+                (ScreenStyle) { .fg = screenColT16(61) },
                 (ScreenRect) {
                     .x = lineX + width - chWidth - scrollX,
                     .y = lineY,
@@ -340,7 +340,7 @@ static void renderFile_(Ctx *ctx) {
         );
         screenSetStyle(
             &g_ed.screen,
-            (ScreenStyle){ .fg = { .term16 = 7 } },
+            (ScreenStyle){ .fg = screenColT16(7) },
             (ScreenRect){ .x = 0, .y = i, .w = linenoWidth + 2, .h = 1 }
         );
         renderCtxLine_(
