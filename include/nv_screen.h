@@ -72,11 +72,11 @@ void screenWrite(
 );
 
 // Write a string to the screen using printf-style formatting.
-void screenWriteFmt(
+NV_UNIX_FMT(4, 5) void screenWriteFmt(
     Screen *screen,
     uint16_t x, uint16_t y,
     NV_WIN_FMT const char *fmt, ...
-) NV_UNIX_FMT(3, 4);
+);
 
 // Change the style for a rectangle of the screen
 void screenSetStyle(Screen *screen, ScreenStyle st, ScreenRect rect);

@@ -195,10 +195,10 @@ replaceRow:
     strClear(&screen->buf, screen->buf.cap);
 }
 
-void screenWriteFmt(
+NV_UNIX_FMT(4, 5) void screenWriteFmt(
     Screen *screen,
     uint16_t x, uint16_t y,
-    const char *fmt, ...
+    NV_WIN_FMT const char *fmt, ...
 ) {
     char buf[2048] = { 0 };
     va_list args;

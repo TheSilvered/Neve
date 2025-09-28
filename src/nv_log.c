@@ -51,7 +51,7 @@ void logQuit(void) {
     fileClose(&logFile);
 }
 
-void logFmt(NV_WIN_FMT const char *fmt, ...) NV_UNIX_FMT(1, 2) {
+NV_UNIX_FMT(1, 2) void logFmt(NV_WIN_FMT const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     (void)vfprintf(logFile.fp, fmt, args);

@@ -336,7 +336,7 @@ static void renderFile_(Ctx *ctx) {
         screenWriteFmt(
             &g_ed.screen,
             0, i,
-            "%*d  ", linenoWidth, i + 1 + ctx->frame.y
+            "%*zi  ", linenoWidth, i + 1 + ctx->frame.y
         );
         screenSetStyle(
             &g_ed.screen,
