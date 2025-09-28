@@ -2,6 +2,7 @@
 #define NV_THREADS_H_
 
 #include <stdbool.h>
+#include "nv_utils.h"
 
 #ifdef _WIN32
 
@@ -27,7 +28,6 @@ bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg);
 // Wait until the thread exits
 bool threadJoin(Thread thread, ThreadRet *status);
 // Exit the current thread
-void threadExit(ThreadRet status);
+NV_NORETURN void threadExit(ThreadRet status);
 
 #endif // !NV_THREADS_H_
-

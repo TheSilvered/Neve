@@ -14,14 +14,6 @@
 #include "nv_unicode.h"
 #include "nv_utils.h"
 
-#if defined(_MSC_VER) && !defined(__clang__)
-#define UNREACHABLE __assume(0)
-#elif defined(__clang__)
-#define UNREACHABLE __builtin_unreachable()
-#else
-#define UNREACHABLE
-#endif // !UNREACHABLE
-
 static HANDLE g_consoleInput = INVALID_HANDLE_VALUE;
 static HANDLE g_consoleOutput = INVALID_HANDLE_VALUE;
 static DWORD g_origInputMode = 0;
@@ -153,7 +145,7 @@ static int getCh(UcdCh16 *outCh) {
     case WAIT_OBJECT_0:
         break;
     default:
-        UNREACHABLE;
+        NV_UNREACHABLE;
     }
 
     DWORD eventsRead;
@@ -206,7 +198,7 @@ UcdCP termGetInput(void) {
 
 int64_t termRead(UcdCh8 *buf, size_t bufSize) {
     wchar_t readBuf[4096] = { 0 };
-    size_t toRead = min(bufSize, NV_ARRLEN(readBuf));
+    size_t toRead = NV_MIN(bufSize, NV_ARRLEN(readBuf));
     size_t idx = 0;
     uint8_t offsetOutBuf = 0;
 
@@ -247,7 +239,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
         if (charsRead < toRead) {
             toRead = 0;
         } else {
-            toRead = min(bufSize - idx, NV_ARRLEN(readBuf) - offsetOutBuf);
+            toRead = NV_MIN(bufSize - idx, NV_ARRLEN(readBuf) - offsetOutBuf);
         }
     }
 

@@ -14,8 +14,6 @@
 #include "nv_unicode.h"
 #include "nv_utils.h"
 
-#define UNREACHABLE __builtin_unreachable()
-
 static struct termios g_origTermios = { 0 };
 static bool g_initialized = false;
 

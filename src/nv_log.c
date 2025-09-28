@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include "nv_log.h"
-#include "nv_utils.h"
+#include "nv_file.h"
 
 static File logFile = { 0 };
 
@@ -51,7 +51,7 @@ void logQuit(void) {
     fileClose(&logFile);
 }
 
-void logFmt(const char *fmt, ...) {
+void logFmt(NV_WIN_FMT const char *fmt, ...) NV_UNIX_FMT(1, 2) {
     va_list args;
     va_start(args, fmt);
     (void)vfprintf(logFile.fp, fmt, args);

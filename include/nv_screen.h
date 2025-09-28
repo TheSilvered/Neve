@@ -2,6 +2,7 @@
 #define NV_RENDER_H_
 
 #include "nv_string.h"
+#include "nv_utils.h"
 
 // 16-colors color mode
 #define screenColorModeTerm16 0
@@ -74,8 +75,8 @@ void screenWrite(
 void screenWriteFmt(
     Screen *screen,
     uint16_t x, uint16_t y,
-    const char *fmt, ...
-);
+    NV_WIN_FMT const char *fmt, ...
+) NV_UNIX_FMT(3, 4);
 
 // Change the style for a rectangle of the screen
 void screenSetStyle(Screen *screen, ScreenStyle st, ScreenRect rect);

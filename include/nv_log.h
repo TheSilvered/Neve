@@ -1,11 +1,12 @@
 #ifndef NV_LOG_H_
 #define NV_LOG_H_
 
-#include "nv_file.h"
+#include <stdbool.h>
+#include "nv_utils.h"
 
 bool logInit(const char *filePath);
 void logQuit(void);
 
-void logFmt(const char *fmt, ...);
+void logFmt(NV_WIN_FMT const char *fmt, ...) NV_UNIX_FMT(1, 2);
 
 #endif // !NV_LOG_H_
