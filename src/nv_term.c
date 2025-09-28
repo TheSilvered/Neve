@@ -2,9 +2,9 @@
 #include "nv_term.h"
 
 #ifdef _WIN32
-#include "nv_term_win32.c"
+#include "win32/nv_term_win32.c"
 #else
-#include "nv_term_unix.c"
+#include "unix/nv_term_unix.c"
 #endif // !_WIN32
 
 bool termIsInit(void) {

@@ -20,4 +20,3 @@ bool threadJoin(Thread thread, ThreadRet *status) {
 void threadExit(ThreadRet status) {
     pthread_exit(status);
 }
-
