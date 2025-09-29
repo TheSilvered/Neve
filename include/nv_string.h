@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include "nv_unicode.h"
+#include "nv_utils.h"
 
 // A heap-allocated string.
 // Any function that expects a `StrView *` also accepts a `Str *`.
@@ -48,6 +49,10 @@ void strReserve(Str *str, size_t reserve);
 void strAppendC(Str *str, const char *cStr);
 // Append a string view to a string.
 void strAppend(Str *str, const StrView *sv);
+// Format a string and append it
+NV_UNIX_FMT(2, 3) void strAppendFmt(Str *str, NV_WIN_FMT const char *fmt, ...);
+// Append a buffer to a string
+void strAppendRaw(Str *str, const UcdCh8 *buf, size_t len);
 // Append `ch` to the end of the string `count` times.
 void strRepeat(Str *str, char ch, size_t count);
 // Pop a number of characters from the end of a string.

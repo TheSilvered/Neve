@@ -5,11 +5,11 @@
 #include "nv_utils.h"
 
 // 16-colors color mode
-#define screenColorModeTerm16 0
+#define screenColModeT16 0
 // 256-colors color mode
-#define screenColorModeTerm256 1
+#define screenColModeT256 1
 // 24-bit RGB colors color mode
-#define screenColorModeRGB 2
+#define screenColModeRGB 2
 
 #define screenColRGB(r_, g_, b_) { .r = (r_), .g = (g_), .b = (b_) }
 #define screenColT16(col) { .r = (col) }
@@ -38,7 +38,8 @@ typedef struct {
     unsigned int italic : 1;
     unsigned int strike: 1;
     unsigned int reverse : 1;
-    unsigned int colorMode : 2;
+    unsigned int fgColorMode : 2;
+    unsigned int bgColorMode : 2;
 } ScreenStyle;
 
 // The painting surface.

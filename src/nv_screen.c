@@ -273,7 +273,6 @@ static bool screenStyleEq_(ScreenStyle st1, ScreenStyle st2) {
 }
 
 static void screenChangeStyle_(Screen *screen, ScreenStyle st) {
-    char buf[32];
     strAppendC(&screen->buf, "\x1b[0");
     if (st.bold) {
         strAppendC(&screen->buf, ";1");
@@ -290,49 +289,32 @@ static void screenChangeStyle_(Screen *screen, ScreenStyle st) {
     if (st.strike) {
         strAppendC(&screen->buf, ";9");
     }
-    if (st.colorMode == screenColorModeTerm16) {
-        if (st.fg.r != 0) {
-            snprintf(buf, NV_ARRLEN(buf), ";%d", st.fg.r + 29);
-            strAppendC(&screen->buf, buf);
-        }
-        if (st.bg.r != 0) {
-            snprintf(buf, NV_ARRLEN(buf), ";%d", st.bg.r + 39);
-            strAppendC(&screen->buf, buf);
-        }
-    } else if (st.colorMode == screenColorModeTerm256) {
-        snprintf(buf, NV_ARRLEN(buf), ";38;5;%d", st.fg.r);
-        strAppendC(&screen->buf, buf);
-        snprintf(buf, NV_ARRLEN(buf), ";48;5;%d", st.bg.r);
-        strAppendC(&screen->buf, buf);
-    } else if (st.colorMode == screenColorModeRGB) {
-        snprintf(
-            buf,
-            NV_ARRLEN(buf),
-            ";38;2;%d;%d;%d",
-            st.fg.r, st.fg.g, st.fg.b
-        );
-        strAppendC(&screen->buf, buf);
-        snprintf(
-            buf,
-            NV_ARRLEN(buf),
-            ";48;2;%d;%d;%d",
-            st.bg.r, st.bg.g, st.bg.b
-        );
-        strAppendC(&screen->buf, buf);
+
+    if (st.fgColorMode == screenColModeT16 && st.fg.r != 0) {
+        strAppendFmt(&screen->buf, ";%d", st.fg.r + 29);
+    } else if (st.fgColorMode == screenColModeT256) {
+        strAppendFmt(&screen->buf, ";38;5;%d", st.fg.r);
+    } else if (st.fgColorMode == screenColModeRGB) {
+        strAppendFmt(&screen->buf, ";38;2;%d;%d;%d", st.fg.r, st.fg.g, st.fg.b);
+    }
+
+    if (st.bgColorMode == screenColModeT16 && st.bg.r != 0) {
+        strAppendFmt(&screen->buf, ";%d", st.bg.r + 39);
+    } else if (st.bgColorMode == screenColModeT256) {
+        strAppendFmt(&screen->buf, ";48;5;%d", st.bg.r);
+    } else if (st.bgColorMode == screenColModeRGB) {
+        strAppendFmt(&screen->buf, ";48;2;%d;%d;%d", st.bg.r, st.bg.g, st.bg.b);
     }
     strAppendC(&screen->buf, "m");
 }
 
 static void writeLine_(Screen *screen, uint16_t idx) {
-    char posBuf[64] = { 0 };
     StrView *editRow = (StrView *)&screen->editRows[idx];
-    snprintf(
-        posBuf,
-        NV_ARRLEN(posBuf),
+    strAppendFmt(
+        &screen->buf,
         escCursorSetPos("%u", "%u") escLineClear,
         idx + 1, 1
     );
-    strAppendC(&screen->buf, posBuf);
 
     ScreenStyle currSt = { 0 };
     StrView span = {
@@ -381,7 +363,6 @@ bool screenRefresh(Screen *screen) {
         screen->resized = false;
     }
 
-    char posBuf[64] = { 0 };
     for (uint16_t i = 0; i < screen->h; i++) {
         if (!resized && !rowChanged_(screen, i)) {
             continue;
@@ -411,13 +392,7 @@ bool screenRefresh(Screen *screen) {
     uint16_t curX, curY;
     ctxGetCurTermPos(ctx, &curX, &curY);
 
-    (void)snprintf(
-        posBuf, 64,
-        escCursorSetPos("%u", "%u"),
-        curY + 1, curX + 1
-    );
-
-    strAppendC(&screen->buf, posBuf);
+    strAppendFmt(&screen->buf, escCursorSetPos("%u", "%u"), curY + 1, curX + 1);
     strAppendC(&screen->buf, escCursorShow);
 
     if (!termWrite(screen->buf.buf, screen->buf.len)) {

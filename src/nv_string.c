@@ -1,8 +1,9 @@
 #include <assert.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include "nv_mem.h"
 #include "nv_string.h"
-#include "nv_utils.h"
 
 // NOTE: The actual capacity of the string buffer is one more than Str.cap
 //       to allow for the NUL byte
@@ -82,14 +83,26 @@ void strAppendC(Str *str, const char *cStr) {
 }
 
 void strAppend(Str *str, const StrView *sv) {
-    if (sv->len == 0) {
+    strAppendRaw(str, sv->buf, sv->len);
+}
+
+NV_UNIX_FMT(2, 3) void strAppendFmt(Str *str, NV_WIN_FMT const char *fmt, ...) {
+    char buf[128];
+    va_list args;
+    va_start(args, fmt);
+
+    size_t len = vsnprintf(buf, NV_ARRLEN(buf), fmt, args);
+    strAppendRaw(str, (const UcdCh8 *)buf, len);
+}
+
+void strAppendRaw(Str *str, const UcdCh8 *buf, size_t len) {
+    if (len == 0) {
         return;
     }
-    strReserve(str, sv->len);
+    strReserve(str, len);
 
-    // StrView is not guaranteed to end with a NUL character, add it manually
-    memcpy(str->buf + str->len, sv->buf, sv->len * sizeof(*sv->buf));
-    str->len += sv->len;
+    memcpy(str->buf + str->len, buf, len * sizeof(*buf));
+    str->len += len;
     str->buf[str->len] = '\0';
 }
 

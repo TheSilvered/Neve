@@ -239,8 +239,6 @@ static void renderCtxLine_(
     }
 
     strClear(outBuf, maxWidth);
-    char fmtBuf[32];
-    StrView fmtView = { .buf = (UcdCh8 *)fmtBuf, .len = 0 };
 
     size_t width = 0;
 
@@ -261,12 +259,7 @@ static void renderCtxLine_(
             continue;
         } else if (width - chWidth < scrollX) {
             // Draw a gray '<' at the start if a character is cut off
-            fmtView.len = snprintf(
-                fmtBuf, NV_ARRLEN(fmtBuf),
-                startCutoffFmt,
-                width - scrollX - 1, ""
-            );
-            strAppend(outBuf, &fmtView);
+            strAppendFmt(outBuf, startCutoffFmt, width - scrollX - 1, "");
             screenSetStyle(
                 &g_ed.screen,
                 (ScreenStyle) { .fg = screenColT16(61) },
@@ -275,12 +268,11 @@ static void renderCtxLine_(
         } else if (width > maxWidth + scrollX) {
             // Draw a gray '>' at the end if a character is cut off
             // If the character is a tab it can just draw a '»'
-            fmtView.len = snprintf(
-                fmtBuf, NV_ARRLEN(fmtBuf),
+            strAppendFmt(
+                outBuf,
                 cp == '\t' ? tabFmt : endCutoffFmt,
                 maxWidth + chWidth + scrollX - width - 1, ""
             );
-            strAppend(outBuf, &fmtView);
             screenSetStyle(
                 &g_ed.screen,
                 (ScreenStyle) { .fg = screenColT16(61) },
@@ -293,12 +285,7 @@ static void renderCtxLine_(
             );
             break;
         } else if (cp == '\t') {
-            fmtView.len = snprintf(
-                fmtBuf, NV_ARRLEN(fmtBuf),
-                tabFmt,
-                chWidth - 1, ""
-            );
-            strAppend(outBuf, &fmtView);
+            strAppendFmt(outBuf, tabFmt, chWidth - 1, "");
             screenSetStyle(
                 &g_ed.screen,
                 (ScreenStyle) { .fg = screenColT16(61) },
