@@ -265,7 +265,7 @@ static void renderCtxLine_(
                 (ScreenColor){ .col = screenColT16(61) },
                 lineX, lineY, 1
             );
-        } else if (width > maxWidth) {
+        } else if ((size_t)width > maxWidth) {
             // Draw a gray '>' at the end if a character is cut off
             // If the character is a tab it can just draw a '»'
             strAppendFmt(
@@ -293,7 +293,7 @@ static void renderCtxLine_(
             strAppend(outBuf, &sv);
         }
 
-        if (width == maxWidth) {
+        if ((size_t)width == maxWidth) {
             break;
         }
     }
