@@ -260,10 +260,10 @@ static void renderCtxLine_(
         } else if (width - chWidth < scrollX) {
             // Draw a gray '<' at the start if a character is cut off
             strAppendFmt(outBuf, startCutoffFmt, width - scrollX - 1, "");
-            screenSetStyle(
+            screenSetFg(
                 &g_ed.screen,
-                (ScreenStyle) { .fg = screenColT16(61) },
-                (ScreenRect) { .x = lineX, .y = lineY, .w = 1, .h = 1 }
+                (ScreenColor){ .col = screenColT16(61) },
+                lineX, lineY, 1
             );
         } else if (width > maxWidth + scrollX) {
             // Draw a gray '>' at the end if a character is cut off
@@ -273,28 +273,18 @@ static void renderCtxLine_(
                 cp == '\t' ? tabFmt : endCutoffFmt,
                 maxWidth + chWidth + scrollX - width - 1, ""
             );
-            screenSetStyle(
+            screenSetFg(
                 &g_ed.screen,
-                (ScreenStyle) { .fg = screenColT16(61) },
-                (ScreenRect) {
-                    .x = lineX + width - chWidth - scrollX,
-                    .y = lineY,
-                    .w = 1,
-                    .h = 1
-                }
+                (ScreenColor) { .col = screenColT16(61) },
+                lineX + width - chWidth - scrollX, lineY, 1
             );
             break;
         } else if (cp == '\t') {
             strAppendFmt(outBuf, tabFmt, chWidth - 1, "");
-            screenSetStyle(
+            screenSetFg(
                 &g_ed.screen,
-                (ScreenStyle) { .fg = screenColT16(61) },
-                (ScreenRect) {
-                    .x = lineX + width - chWidth - scrollX,
-                    .y = lineY,
-                    .w = 1,
-                    .h = 1
-                }
+                (ScreenColor) { .col = screenColT16(61) },
+                lineX + width - chWidth - scrollX, lineY, 1
             );
         } else {
             UcdCh8 buf[4];
@@ -325,10 +315,10 @@ static void renderFile_(Ctx *ctx) {
             0, i,
             "%*zi  ", linenoWidth, i + 1 + ctx->frame.y
         );
-        screenSetStyle(
+        screenSetFg(
             &g_ed.screen,
-            (ScreenStyle){ .fg = screenColT16(7) },
-            (ScreenRect){ .x = 0, .y = i, .w = linenoWidth + 2, .h = 1 }
+            (ScreenColor){ .col = screenColT16(7) },
+            0, i, linenoWidth + 2
         );
         renderCtxLine_(
             ctx,
@@ -375,15 +365,10 @@ static void renderStatusBar_(void) {
         g_ed.fileBuf.ctx.edited ? "*" : ""
     );
 
-    screenSetStyle(
+    screenSetTextFmt(
         &g_ed.screen,
-        (ScreenStyle){ .reverse = true },
-        (ScreenRect){
-            .x = 0,
-            .y = g_ed.screen.h - 2,
-            .w = g_ed.screen.w,
-            .h = 1
-        }
+        screenFmtInverse,
+        0, g_ed.screen.h - 2, g_ed.screen.w
     );
 
     if (!g_ed.savingFile) {

@@ -254,17 +254,82 @@ static bool rowChanged_(Screen *screen, uint16_t idx) {
     );
 }
 
-void screenSetStyle(Screen *screen, ScreenStyle st, ScreenRect rect) {
-    if (rect.x >= screen->w || rect.y >= screen->h) {
+void screenSetFg(
+    Screen *screen,
+    ScreenColor fg,
+    uint16_t x,
+    uint16_t y,
+    uint16_t width
+) {
+    ScreenStyle style = {
+        .fg.r = fg.col.r,
+        .fg.g = fg.col.g,
+        .fg.b = fg.col.b,
+        .bgMode = fg.mode,
+        .scope = screenStyleNoBg | screenStyleNoFmt,
+    };
+    screenSetStyle(screen, style, x, y, width);
+}
+
+void screenSetBg(
+    Screen *screen,
+    ScreenColor bg,
+    uint16_t x,
+    uint16_t y,
+    uint16_t width
+) {
+    ScreenStyle style = {
+        .bg.r = bg.col.r,
+        .bg.g = bg.col.g,
+        .bg.b = bg.col.b,
+        .bgMode = bg.mode,
+        .scope = screenStyleNoFg | screenStyleNoFmt,
+    };
+    screenSetStyle(screen, style, x, y, width);
+}
+
+void screenSetTextFmt(
+    Screen *screen,
+    ScreenTextFmt textFmt,
+    uint16_t x,
+    uint16_t y,
+    uint16_t width
+) {
+    ScreenStyle style = {
+        .textFmt = textFmt,
+        .scope = screenStyleNoFg | screenStyleNoBg,
+    };
+    screenSetStyle(screen, style, x, y, width);
+}
+
+// Set the full style of a region.
+void screenSetStyle(
+    Screen *screen,
+    ScreenStyle style,
+    uint16_t x,
+    uint16_t y,
+    uint16_t width
+) {
+    if (y < 0 || y >= screen->h || x < 0 || x >= screen->w) {
         return;
     }
 
-    uint16_t maxX = rect.x + rect.w > screen->w ? screen->w : rect.x + rect.w;
-    uint16_t maxY = rect.y + rect.h > screen->h ? screen->h : rect.y + rect.h;
-    for (uint16_t y = rect.y; y < maxY; y++) {
-        for (uint16_t x = rect.x; x < maxX; x++) {
-            screen->editStyles[screen->w * y + x] = st;
+    width = NV_MIN(width, screen->w - x);
+
+    ScreenStyle *styles = &screen->editStyles[y * screen->w + x];
+    for (uint16_t i = 0; i < width; i++) {
+        if (!(style.scope & screenStyleNoFg)) {
+            styles[i].fg = style.fg;
+            styles[i].fgMode = style.fgMode;
         }
+        if (!(style.scope & screenStyleNoBg)) {
+            styles[i].bg = style.bg;
+            styles[i].bgMode = style.bgMode;
+        }
+        if (!(style.scope & screenStyleNoFmt)) {
+            styles[i].textFmt = style.textFmt;
+        }
+        styles[i].scope = 0;
     }
 }
 
@@ -274,35 +339,38 @@ static bool screenStyleEq_(ScreenStyle st1, ScreenStyle st2) {
 
 static void screenChangeStyle_(Screen *screen, ScreenStyle st) {
     strAppendC(&screen->buf, "\x1b[0");
-    if (st.bold) {
+    if (st.textFmt & screenFmtBold) {
         strAppendC(&screen->buf, ";1");
     }
-    if (st.italic) {
+    if (st.textFmt & screenFmtDim) {
+        strAppendC(&screen->buf, ";1");
+    }
+    if (st.textFmt & screenFmtItalic) {
         strAppendC(&screen->buf, ";3");
     }
-    if (st.underline) {
+    if (st.textFmt & screenFmtUnderline) {
         strAppendC(&screen->buf, ";4");
     }
-    if (st.reverse) {
+    if (st.textFmt & screenFmtInverse) {
         strAppendC(&screen->buf, ";7");
     }
-    if (st.strike) {
+    if (st.textFmt & screenFmtStrike) {
         strAppendC(&screen->buf, ";9");
     }
 
-    if (st.fgColorMode == screenColModeT16 && st.fg.r != 0) {
+    if (st.fgMode == screenColModeT16 && st.fg.r != 0) {
         strAppendFmt(&screen->buf, ";%d", st.fg.r + 29);
-    } else if (st.fgColorMode == screenColModeT256) {
+    } else if (st.fgMode == screenColModeT256) {
         strAppendFmt(&screen->buf, ";38;5;%d", st.fg.r);
-    } else if (st.fgColorMode == screenColModeRGB) {
+    } else if (st.fgMode == screenColModeRGB) {
         strAppendFmt(&screen->buf, ";38;2;%d;%d;%d", st.fg.r, st.fg.g, st.fg.b);
     }
 
-    if (st.bgColorMode == screenColModeT16 && st.bg.r != 0) {
+    if (st.bgMode == screenColModeT16 && st.bg.r != 0) {
         strAppendFmt(&screen->buf, ";%d", st.bg.r + 39);
-    } else if (st.bgColorMode == screenColModeT256) {
+    } else if (st.bgMode == screenColModeT256) {
         strAppendFmt(&screen->buf, ";48;5;%d", st.bg.r);
-    } else if (st.bgColorMode == screenColModeRGB) {
+    } else if (st.bgMode == screenColModeRGB) {
         strAppendFmt(&screen->buf, ";48;2;%d;%d;%d", st.bg.r, st.bg.g, st.bg.b);
     }
     strAppendC(&screen->buf, "m");
