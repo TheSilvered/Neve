@@ -240,7 +240,7 @@ static void renderCtxLine_(
 
     strClear(outBuf, maxWidth);
 
-    size_t width = 0;
+    ptrdiff_t width = -scrollX;
 
     const char *tabFmt = "\xc2\xbb%*s"; // »%*s
     const char *startCutoffFmt = "<%*s";
@@ -252,31 +252,31 @@ static void renderCtxLine_(
         i != -1;
         i = ctxLineIterNext(ctx, i, &cp)
     ) {
-        uint8_t chWidth = ucdCPWidth(cp, ctx->tabStop, width);
+        uint8_t chWidth = ucdCPWidth(cp, ctx->tabStop, width + scrollX);
         width += chWidth;
 
-        if (width <= scrollX) {
+        if (width <= 0) {
             continue;
-        } else if (width - chWidth < scrollX) {
+        } else if (width - chWidth < 0) {
             // Draw a gray '<' at the start if a character is cut off
-            strAppendFmt(outBuf, startCutoffFmt, width - scrollX - 1, "");
+            strAppendFmt(outBuf, startCutoffFmt, width - 1, "");
             screenSetFg(
                 &g_ed.screen,
                 (ScreenColor){ .col = screenColT16(61) },
                 lineX, lineY, 1
             );
-        } else if (width > maxWidth + scrollX) {
+        } else if (width > maxWidth) {
             // Draw a gray '>' at the end if a character is cut off
             // If the character is a tab it can just draw a '»'
             strAppendFmt(
                 outBuf,
                 cp == '\t' ? tabFmt : endCutoffFmt,
-                maxWidth + chWidth + scrollX - width - 1, ""
+                maxWidth + chWidth - width - 1, ""
             );
             screenSetFg(
                 &g_ed.screen,
                 (ScreenColor) { .col = screenColT16(61) },
-                lineX + width - chWidth - scrollX, lineY, 1
+                lineX + width - chWidth, lineY, 1
             );
             break;
         } else if (cp == '\t') {
@@ -284,7 +284,7 @@ static void renderCtxLine_(
             screenSetFg(
                 &g_ed.screen,
                 (ScreenColor) { .col = screenColT16(61) },
-                lineX + width - chWidth - scrollX, lineY, 1
+                lineX + width - chWidth, lineY, 1
             );
         } else {
             UcdCh8 buf[4];
@@ -293,7 +293,7 @@ static void renderCtxLine_(
             strAppend(outBuf, &sv);
         }
 
-        if (width == maxWidth + scrollX) {
+        if (width == maxWidth) {
             break;
         }
     }
