@@ -343,7 +343,7 @@ static void screenChangeStyle_(Screen *screen, ScreenStyle st) {
         strAppendC(&screen->buf, ";1");
     }
     if (st.textFmt & screenFmtDim) {
-        strAppendC(&screen->buf, ";1");
+        strAppendC(&screen->buf, ";2");
     }
     if (st.textFmt & screenFmtItalic) {
         strAppendC(&screen->buf, ";3");
