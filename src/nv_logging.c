@@ -1,6 +1,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
-#include "nv_log.h"
+#include "nv_logging.h"
 #include "nv_file.h"
 
 static File logFile = { 0 };

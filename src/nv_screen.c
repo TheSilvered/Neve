@@ -310,7 +310,7 @@ void screenSetStyle(
     uint16_t y,
     uint16_t width
 ) {
-    if (y < 0 || y >= screen->h || x < 0 || x >= screen->w) {
+    if (y >= screen->h || x >= screen->w) {
         return;
     }
 

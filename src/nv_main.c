@@ -6,7 +6,7 @@
 #include "nv_escapes.h"
 #include "nv_file.h"
 #include "nv_key_queue.h"
-#include "nv_log.h"
+#include "nv_logging.h"
 #include "nv_term.h"
 #include "nv_threads.h"
 

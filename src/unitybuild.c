@@ -5,7 +5,7 @@
 #include "nv_file.c"
 #include "nv_gapbuffer.c"
 #include "nv_key_queue.c"
-#include "nv_log.c"
+#include "nv_logging.c"
 #include "nv_main.c"
 #include "nv_mem.c"
 #include "nv_screen.c"
