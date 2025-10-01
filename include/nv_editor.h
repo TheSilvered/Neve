@@ -7,6 +7,7 @@
 
 typedef struct EditorStrings {
     Str savePrompt;
+    Str noFilePath;
 } EditorStrings;
 
 // The state of the editor.
@@ -36,6 +37,8 @@ void editorHandleKey(uint32_t key);
 bool editorRefresh(void);
 // Get the current active context.
 Ctx *editorGetActiveCtx(void);
+// Get the current active file buffer.
+Buf *editorGetActiveBuf(void);
 // Save the current file. Fail if no path is set for the file context.
 bool editorSaveFile(void);
 

@@ -19,6 +19,7 @@ void editorInit(void) {
     ctxInit(&g_ed.saveDialogCtx, false);
 
     strInitFromC(&g_ed.strings.savePrompt, "File path: ");
+    strInitFromC(&g_ed.strings.noFilePath, "<New File>");
 
     termWrite(sLen(
         escEnableAltBuffer
@@ -39,7 +40,7 @@ bool editorUpdateSize(void) {
     }
 
     screenResize(&g_ed.screen, cols, rows);
-    ctxSetFrameSize(&g_ed.fileBuf.ctx, cols, rows - 2);
+    ctxSetFrameSize(&editorGetActiveBuf()->ctx, cols, rows - 2);
 
     if (g_ed.savingFile) {
         // TODO: use visual width of savePrompt
@@ -132,7 +133,7 @@ static void handleKeyNormalMode(int32_t key) {
         enterFileSaveMode();
         return;
     case 'w':
-        if (g_ed.fileBuf.path.len == 0) {
+        if (editorGetActiveBuf()->path.len == 0) {
             enterFileSaveMode();
         } else {
             editorSaveFile();
@@ -205,7 +206,7 @@ void editorHandleKey(uint32_t key) {
         if (g_ed.savingFile) {
             StrView *path = ctxGetContent(ctx);
             if (path->len != 0) {
-                bufSetPath(&g_ed.fileBuf, path);
+                bufSetPath(editorGetActiveBuf(), path);
                 editorSaveFile();
                 exitFileSaveMode();
             }
@@ -355,14 +356,23 @@ static void renderStatusBar_(void) {
         assert(false);
     }
 
+    Buf *activeBuf = editorGetActiveBuf();
+    const char *filePath;
+    if (activeBuf->path.len == 0) {
+        filePath = strAsC(&g_ed.strings.noFilePath);
+    } else {
+        filePath = strAsC(&activeBuf->path);
+    }
+
     screenWriteFmt(
         &g_ed.screen,
         0, g_ed.screen.h - 2,
-        "%zi:%zi %s %s",
-        ctx->cur.y + 1,
-        ctx->cur.x + 1,
+        "%zi:%zi %s %s - %s",
+        activeBuf->ctx.cur.y + 1,
+        activeBuf->ctx.cur.x + 1,
         mode,
-        g_ed.fileBuf.ctx.edited ? "*" : ""
+        activeBuf->ctx.edited ? "*" : "",
+        filePath
     );
 
     screenSetTextFmt(
@@ -405,7 +415,7 @@ bool editorRefresh(void) {
     }
 
     screenClear(&g_ed.screen, -1);
-    renderFile_(editorGetActiveCtx());
+    renderFile_(&editorGetActiveBuf()->ctx);
     renderStatusBar_();
 
     return screenRefresh(&g_ed.screen);
@@ -416,6 +426,10 @@ Ctx *editorGetActiveCtx(void) {
         return &g_ed.saveDialogCtx;
     }
     return &g_ed.fileBuf.ctx;
+}
+
+Buf *editorGetActiveBuf(void) {
+    return &g_ed.fileBuf;
 }
 
 bool editorSaveFile(void) {
