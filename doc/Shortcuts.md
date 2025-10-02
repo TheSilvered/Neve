@@ -87,6 +87,9 @@ With `[ctrl]` they have yet another different behavior:
 - `[d]` indent current line
 - `[D]` dedent current line
 
+- `[q]` delete character before cursor (= `[y][j]`)
+- `[Q]` delete character after cursor (= `[y][l]`)
+
 - `[g]` global selection of a given pattern
 - `[G]` incremental global selection (for each match ask to select or skip)
 
@@ -103,7 +106,6 @@ With `[ctrl]` they have yet another different behavior:
 - `[a]c` move after the next `c` in the line
 - `[A]c` move after the previous `c` in the line
 - `[^A]` repeat last `a` or `A` command
-- `[q]` move to the matching parenthesis
 
 - `[f]` find a given pattern foreward
 - `[F]` find backward
@@ -118,4 +120,8 @@ With `[ctrl]` they have yet another different behavior:
 - `[space][z][t]` fuzzy search in the current buffer
 - `[space][h]s` find selection foreward
 - `[space][H]s` find selection backward
+- `[space][q]c` replace character before cursor with `c`
+- `[space][Q]c` replace character after cursor with `c`
+- `[space][v]c` select clipboard register, if `c` is a space the system
+  clipboard is used, the register remains active until it is changed again
 
