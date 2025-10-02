@@ -76,7 +76,36 @@ With `[ctrl]` they have yet another different behavior:
 - `[h]` edit in a new line below the cursor
 - `[H]` edit in a new line above the cursor
 
+### Advanced movement
+
+- `[b]c` move before the next `c` in the line
+- `[B]c` move before the previous `c` in the line
+- `[^B]` repeat last `b` or `B` command
+- `[a]c` move after the next `c` in the line
+- `[A]c` move after the previous `c` in the line
+- `[^A]` repeat last `a` or `A` command
+
+- `[f]` find a given pattern foreward, the cursor is placed at the beginning of
+  the first match
+- `[F]` find a given pattern backward, the cursor is placed at the end of the
+  first match
+- `[n]` repeat the search foreward
+- `[N]` repeat the search backward
+- `[space][h]s` find selection foreward
+- `[space][H]s` find selection backward
+
+- `[space][z][b]` fuzzy search buffers
+- `[space][z][f]` fuzzy search files in the curren working directory
+- `[space][z][t]` fuzzy search in the current buffer
+
+- `[space][m]` move to the matching parenthesis
+
+- `[space]m` duplicate cursor at the end of the movement
+
 ### Advanced editing
+
+- `[space][v]c` select clipboard register, if `c` is a space the system
+  clipboard is used, the register remains active until it is changed again
 
 - `[y]s` delete the selection
 - `[Y]` delete the current line
@@ -89,6 +118,8 @@ With `[ctrl]` they have yet another different behavior:
 
 - `[q]` delete character before cursor (= `[y][j]`)
 - `[Q]` delete character after cursor (= `[y][l]`)
+- `[space][q]c` replace character before cursor with `c`
+- `[space][Q]c` replace character after cursor with `c`
 
 - `[g]` global selection of a given pattern
 - `[G]` incremental global selection (for each match ask to select or skip)
@@ -98,30 +129,44 @@ With `[ctrl]` they have yet another different behavior:
 
 - `[t]` repeat last edit
 
-### Advanced movement
+## Selection mode
 
-- `[b]c` move before the next `c` in the line
-- `[B]c` move before the previous `c` in the line
-- `[^B]` repeat last `b` or `B` command
-- `[a]c` move after the next `c` in the line
-- `[A]c` move after the previous `c` in the line
-- `[^A]` repeat last `a` or `A` command
+To enter selection mode press `[s]`, to enter line selection mode press `[S]`.
 
-- `[f]` find a given pattern foreward
-- `[F]` find backward
-- `[n]` repeat the search foreward
-- `[N]` repeat the search backward
+Inside selection mode you can move the cursor(s) and a selection will be made
+from the starting position to where the cursor moves. Any command that in normal
+mode requires an immediate selection will instead operate on the selected text
+and quit selection mode.
 
-### Command variants with `[space]`
+Additional keybindings:
 
-- `[space]m` duplicate cursor at the end of the movement
-- `[space][z][b]` fuzzy search buffers
-- `[space][z][f]` fuzzy search files in the curren working directory
-- `[space][z][t]` fuzzy search in the current buffer
-- `[space][h]s` find selection foreward
-- `[space][H]s` find selection backward
-- `[space][q]c` replace character before cursor with `c`
-- `[space][Q]c` replace character after cursor with `c`
-- `[space][v]c` select clipboard register, if `c` is a space the system
-  clipboard is used, the register remains active until it is changed again
+- `[h]` pause/resume selection to move the cursor freely
+- `[space][p]` surround the selection with parenthesis
+- `[space][s]` surround the selection with square brackets
+- `[space][c]` surround the selection with curly brackets
+- `[space][q]` surround the selection with double quotes
+- `[space][t]` surround the selection with single quotes
+- `[^Q]` quit selection mode
+
+Text objects:
+
+In addition to selection via movement, you can also select various text objects:
+
+- `[p]` select text inside parenthesis
+- `[P]` select text inside parenthesis and the parenthesis
+- `[s]` select text inside square brackets
+- `[S]` select text inside square brackets and the square brackets
+- `[c]` select text inside curly brackets
+- `[C]` select text inside curly brackets and the curly brackets
+- `[q]` select text inside double quotes
+- `[Q]` select text inside double quotes and the double quotes brackets
+- `[t]` select text inside single quotes
+- `[T]` select text inside single quotes and the single quotes
+
+### Immediate selection
+
+Immediate selection is required after some commands and quits selection mode
+after the first command, you can use `[h]` to remain in selection mode and
+perform multiple commands and then press `[h]` again to exit and apply the
+action.
 
