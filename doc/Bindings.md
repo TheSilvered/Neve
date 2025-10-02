@@ -152,16 +152,21 @@ Text objects:
 
 In addition to selection via movement, you can also select various text objects:
 
-- `[p]` select text inside parenthesis
-- `[P]` select text inside parenthesis and the parenthesis
-- `[s]` select text inside square brackets
-- `[S]` select text inside square brackets and the square brackets
-- `[c]` select text inside curly brackets
-- `[C]` select text inside curly brackets and the curly brackets
-- `[q]` select text inside double quotes
-- `[Q]` select text inside double quotes and the double quotes brackets
-- `[t]` select text inside single quotes
-- `[T]` select text inside single quotes and the single quotes
+- `[p]` text inside parenthesis
+- `[P]` text inside parenthesis and the parenthesis
+- `[s]` text inside square brackets
+- `[S]` text inside square brackets and the square brackets
+- `[c]` text inside curly brackets
+- `[C]` text inside curly brackets and the curly brackets
+- `[q]` text inside double quotes
+- `[Q]` text inside double quotes and the double quotes brackets
+- `[t]` text inside single quotes
+- `[T]` text inside single quotes and the single quotes
+- `[w]` word the cursor is on
+- `[W]` word the cursor is on and the space around it
+- `[e]` the extended word (word + punctuation) the cursor is on
+- `[E]` the extended word (word + punctuation) the cursor is on and the space
+  around it
 
 ### Immediate selection
 
