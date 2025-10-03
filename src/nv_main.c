@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (strcmp(argv[1], "--keys")) {
+    if (argc == 2 && strcmp(argv[1], "--keys")) {
         return keyLogMode();
     }
 

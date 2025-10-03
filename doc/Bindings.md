@@ -49,6 +49,8 @@ When using `[shift]` they become "more powerful":
 
 With `[ctrl]` they have yet another different behavior:
 
+- `[^I]` move up half a screen
+- `[^K]` move down half a screen
 - `[^J]` move to the end of the previous word
 - `[^L]` move to the start of the next word
 - `[^U]` move the previous edit position
@@ -98,7 +100,7 @@ With `[ctrl]` they have yet another different behavior:
 - `[space][z][f]` fuzzy search files in the curren working directory
 - `[space][z][t]` fuzzy search in the current buffer
 
-- `[space][m]` move to the matching parenthesis
+- `[space][p]` move to the matching parenthesis
 
 - `[space]m` duplicate cursor at the end of the movement
 
@@ -126,8 +128,10 @@ With `[ctrl]` they have yet another different behavior:
 
 - `[m]c` start/stop recoring macro `c`
 - `[M]c` play macro `c`
+- `[space][m]` play last recorded/played macro
 
 - `[t]` repeat last edit
+- `[T]` repeat last command
 
 ## Selection mode
 
@@ -141,14 +145,15 @@ and quit selection mode.
 Additional keybindings:
 
 - `[h]` pause/resume selection to move the cursor freely
+- `[H]` move cursor to the other end of the selection
 - `[space][p]` surround the selection with parenthesis
 - `[space][s]` surround the selection with square brackets
 - `[space][c]` surround the selection with curly brackets
 - `[space][q]` surround the selection with double quotes
 - `[space][t]` surround the selection with single quotes
-- `[^Q]` quit selection mode
+- `[^C]`/`[^Q]`/`[esc]` quit selection mode
 
-Text objects:
+### Text objects
 
 In addition to selection via movement, you can also select various text objects:
 
@@ -174,4 +179,30 @@ Immediate selection is required after some commands and quits selection mode
 after the first command, you can use `[h]` to remain in selection mode and
 perform multiple commands and then press `[h]` again to exit and apply the
 action.
+
+In immediate selection text object still work.
+
+## Edit mode
+
+In edit mode the key bindings available are the following:
+
+- `[^A]` move to the start of the line
+- `[^E]` move to the end of the line
+- `[^F]` move cursor foreward
+- `[^B]` move cursor backward
+- `[^P]` move cursor up
+- `[^N]` move cursor down
+- `[^H]` delete backward (backspace)
+- `[^K]` delete foreward
+- `[^W]` delete previous word
+- `[^R]` delete next word
+- `[^O]` new line above
+- `[^J]` new line below
+- `[^T]` indent
+- `[^D]` dedent
+- `[^U]` delete to the start of the line
+- `[^L]` delete to the end of the line
+- `[^S]` suspend edit mode for one command
+- `[^V]` enter a digraph
+- `[^C]`/`[^Q]`/`[esc]` quit edit mode
 
