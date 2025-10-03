@@ -3,7 +3,6 @@
 
 #include "nv_array.h"
 #include "nv_string.h"
-#include "nv_gapbuffer.h"
 
 // Context mode
 typedef enum CtxMode {
@@ -11,27 +10,23 @@ typedef enum CtxMode {
     CtxMode_Insert
 } CtxMode;
 
-// Window positition (scroll x and y) and size.
-typedef struct CtxFrame {
-    size_t x, y;
-    uint16_t termX, termY;
-    uint16_t w, h;
-} CtxFrame;
+typedef Arr(size_t) CtxLineRef;
+typedef Arr(size_t) CtxCursors;
+typedef Arr(size_t) CtxSelects;
 
-// Cursor position.
-typedef struct CtxCursor {
-    size_t x, y, baseX, idx;
-} CtxCursor;
-
-// Dynamic array of size_t for storing line indices.
-typedef Arr(size_t) CtxLines;
+typedef struct CtxBuf {
+    UcdCh8 *bytes;
+    size_t len;
+    size_t cap;
+    size_t gapIdx;
+} CtxBuf;
 
 // Editing context.
 typedef struct Ctx {
-    CtxFrame frame;
-    CtxCursor cur;
-    GBuf buf;
-    CtxLines m_lines;
+    CtxLineRef m_lineRef;
+    CtxCursors m_cursors;
+    CtxSelects m_selects;
+    CtxBuf m_buf;
     CtxMode mode;
     bool edited;
     bool multiline;
@@ -47,8 +42,6 @@ void ctxDestroy(Ctx *ctx);
 
 /****************************** Cursor movement *******************************/
 
-// Get the position of the cursor as it appears on the terminal.
-void ctxGetCurTermPos(const Ctx *ctx, uint16_t *outCol, uint16_t *outRow);
 // Move the cursor by `dx` characters on the current line.
 void ctxMoveCurX(Ctx *ctx, ptrdiff_t dx);
 // Move the cursor by `dy` lines.
@@ -94,19 +87,12 @@ void ctxRemoveForeward(Ctx *ctx);
 
 /*********************************** Other ************************************/
 
-// Set the size of the window.
-void ctxSetFrameSize(Ctx *ctx, uint16_t width, uint16_t height);
 // Get the number of lines in the text of a context.
 size_t ctxLineCount(const Ctx *ctx);
 // Get the length of a line in characters.
 size_t ctxLineLen(const Ctx *ctx, size_t lineIdx);
-
-// Get the character after the cursor.
-// Return -1 if the cursor is at the end of the text.
-UcdCP ctxGetChF(const Ctx *ctx);
-// Get the character before the cursor.
-// Return -1 if the cursor is at the start of the text.
-UcdCP ctxGetChB(const Ctx *ctx);
+// Get the number of cursors in the context
+size_t ctxCursorCount(const Ctx *ctx);
 
 // Get the content of the context as a string view.
 // The view is valid until the text is edited.

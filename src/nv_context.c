@@ -1,3 +1,95 @@
+#include "nv_context.h"
+#include "nv_mem.h"
+
+#define lineRefBlockSize_ 2048
+
+void ctxInit(Ctx *ctx, bool multiline) {
+    ctx->m_lineRef = (CtxLineRef){ 0 };
+    ctx->m_cursors = (CtxCursors){ 0 };
+    ctx->m_selects = (CtxSelects){ 0 };
+
+    ctx->m_buf = (CtxBuf) {
+        .bytes = NULL,
+        .len = 0,
+        .cap = 0,
+        .gapIdx = 0
+    };
+
+    ctx->mode = CtxMode_Normal;
+    ctx->edited = false;
+    ctx->multiline = multiline;
+    ctx->tabStop = 8;
+}
+
+void ctxDestroy(Ctx *ctx) {
+    arrDestroy(&ctx->m_lineRef);
+    arrDestroy(&ctx->m_cursors);
+    arrDestroy(&ctx->m_selects);
+
+    memFree(ctx->m_buf.bytes);
+
+    // Keep the context in a valid state after deletion
+    ctxInit(ctx, ctx->multiline);
+}
+
+void ctxMoveCurX(Ctx *ctx, ptrdiff_t dx);
+
+void ctxMoveCurY(Ctx *ctx, ptrdiff_t dy);
+
+void ctxMoveCurIdx(Ctx *ctx, ptrdiff_t diffIdx);
+
+void ctxMoveCurLineStart(Ctx *ctx);
+
+void ctxMoveCurLineEnd(Ctx *ctx);
+
+void ctxMoveCurFileStart(Ctx *ctx);
+
+void ctxMoveCurFileEnd(Ctx *ctx);
+
+void ctxMoveCurWordStartF(Ctx *ctx);
+
+void ctxMoveCurWordEndF(Ctx *ctx);
+
+void ctxMoveCurWordStartB(Ctx *ctx);
+
+void ctxMoveCurWordEndB(Ctx *ctx);
+
+void ctxMoveCurParagraphF(Ctx *ctx);
+
+void ctxMoveCurParagraphB(Ctx *ctx);
+
+void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len);
+
+void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len);
+
+void ctxInsertCP(Ctx *ctx, UcdCP cp);
+
+void ctxRemoveBack(Ctx *ctx);
+
+void ctxRemoveForeward(Ctx *ctx);
+
+size_t ctxLineCount(const Ctx *ctx);
+
+size_t ctxLineLen(const Ctx *ctx, size_t lineIdx);
+
+size_t ctxCursorCount(const Ctx *ctx);
+
+StrView *ctxGetContent(Ctx *ctx);
+
+ptrdiff_t ctxIterNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+
+ptrdiff_t ctxIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+
+ptrdiff_t ctxLineIterNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+
+ptrdiff_t ctxLineIterPrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+
+ptrdiff_t ctxLineIterNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+
+ptrdiff_t ctxLineIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+
+#if 0
+
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
@@ -15,15 +107,7 @@ void ctxInit(Ctx *ctx, bool multiline) {
         .termY = 0
     };
 
-    ctx->cur = (CtxCursor) {
-        .x = 0,
-        .y = 0,
-        .idx = 0,
-        .baseX = 0
-    };
-
     ctx->buf = (GBuf){ 0 };
-    ctx->m_lines = (CtxLines){ 0 };
     ctx->mode = CtxMode_Normal;
     ctx->multiline = multiline;
     ctx->edited = false;
@@ -752,3 +836,5 @@ ptrdiff_t ctxLineIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     }
     return newIdx;
 }
+
+# endif

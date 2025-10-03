@@ -1,3 +1,4 @@
+# if 0 // build disabled while refactoring
 #include "nv_buffer.c"
 #include "nv_context.c"
 #include "nv_editor.c"
@@ -14,3 +15,6 @@
 #include "nv_threads.c"
 #include "nv_udb.c"
 #include "nv_unicode.c"
+#else
+int main(void) { return 0; }
+#endif
