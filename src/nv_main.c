@@ -1,5 +1,7 @@
 #include <assert.h>
+#include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "nv_editor.h"
 #include "nv_error.h"
@@ -82,6 +84,39 @@ ThreadRet inputThreadRoutine(void *arg) {
     return 0;
 }
 
+int keyLogMode(void) {
+    if (!termInit()) {
+        errLog("failed to initialize the terminal");
+        return 1;
+    }
+
+    if (!termEnableRawMode(1)) {
+        errLog("failed to enable raw mode");
+        return 1;
+    }
+
+    while (true) {
+        UcdCP byte = termGetInput();
+        if (byte == TermKey_CtrlC) {
+            break;
+        }
+        if (byte <= 0) {
+            continue;
+        }
+        if (byte > 127) {
+            printf("U+%04X\r\n", byte);
+        } else if (byte >= ' ' && byte <= '~') {
+            printf("%c\r\n", byte);
+        } else {
+            printf("^%c\r\n", byte == 127 ? '?' : byte | 0x40);
+        }
+    }
+
+    termQuit();
+
+    return 0;
+}
+
 // TODO: use wmain on Windows
 int main(int argc, char **argv) {
     int ret = 0;
@@ -93,6 +128,10 @@ int main(int argc, char **argv) {
     if (argc > 2) {
         printf("Usage: neve [file]\n");
         return 1;
+    }
+
+    if (strcmp(argv[1], "--keys")) {
+        return keyLogMode();
     }
 
     if (!initNeve()) {
