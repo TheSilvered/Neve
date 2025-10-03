@@ -98,18 +98,22 @@ int keyLogMode(void) {
     while (true) {
         UcdCP byte = termGetInput();
         if (byte == TermKey_CtrlC) {
+            printf("^C\n");
             break;
         }
         if (byte <= 0) {
             continue;
         }
         if (byte > 127) {
-            printf("U+%04X\r\n", byte);
-        } else if (byte >= ' ' && byte <= '~') {
-            printf("%c\r\n", byte);
+            printf("U+%04X ", byte);
+        } else if (byte == ' ') {
+            printf("<sp>");
+        } else if (byte > ' ' && byte <= '~') {
+            printf("%c", byte);
         } else {
-            printf("^%c\r\n", byte == 127 ? '?' : byte | 0x40);
+            printf("^%c", byte == 127 ? '?' : byte | 0x40);
         }
+        fflush(stdout);
     }
 
     termQuit();
@@ -130,7 +134,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (argc == 2 && strcmp(argv[1], "--keys")) {
+    if (argc == 2 && strcmp(argv[1], "--keys") == 0) {
         return keyLogMode();
     }
 
