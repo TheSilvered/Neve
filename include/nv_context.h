@@ -40,6 +40,41 @@ void ctxInit(Ctx *ctx, bool multiline);
 // Destroy a context.
 void ctxDestroy(Ctx *ctx);
 
+/* Iteration */
+
+// Iterate over the whole content of the context.
+// Use `idx == -1` to begin iterating.
+// Pass the returned value as `idx` to continue iterating.
+// The iteration ends once the return value is `-1`.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+// Iterate over the whole content of the context from the end.
+// Use `idx == -1` to begin iterating.
+// Pass the returned value as `idx` to continue iterating.
+// The iteration ends once the return value is `-1`.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+// Start iterating over one line of the context.
+// Pass the returned value as `idx` to `ctxLineIterNext` to continue iterating.
+// If the return value is `-1` there is nothing to iterate.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+// Start iterating over one line of the context from the end.
+// Pass the returned value as `idx` to `ctxLineIterPrev` to continue iterating.
+// If the return value is `-1` there is nothing to iterate.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+// Continue iterating over one line of the context.
+// Pass the returned value as `idx` to continue iterating.
+// The iteration ends once the return value is `-1`.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+// Continue iterating over one line of the context from the end.
+// Pass the returned value as `idx` to continue iterating.
+// The iteration ends once the return value is `-1`.
+// `idx` is the index of the first byte of the character in the text.
+ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+
 /****************************** Cursor movement *******************************/
 
 // Move the cursor by `dx` characters on the current line.

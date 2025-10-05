@@ -1,7 +1,16 @@
+#include <string.h>
+#include <assert.h>
 #include "nv_context.h"
 #include "nv_mem.h"
 
 #define lineRefBlockSize_ 2048
+
+static inline UcdCh8 *ctxBufGet_(const CtxBuf *buf, size_t idx);
+static void ctxBufReserve_(CtxBuf *buf, size_t amount);
+static void ctxBufShrink_(CtxBuf *buf);
+static void ctxBufInsert_(CtxBuf *buf, const UcdCh8 *text, size_t len);
+static void ctxBufRemove_(CtxBuf *buf, size_t len);
+static void ctxBufSetGapIdx_(CtxBuf *buf, size_t gapIdx);
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->m_lineRef = (CtxLineRef){ 0 };
@@ -32,61 +41,224 @@ void ctxDestroy(Ctx *ctx) {
     ctxInit(ctx, ctx->multiline);
 }
 
-void ctxMoveCurX(Ctx *ctx, ptrdiff_t dx);
+static inline UcdCh8 *ctxBufGet_(const CtxBuf *buf, size_t idx) {
+    assert(idx < buf->len);
+    if (idx >= buf->gapIdx) {
+        size_t gapSize = buf->cap - buf->len;
+        idx += gapSize;
+    }
+    return &buf->bytes[idx];
+}
 
-void ctxMoveCurY(Ctx *ctx, ptrdiff_t dy);
+static void ctxBufReserve_(CtxBuf *buf, size_t amount) {
+    size_t requiredLen = buf->len + amount;
+    if (requiredLen <= buf->cap) {
+        return;
+    }
 
-void ctxMoveCurIdx(Ctx *ctx, ptrdiff_t diffIdx);
+    size_t newCap = requiredLen + requiredLen / 2;
+    buf->bytes = memChange(
+        buf->bytes,
+        newCap,
+        sizeof(*buf->bytes)
+    );
 
-void ctxMoveCurLineStart(Ctx *ctx);
+    size_t newGapSize = newCap - buf->len;
+    size_t gapSize = buf->cap - buf->len;
 
-void ctxMoveCurLineEnd(Ctx *ctx);
+    memmove(
+        buf->bytes + buf->gapIdx + newGapSize,
+        buf->bytes + buf->gapIdx + gapSize,
+        (buf->len - buf->gapIdx) * sizeof(*buf->bytes)
+    );
+    buf->cap = newCap;
+}
 
-void ctxMoveCurFileStart(Ctx *ctx);
+static void ctxBufShrink_(CtxBuf *buf) {
+    if (buf->len >= buf->cap / 4) {
+        return;
+    }
+    size_t newCap = buf->cap / 2;
+    size_t newGapSize = newCap - buf->len;
+    size_t gapSize = buf->cap - buf->len;
+    memmove(
+        buf->bytes + buf->gapIdx + newGapSize,
+        buf->bytes + buf->gapIdx + gapSize,
+        (buf->len - buf->gapIdx) * sizeof(*buf->bytes)
+    );
 
-void ctxMoveCurFileEnd(Ctx *ctx);
+    buf->bytes = memShrink(
+        buf->bytes,
+        buf->cap / 2,
+        sizeof(*buf->bytes)
+    );
 
-void ctxMoveCurWordStartF(Ctx *ctx);
+    buf->cap = newCap;
+}
 
-void ctxMoveCurWordEndF(Ctx *ctx);
+static void ctxBufInsert_(CtxBuf *buf, const UcdCh8 *text, size_t len) {
+    ctxBufReserve_(buf, len);
+    memcpy(buf->bytes + buf->gapIdx, text, len * sizeof(*text));
+    buf->gapIdx += len;
+    buf->len += len;
+}
 
-void ctxMoveCurWordStartB(Ctx *ctx);
+static void ctxBufRemove_(CtxBuf *buf, size_t len) {
+    if (len > buf->gapIdx) {
+        len = buf->gapIdx;
+    }
 
-void ctxMoveCurWordEndB(Ctx *ctx);
+    buf->gapIdx -= len;
+    buf->len -= len;
 
-void ctxMoveCurParagraphF(Ctx *ctx);
+    assert(
+        buf->gapIdx == buf->len
+        || ucdCh8CPLen(*ctxBufGet_(buf, buf->gapIdx))
+    );
 
-void ctxMoveCurParagraphB(Ctx *ctx);
+    ctxBufShrink_(buf);
+}
 
-void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len);
+static void ctxBufSetGapIdx_(CtxBuf *buf, size_t gapIdx) {
+    assert(gapIdx <= buf->len);
+    assert(
+        gapIdx == buf->len
+        || ucdCh8CPLen(*ctxBufGet_(buf, gapIdx))
+    );
+    if (buf->gapIdx == gapIdx) {
+        return;
+    }
 
-void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len);
+    size_t gapSize = buf->cap - buf->len;
 
-void ctxInsertCP(Ctx *ctx, UcdCP cp);
+    if (gapIdx > buf->gapIdx) {
+        size_t moveSize = gapIdx - buf->gapIdx;
+        memmove(
+            buf->bytes + buf->gapIdx,
+            buf->bytes + buf->gapIdx + gapSize,
+            moveSize * sizeof(*buf->bytes)
+        );
+    } else {
+        size_t moveSize = buf->gapIdx - gapIdx;
+        memmove(
+            buf->bytes + gapIdx + gapSize,
+            buf->bytes + gapIdx,
+            moveSize * sizeof(*buf->bytes)
+        );
+    }
+    buf->gapIdx = gapIdx;
+}
 
-void ctxRemoveBack(Ctx *ctx);
+ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
+    if (idx < 0) {
+        idx = 0;
+    } else if ((size_t)idx >= ctx->m_buf.len) {
+        goto endReached;
+    } else {
+        idx += ucdCh8RunLen(*ctxBufGet_(&ctx->m_buf, idx));
+    }
 
-void ctxRemoveForeward(Ctx *ctx);
+    if ((size_t)idx >= ctx->m_buf.len) {
+        goto endReached;
+    }
 
-size_t ctxLineCount(const Ctx *ctx);
+    if (outCP != NULL) {
+        *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->m_buf, idx));
+    }
+    return idx;
 
-size_t ctxLineLen(const Ctx *ctx, size_t lineIdx);
+endReached:
+    if (outCP != NULL) {
+        *outCP = -1;
+    }
+    return -1;
+}
 
-size_t ctxCursorCount(const Ctx *ctx);
+ptrdiff_t ctxPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
+    if (idx == 0) {
+        goto endReached;
+    } else if (idx < 0) {
+        idx = ctx->m_buf.len;
+    }
+    idx--;
+    UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, idx);
+    while (idx >= 0 && ucdCh8RunLen(*chPtr) == 0) {
+        idx--;
+        chPtr--;
+    }
+    if (idx < 0) {
+        goto endReached;
+    }
 
-StrView *ctxGetContent(Ctx *ctx);
+    if (outCP != NULL) {
+        *outCP = ucdCh8ToCP(chPtr);
+    }
+    return idx;
 
-ptrdiff_t ctxIterNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+endReached:
+    if (outCP != NULL) {
+        *outCP = -1;
+    }
+    return -1;
+}
 
-ptrdiff_t ctxIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
 
-ptrdiff_t ctxLineIterNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
 
-ptrdiff_t ctxLineIterPrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
+    if (idx < 0) {
+        idx = 0;
+    } else if ((size_t)idx >= ctx->m_buf.len) {
+        goto endReached;
+    } else {
+        idx += ucdCh8RunLen(*ctxBufGet_(&ctx->m_buf, idx));
+    }
+    UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, idx);
 
-ptrdiff_t ctxLineIterNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+    if ((size_t)idx >= ctx->m_buf.len || *chPtr == '\n') {
+        goto endReached;
+    }
 
-ptrdiff_t ctxLineIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+    if (outCP != NULL) {
+        *outCP = ucdCh8ToCP(chPtr);
+    }
+    return idx;
+
+endReached:
+    if (outCP != NULL) {
+        *outCP = -1;
+    }
+    return -1;
+}
+
+ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
+    if (idx == 0) {
+        goto endReached;
+    } else if (idx < 0) {
+        idx = ctx->m_buf.len;
+    }
+    idx--;
+    UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, idx);
+    while (idx >= 0 && ucdCh8RunLen(*chPtr) == 0) {
+        idx--;
+        chPtr--;
+    }
+    if (idx < 0 || *chPtr == '\n') {
+        goto endReached;
+    }
+
+    if (outCP != NULL) {
+        *outCP = ucdCh8ToCP(chPtr);
+    }
+    return idx;
+
+endReached:
+    if (outCP != NULL) {
+        *outCP = -1;
+    }
+    return -1;
+}
 
 #if 0
 
@@ -96,30 +268,6 @@ ptrdiff_t ctxLineIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
 #include "nv_array.h"
 #include "nv_context.h"
 #include "nv_udb.h"
-
-void ctxInit(Ctx *ctx, bool multiline) {
-    ctx->frame = (CtxFrame) {
-        .x = 0,
-        .y = 0,
-        .w = 0,
-        .h = 0,
-        .termX = 0,
-        .termY = 0
-    };
-
-    ctx->buf = (GBuf){ 0 };
-    ctx->mode = CtxMode_Normal;
-    ctx->multiline = multiline;
-    ctx->edited = false;
-    ctx->tabStop = 8;
-}
-
-void ctxDestroy(Ctx *ctx) {
-    memFree(ctx->buf.bytes);
-    arrDestroy(&ctx->m_lines);
-
-    memset(ctx, 0, sizeof(*ctx));
-}
 
 static size_t ctxLineChIdx_(const Ctx *ctx, size_t lineIdx) {
     assert(lineIdx <= ctx->m_lines.len);

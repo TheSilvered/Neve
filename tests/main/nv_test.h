@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include "nv_utils.h" // Useful inside the tests
 
+// Length of a char array
+#define chArrLen(s) (sizeof(s)/sizeof(*(s)) - 1)
+
 // TODO: testCapture
 
 typedef struct Test {
