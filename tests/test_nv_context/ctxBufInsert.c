@@ -20,8 +20,21 @@ void test_ctxBufInsertFromEmpty(void) {
     testAssert(buf.gapIdx == chArrLen(s));
 }
 
+void test_ctxBufInsertFromEnd(void) {
+    CtxBuf buf = { 0 };
+    const char s[] = "abcd";
+
+    ctxBufInsert_(&buf, (UcdCh8 *)s, chArrLen(s));
+    testAssert(buf.gapIdx == chArrLen(s));
+    ctxBufInsert_(&buf, (UcdCh8 *)s, chArrLen(s));
+    testAssert(buf.len == chArrLen(s) * 2);
+    testAssert(buf.cap >= chArrLen(s) * 2);
+    testAssert(buf.gapIdx == chArrLen(s) * 2);
+}
+
 testList(
     testMake(test_ctxBufInsertEmpty),
-    testMake(test_ctxBufInsertFromEmpty)
+    testMake(test_ctxBufInsertFromEmpty),
+    testMake(test_ctxBufInsertFromEnd)
 )
 
