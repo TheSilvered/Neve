@@ -26,7 +26,7 @@ bool testAssertWith_(
     }
 
     g_failed = true;
-    printf("  %s:%d %s\n    Some tests were skipped.\n", file, line, exprStr);
+    printf("  %s:%d %s\n    Some checks were skipped.\n", file, line, exprStr);
     return false;
 }
 
