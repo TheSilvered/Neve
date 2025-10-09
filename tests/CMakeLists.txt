@@ -1,3 +1,3 @@
+add_subdirectory(test_nv_context)
 add_subdirectory(test_nv_string)
 add_subdirectory(test_nv_unicode)
-add_subdirectory(test_nv_context)
