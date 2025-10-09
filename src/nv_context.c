@@ -1,16 +1,50 @@
+/* Context data structure:
+ *
+ * m_buf is a gap buffer
+ *
+ * m_lineRef is an array of length ctx->m_buf.len >> lineRefBlockShift_ and
+ * contains the ith block contains how many lines start start from index 0 to
+ * (i << lineRefBlockShift_) - 1.
+ */
+
 #include <string.h>
 #include <assert.h>
 #include "nv_context.h"
 #include "nv_mem.h"
+#include "nv_unicode.h"
+#include "nv_utils.h"
 
-#define lineRefBlockSize_ 2048
+// Allow other definition for tests
+#ifndef lineRefBlockShift_
+#define lineRefBlockShift_ 11
+#endif // !lineRefBlockShift
 
+#define lineRefBlockMask_ ((1 << lineRefBlockShift_) - 1)
+
+// Get from the gap buffer
 static inline UcdCh8 *ctxBufGet_(const CtxBuf *buf, size_t idx);
+// Reserve space in the gap buffer
 static void ctxBufReserve_(CtxBuf *buf, size_t amount);
+// Shrkin if too much space is empty
 static void ctxBufShrink_(CtxBuf *buf);
+// Insert at the gapIdx and move it
 static void ctxBufInsert_(CtxBuf *buf, const UcdCh8 *text, size_t len);
+// Remove before the gap index and move it
 static void ctxBufRemove_(CtxBuf *buf, size_t len);
+// Change the gap index
 static void ctxBufSetGapIdx_(CtxBuf *buf, size_t gapIdx);
+
+// Get info about the line that `idx` is in, outY is the line number (from 0)
+// outIdx is the start index of the line
+static void ctxLineAt_(
+    Ctx *ctx,
+    size_t idx,
+    size_t *outLineNo,
+    size_t *outStartIdx
+);
+
+// Get the index of the first character of a line
+static ptrdiff_t ctxLineNoToIdx_(const Ctx *ctx, size_t lineNo);
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->m_lineRef = (CtxLineRef){ 0 };
@@ -202,9 +236,33 @@ endReached:
     return -1;
 }
 
-ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
+    ptrdiff_t i = ctxLineNoToIdx_(ctx, lineIdx);
+    if (i == ctx->m_buf.len || i < 0) {
+        return -1;
+    }
+    if (outCP) {
+        *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->m_buf, i));
+    }
+    return i;
+}
 
-ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
+    size_t i = ctxLineNoToIdx_(ctx, lineIdx + 1);
+    if (i <= 0) {
+        return -1;
+    }
+
+    i--;
+    while (!ucdCh8RunLen(*ctxBufGet_(&ctx->m_buf, i))) {
+        i--;
+    }
+
+    if (outCP) {
+        *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->m_buf, i));
+    }
+    return i;
+}
 
 ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     if (idx < 0) {
@@ -258,6 +316,114 @@ endReached:
         *outCP = -1;
     }
     return -1;
+}
+
+static void ctxLineAt_(
+    Ctx *ctx,
+    size_t idx,
+    size_t *outLineNo,
+    size_t *outStartIdx
+) {
+    size_t lineCount;
+    if (idx <= lineRefBlockMask_) {
+        lineCount = 0;
+    } else {
+        lineCount = ctx->m_lineRef.items[(idx >> lineRefBlockShift_) - 1];
+    }
+    size_t i = idx & (~lineRefBlockMask_);
+    size_t lineIdx = 0;
+
+    for (; i < idx; i++) {
+        if (*ctxBufGet_(&ctx->m_buf, i) == '\n') {
+            lineCount++;
+            lineIdx = i + 1;
+        }
+    }
+
+    if (outLineNo) {
+        *outLineNo = lineCount;
+    }
+    if (outStartIdx) {
+        *outStartIdx = lineIdx;
+    }
+}
+
+static ptrdiff_t ctxLineNoToIdx_(const Ctx *ctx, size_t lineNo) {
+    size_t lo = 0;
+    size_t hi = ctx->m_lineRef.len;
+    size_t *lines = ctx->m_lineRef.items;
+    size_t i = 0;
+    size_t lineCount = 0;
+    size_t endIdx;
+
+    if (hi == 0 || lines[0] > lineNo) {
+        goto preciseIdx;
+    }
+
+    while (lo < hi) {
+        size_t mid = (hi + lo) / 2;
+
+        if (lines[mid] >= lineNo) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+
+    i = lo << lineRefBlockShift_;
+    lineCount = lines[lo - 1];
+
+preciseIdx:
+    endIdx = NV_MIN(i + lineRefBlockMask_, ctx->m_buf.len);
+
+    for (; i < endIdx; i++) {
+        if (*ctxBufGet_(&ctx->m_buf, i) != '\n') {
+            continue;
+        }
+        lineCount++;
+        if (lineCount == lineNo) {
+            return i + 1;
+        }
+    }
+
+    // The line does not exist
+    return -1;
+}
+
+void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
+    if (len == 0) {
+        return;
+    }
+
+    ctx->edited = true;
+
+    size_t lineStart = 0;
+    bool ignoreNL = !ctx->multiline;
+
+    CtxBuf *buf = &ctx->m_buf;
+    uint16_t lineBlock = buf->len & lineRefBlockMask_;
+    size_t lineCount = ctx->m_lineRef.len == 0
+        ? 0
+        : ctx->m_lineRef.items[ctx->m_lineRef.len - 1];
+
+    ctxBufSetGapIdx_(buf, buf->len);
+
+    for (size_t i = 0; i < len; i++) {
+        if (data[i] == '\n' && !ignoreNL) {
+            ctxBufInsert_(buf, &data[lineStart], i - lineStart);
+            ctxBufInsert_(buf, (const UcdCh8 *)"\n", 1);
+            lineStart = i + 1;
+            lineCount++;
+        } else if (data[i] == '\r' || data[i] == '\n') {
+            ctxBufInsert_(buf, &data[lineStart], i - lineStart);
+            lineStart = i + 1;
+        }
+        lineBlock++;
+    }
+
+    if (lineStart < len) {
+        ctxBufInsert_(buf, &data[lineStart], len - lineStart);
+    }
 }
 
 #if 0
