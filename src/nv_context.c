@@ -14,7 +14,7 @@
 #include "nv_unicode.h"
 #include "nv_utils.h"
 
-// Allow other definition for tests
+// Allow another definition for tests
 #ifndef lineRefBlockShift_
 #define lineRefBlockShift_ 11
 #endif // !lineRefBlockShift
@@ -37,14 +37,14 @@ static void ctxBufSetGapIdx_(CtxBuf *buf, size_t gapIdx);
 // Get info about the line that `idx` is in, outY is the line number (from 0)
 // outIdx is the start index of the line
 static void ctxLineAt_(
-    Ctx *ctx,
+    const Ctx *ctx,
     size_t idx,
     size_t *outLineNo,
     size_t *outStartIdx
 );
 
 // Get the index of the first character of a line
-static ptrdiff_t ctxLineNoToIdx_(const Ctx *ctx, size_t lineNo);
+static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo);
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->m_lineRef = (CtxLineRef){ 0 };
@@ -237,7 +237,7 @@ endReached:
 }
 
 ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    ptrdiff_t i = ctxLineNoToIdx_(ctx, lineIdx);
+    ptrdiff_t i = ctxLineToIdx_(ctx, lineIdx);
     if (i == ctx->m_buf.len || i < 0) {
         return -1;
     }
@@ -248,7 +248,7 @@ ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
 }
 
 ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    size_t i = ctxLineNoToIdx_(ctx, lineIdx + 1);
+    size_t i = ctxLineToIdx_(ctx, lineIdx + 1);
     if (i <= 0) {
         return -1;
     }
@@ -319,11 +319,12 @@ endReached:
 }
 
 static void ctxLineAt_(
-    Ctx *ctx,
+    const Ctx *ctx,
     size_t idx,
     size_t *outLineNo,
     size_t *outStartIdx
 ) {
+    assert(idx <= ctx->m_buf.len);
     size_t lineCount;
     if (idx <= lineRefBlockMask_) {
         lineCount = 0;
@@ -343,12 +344,23 @@ static void ctxLineAt_(
     if (outLineNo) {
         *outLineNo = lineCount;
     }
-    if (outStartIdx) {
-        *outStartIdx = lineIdx;
+    if (outStartIdx == NULL) {
+        return;
     }
+
+    if (lineCount == 0 || lineIdx != 0) {
+        *outStartIdx = lineIdx;
+        return;
+    }
+    // The requested line does not begin in the lineRef block, figue out where
+    // it starts
+    do {
+        i--;
+    } while (*ctxBufGet_(&ctx->m_buf, i) != '\n');
+    *outStartIdx = i + 1;
 }
 
-static ptrdiff_t ctxLineNoToIdx_(const Ctx *ctx, size_t lineNo) {
+static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo) {
     size_t lo = 0;
     size_t hi = ctx->m_lineRef.len;
     size_t *lines = ctx->m_lineRef.items;
