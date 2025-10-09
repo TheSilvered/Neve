@@ -401,10 +401,9 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     bool ignoreNL = !ctx->multiline;
 
     CtxBuf *buf = &ctx->m_buf;
-    uint16_t lineBlock = buf->len & lineRefBlockMask_;
-    size_t lineCount = ctx->m_lineRef.len == 0
-        ? 0
-        : ctx->m_lineRef.items[ctx->m_lineRef.len - 1];
+    uint16_t lastBlockSize = buf->len & lineRefBlockMask_;
+    size_t lineCount;
+    ctxLineAt_(ctx, buf->len, &lineCount, NULL);
 
     ctxBufSetGapIdx_(buf, buf->len);
 
@@ -417,8 +416,13 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
         } else if (data[i] == '\r' || data[i] == '\n') {
             ctxBufInsert_(buf, &data[lineStart], i - lineStart);
             lineStart = i + 1;
+            continue;
         }
-        lineBlock++;
+        lastBlockSize++;
+        if (lastBlockSize == lineRefBlockMask_ + 1) {
+            arrAppend(&ctx->m_lineRef, lineCount);
+            lastBlockSize = 0;
+        }
     }
 
     if (lineStart < len) {
