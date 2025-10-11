@@ -361,6 +361,10 @@ static void ctxLineAt_(
 }
 
 static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo) {
+    if (lineNo == 0) {
+        return 0;
+    }
+
     size_t lo = 0;
     size_t hi = ctx->m_lineRef.len;
     size_t *lines = ctx->m_lineRef.items;
@@ -368,7 +372,7 @@ static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo) {
     size_t lineCount = 0;
     size_t endIdx;
 
-    if (hi == 0 || lines[0] > lineNo) {
+    if (hi == 0 || lines[0] >= lineNo) {
         goto preciseIdx;
     }
 
