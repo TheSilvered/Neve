@@ -49,10 +49,10 @@
     } while (0)
 
 
-#define arrAppend(arr, item)                                                   \
+#define arrAppend(arr, ...)                                                    \
     do {                                                                       \
         arrReserve((arr), 1);                                                  \
-        (arr)->items[(arr)->len++] = (item);                                   \
+        (arr)->items[(arr)->len++] = (__VA_ARGS__);                            \
     } while (0)
 
 #define arrDestroy(arr) memFree((arr)->items)

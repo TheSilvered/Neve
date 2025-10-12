@@ -1,12 +1,3 @@
-/* Context data structure:
- *
- * m_buf is a gap buffer
- *
- * m_lineRef is an array of length ctx->m_buf.len >> lineRefBlockShift_ and
- * contains the ith block contains how many lines start start from index 0 to
- * (i << lineRefBlockShift_) - 1.
- */
-
 #include <string.h>
 #include <assert.h>
 #include "nv_context.h"
@@ -14,12 +5,9 @@
 #include "nv_unicode.h"
 #include "nv_utils.h"
 
-// Allow another definition for tests
-#ifndef lineRefBlockShift_
-#define lineRefBlockShift_ 11
-#endif // !lineRefBlockShift
-
-#define lineRefBlockMask_ ((1 << lineRefBlockShift_) - 1)
+#ifndef lineRefMaxGap_
+#define lineRefMaxGap_ (2048)
+#endif // !lineRefMaxGap_
 
 // Get from the gap buffer
 static inline UcdCh8 *ctxBufGet_(const CtxBuf *buf, size_t idx);
@@ -47,7 +35,7 @@ static void ctxLineAt_(
 static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo);
 
 void ctxInit(Ctx *ctx, bool multiline) {
-    ctx->m_lineRef = (CtxLineRef){ 0 };
+    ctx->m_lineRefs = (CtxLineRefs){ 0 };
     ctx->m_cursors = (CtxCursors){ 0 };
     ctx->m_selects = (CtxSelects){ 0 };
 
@@ -65,7 +53,7 @@ void ctxInit(Ctx *ctx, bool multiline) {
 }
 
 void ctxDestroy(Ctx *ctx) {
-    arrDestroy(&ctx->m_lineRef);
+    arrDestroy(&ctx->m_lineRefs);
     arrDestroy(&ctx->m_cursors);
     arrDestroy(&ctx->m_selects);
 
@@ -325,15 +313,39 @@ static void ctxLineAt_(
     size_t *outStartIdx
 ) {
     assert(idx <= ctx->m_buf.len);
-    size_t lineCount;
-    if (idx <= lineRefBlockMask_) {
-        lineCount = 0;
-    } else {
-        lineCount = ctx->m_lineRef.items[(idx >> lineRefBlockShift_) - 1];
-    }
-    size_t i = idx & (~lineRefBlockMask_);
+
+    size_t refsLen = ctx->m_lineRefs.len;
+    CtxLineRef *refs = ctx->m_lineRefs.items;
+
+    size_t lineCount = 0;
+    size_t i = 0;
     size_t lineIdx = 0;
 
+    if (refsLen == 0 || idx < refs[0].idx) {
+        goto preciseLine;
+    }
+
+    size_t lo = 0;
+    size_t hi = refsLen;
+
+    while (lo < hi) {
+        size_t mid = (hi + lo) / 2;
+
+        if (refs[mid].idx == idx) {
+            i = idx;
+            lineCount = refs[mid].lineCount;
+            goto preciseLine;
+        } else if (refs[mid].idx >= idx) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+
+    i = refs[lo - 1].idx;
+    lineCount = refs[lo - 1].lineCount;
+
+preciseLine:
     for (; i < idx; i++) {
         if (*ctxBufGet_(&ctx->m_buf, i) == '\n') {
             lineCount++;
@@ -365,33 +377,38 @@ static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo) {
         return 0;
     }
 
-    size_t lo = 0;
-    size_t hi = ctx->m_lineRef.len;
-    size_t *lines = ctx->m_lineRef.items;
+    size_t refsLen = ctx->m_lineRefs.len;
+    CtxLineRef *refs = ctx->m_lineRefs.items;
     size_t i = 0;
     size_t lineCount = 0;
-    size_t endIdx;
+    size_t endIdx = refsLen == 0 ? ctx->m_buf.len : refs[0].idx;
 
-    if (hi == 0 || lines[0] >= lineNo) {
+    if (refsLen == 0 || refs[0].lineCount >= lineNo) {
         goto preciseIdx;
     }
+
+    size_t lo = 0;
+    size_t hi = refsLen;
 
     while (lo < hi) {
         size_t mid = (hi + lo) / 2;
 
-        if (lines[mid] >= lineNo) {
+        if (refs[mid].lineCount >= lineNo) {
             hi = mid;
         } else {
             lo = mid + 1;
         }
     }
 
-    i = lo << lineRefBlockShift_;
-    lineCount = lines[lo - 1];
+    i = refs[lo - 1].idx;
+    lineCount = refs[lo - 1].lineCount;
+    if (lo == refsLen) {
+        endIdx = ctx->m_buf.len;
+    } else {
+        endIdx = refs[lo].idx;
+    }
 
 preciseIdx:
-    endIdx = NV_MIN(i + lineRefBlockMask_, ctx->m_buf.len);
-
     for (; i < endIdx; i++) {
         if (*ctxBufGet_(&ctx->m_buf, i) != '\n') {
             continue;
@@ -417,7 +434,9 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     bool ignoreNL = !ctx->multiline;
 
     CtxBuf *buf = &ctx->m_buf;
-    uint16_t lastBlockSize = buf->len & lineRefBlockMask_;
+    uint16_t lastBlockSize = ctx->m_lineRefs.len == 0
+        ? buf->len
+        : buf->len - ctx->m_lineRefs.items[ctx->m_lineRefs.len - 1].idx;
     size_t lineCount;
     ctxLineAt_(ctx, buf->len, &lineCount, NULL);
 
@@ -435,8 +454,11 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
             continue;
         }
         lastBlockSize++;
-        if (lastBlockSize == lineRefBlockMask_ + 1) {
-            arrAppend(&ctx->m_lineRef, lineCount);
+        if (lastBlockSize == lineRefMaxGap_) {
+            arrAppend(
+                &ctx->m_lineRefs,
+                (CtxLineRef){ .idx = i, .lineCount = lineCount }
+            );
             lastBlockSize = 0;
         }
     }

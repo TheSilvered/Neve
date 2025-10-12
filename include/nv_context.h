@@ -10,7 +10,11 @@ typedef enum CtxMode {
     CtxMode_Insert
 } CtxMode;
 
-typedef Arr(size_t) CtxLineRef;
+typedef struct CtxLineRef {
+    size_t idx, lineCount;
+} CtxLineRef;
+
+typedef Arr(CtxLineRef) CtxLineRefs;
 typedef Arr(size_t) CtxCursors;
 typedef Arr(size_t) CtxSelects;
 
@@ -23,7 +27,7 @@ typedef struct CtxBuf {
 
 // Editing context.
 typedef struct Ctx {
-    CtxLineRef m_lineRef;
+    CtxLineRefs m_lineRefs;
     CtxCursors m_cursors;
     CtxSelects m_selects;
     CtxBuf m_buf;
