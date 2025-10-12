@@ -1,5 +1,5 @@
 #include "nv_test.h"
-#define lineRefBlockShift_ 3
+#define lineRefMaxGap_ 4
 #include "nv_context.c"
 
 void test_ctxLineToIdxNoLineRef(void) {

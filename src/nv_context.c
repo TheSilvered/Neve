@@ -3,7 +3,6 @@
 #include "nv_context.h"
 #include "nv_mem.h"
 #include "nv_unicode.h"
-#include "nv_utils.h"
 
 #ifndef lineRefMaxGap_
 #define lineRefMaxGap_ (2048)
@@ -342,7 +341,7 @@ static void ctxLineAt_(
         }
     }
 
-    i = refs[lo - 1].idx;
+    i = refs[lo - 1].idx + 1;
     lineCount = refs[lo - 1].lineCount;
 
 preciseLine:
@@ -434,13 +433,14 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     bool ignoreNL = !ctx->multiline;
 
     CtxBuf *buf = &ctx->m_buf;
+    size_t initialLen = buf->len;
     uint16_t lastBlockSize = ctx->m_lineRefs.len == 0
-        ? buf->len
-        : buf->len - ctx->m_lineRefs.items[ctx->m_lineRefs.len - 1].idx;
+        ? initialLen
+        : initialLen - ctx->m_lineRefs.items[ctx->m_lineRefs.len - 1].idx - 1;
     size_t lineCount;
-    ctxLineAt_(ctx, buf->len, &lineCount, NULL);
+    ctxLineAt_(ctx, initialLen, &lineCount, NULL);
 
-    ctxBufSetGapIdx_(buf, buf->len);
+    ctxBufSetGapIdx_(buf, initialLen);
 
     for (size_t i = 0; i < len; i++) {
         if (data[i] == '\n' && !ignoreNL) {
@@ -457,7 +457,7 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
         if (lastBlockSize == lineRefMaxGap_) {
             arrAppend(
                 &ctx->m_lineRefs,
-                (CtxLineRef){ .idx = i, .lineCount = lineCount }
+                (CtxLineRef){ .idx = i + initialLen, .lineCount = lineCount }
             );
             lastBlockSize = 0;
         }

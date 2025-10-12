@@ -1,6 +1,5 @@
 #include "nv_test.h"
-// Blocks are of size 4
-#define lineRefBlockShift_ 2
+#define lineRefMaxGap_ 4
 #include "nv_context.c"
 
 void test_ctxAppendFromEmptyNoLines(void) {
@@ -9,8 +8,8 @@ void test_ctxAppendFromEmptyNoLines(void) {
     const char s[] = "abcd";
 
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    testAssertWith(ctx.m_lineRef.len == 1) {
-        testAssert(ctx.m_lineRef.items[0] == 0);
+    testAssertWith(ctx.m_lineRefs.len == 1) {
+        testAssert(ctx.m_lineRefs.items[0].lineCount == 0);
     }
     testAssert(ctx.m_buf.len == chArrLen(s));
     testAssert(ctx.m_buf.gapIdx == chArrLen(s));
@@ -28,8 +27,8 @@ void test_ctxAppendFromEmptyWithLines(void) {
     const char s[] = "a\nc\n";
 
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    testAssertWith(ctx.m_lineRef.len == 1) {
-        testAssert(ctx.m_lineRef.items[0] == 2);
+    testAssertWith(ctx.m_lineRefs.len == 1) {
+        testAssert(ctx.m_lineRefs.items[0].lineCount == 2);
     }
 
     testAssert(ctx.m_buf.len == chArrLen(s));
@@ -48,8 +47,8 @@ void test_ctxAppendFromEmptyWithCRLFLines(void) {
     const char s[] = "a\r\nc\r\n";
 
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    testAssertWith(ctx.m_lineRef.len == 1) {
-        testAssert(ctx.m_lineRef.items[0] == 2);
+    testAssertWith(ctx.m_lineRefs.len == 1) {
+        testAssert(ctx.m_lineRefs.items[0].lineCount == 2);
     }
 
     testAssert(ctx.m_buf.len == chArrLen(s) - 2);
@@ -69,9 +68,9 @@ void test_ctxAppendFromFullNoLines(void) {
 
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
     ctxAppend(&ctx, (UcdCh8 *)s2, chArrLen(s2));
-    testAssertWith(ctx.m_lineRef.len == 2) {
-        testAssert(ctx.m_lineRef.items[0] == 2);
-        testAssert(ctx.m_lineRef.items[1] == 2);
+    testAssertWith(ctx.m_lineRefs.len == 2) {
+        testAssert(ctx.m_lineRefs.items[0].lineCount == 2);
+        testAssert(ctx.m_lineRefs.items[1].lineCount == 2);
     }
 
     testAssert(ctx.m_buf.len == chArrLen(s) + chArrLen(s2));
@@ -95,9 +94,9 @@ void test_ctxAppendFromFullWithLines(void) {
 
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    testAssertWith(ctx.m_lineRef.len == 2) {
-        testAssert(ctx.m_lineRef.items[0] == 2);
-        testAssert(ctx.m_lineRef.items[1] == 4);
+    testAssertWith(ctx.m_lineRefs.len == 2) {
+        testAssert(ctx.m_lineRefs.items[0].lineCount == 2);
+        testAssert(ctx.m_lineRefs.items[1].lineCount == 4);
     }
 
     testAssert(ctx.m_buf.len == 2 * chArrLen(s));
@@ -122,8 +121,8 @@ void test_ctxAppendFromHalfFullNoLines(void) {
 
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
     ctxAppend(&ctx, (UcdCh8 *)s2, chArrLen(s2));
-    testAssertWith(ctx.m_lineRef.len == 1) {
-        testAssert(ctx.m_lineRef.items[0] == 1);
+    testAssertWith(ctx.m_lineRefs.len == 1) {
+        testAssert(ctx.m_lineRefs.items[0].lineCount == 1);
     }
 
     testAssert(ctx.m_buf.len == chArrLen(s) + chArrLen(s2));
@@ -146,8 +145,8 @@ void test_ctxAppendFromHalfFullWithLines(void) {
 
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
     ctxAppend(&ctx, (UcdCh8 *)s2, chArrLen(s2));
-    testAssertWith(ctx.m_lineRef.len == 1) {
-        testAssert(ctx.m_lineRef.items[0] == 2);
+    testAssertWith(ctx.m_lineRefs.len == 1) {
+        testAssert(ctx.m_lineRefs.items[0].lineCount == 2);
     }
     testAssert(ctx.m_buf.len == chArrLen(s) + chArrLen(s2));
     testAssert(ctx.m_buf.gapIdx == chArrLen(s) + chArrLen(s2));
