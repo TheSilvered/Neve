@@ -516,6 +516,16 @@ static void ctxReplaceCursor_(Ctx *ctx, size_t old, size_t new) {
     size_t newIdx = ctxCurAtIdx_(ctx, new);
     size_t *cursors = ctx->m_cursors.items;
 
+    // If `new` is already a cursor
+    if (newIdx < ctx->m_cursors.len && cursors[newIdx] == new) {
+        ctxRemoveCursor_(ctx, new);
+    }
+
+    // If `old` does not exist
+    if (oldIdx >= ctx->m_cursors.len || cursors[oldIdx] != old) {
+        ctxAddCursor_(ctx, new);
+    }
+
     if (oldIdx == newIdx) {
         cursors[oldIdx] = new;
     } else if (oldIdx < newIdx) {

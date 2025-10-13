@@ -70,15 +70,15 @@
         (arr)->len++;                                                          \
     } while (0)
 
-#define arrRemove(arr, idx) \
-    do { \
-        assert((idx) < (arr)->len); \
-        memmove( \
-            &(arr)->items[(idx)], \
-            &(arr)->items[(idx) + 1], \
-            sizeof(*(arr)->items) * ((arr)->len - (idx) - 1) \
-        ); \
-        (arr)->len--; \
+#define arrRemove(arr, idx)                                                    \
+    do {                                                                       \
+        assert((idx) < (arr)->len);                                            \
+        memmove(                                                               \
+            &(arr)->items[(idx)],                                              \
+            &(arr)->items[(idx) + 1],                                          \
+            sizeof(*(arr)->items) * ((arr)->len - (idx) - 1)                   \
+        );                                                                     \
+        (arr)->len--;                                                          \
     } while (0)
 
 #define arrDestroy(arr) memFree((arr)->items)
