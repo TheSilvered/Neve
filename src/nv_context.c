@@ -35,10 +35,10 @@ static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo);
 
 // Get the index of the cursor at idx or  of the cursor on where it should be
 // inserted
-static size_t ctxCurAtIdx_(Ctx *ctx, size_t idx);
-static void ctxAddCursor_(Ctx *ctx, size_t idx);
-static void ctxRemoveCursor_(Ctx *ctx, size_t idx);
-static void ctxReplaceCursor_(Ctx *ctx, size_t old, size_t new);
+static size_t ctxCursorAt_(Ctx *ctx, size_t idx);
+static void ctxCursorAdd_(Ctx *ctx, size_t idx);
+static void ctxCursorRemove_(Ctx *ctx, size_t idx);
+static void ctxCursorReplace_(Ctx *ctx, size_t old, size_t new);
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->m_lineRefs = (CtxLineRefs){ 0 };
@@ -475,7 +475,7 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     }
 }
 
-static size_t ctxCurAtIdx_(Ctx *ctx, size_t idx) {
+static size_t ctxCursorAt_(Ctx *ctx, size_t idx) {
     size_t hi = ctx->m_cursors.len;
     size_t lo = 0;
     size_t *cursors = ctx->m_cursors.items;
@@ -495,35 +495,37 @@ static size_t ctxCurAtIdx_(Ctx *ctx, size_t idx) {
     return lo;
 }
 
-static void ctxAddCursor_(Ctx *ctx, size_t idx) {
-    size_t curIdx = ctxCurAtIdx_(ctx, idx);
+static void ctxCursorAdd_(Ctx *ctx, size_t idx) {
+    size_t curIdx = ctxCursorAt_(ctx, idx);
     if (curIdx >= ctx->m_cursors.len) {
         arrAppend(&ctx->m_cursors, idx);
         return;
+    // Do not duplicate cursors
+    } else if (ctx->m_cursors.items[curIdx] != idx) {
+        arrInsert(&ctx->m_cursors, curIdx, idx);
     }
-    arrInsert(&ctx->m_cursors, curIdx, idx);
 }
 
-static void ctxRemoveCursor_(Ctx *ctx, size_t idx) {
-    size_t curIdx = ctxCurAtIdx_(ctx, idx);
+static void ctxCursorRemove_(Ctx *ctx, size_t idx) {
+    size_t curIdx = ctxCursorAt_(ctx, idx);
     if (curIdx < ctx->m_cursors.len && ctx->m_cursors.items[curIdx] == idx) {
         arrRemove(&ctx->m_cursors, curIdx);
     }
 }
 
-static void ctxReplaceCursor_(Ctx *ctx, size_t old, size_t new) {
-    size_t oldIdx = ctxCurAtIdx_(ctx, old);
-    size_t newIdx = ctxCurAtIdx_(ctx, new);
+static void ctxCursorReplace_(Ctx *ctx, size_t old, size_t new) {
+    size_t oldIdx = ctxCursorAt_(ctx, old);
+    size_t newIdx = ctxCursorAt_(ctx, new);
     size_t *cursors = ctx->m_cursors.items;
 
     // If `new` is already a cursor
     if (newIdx < ctx->m_cursors.len && cursors[newIdx] == new) {
-        ctxRemoveCursor_(ctx, new);
+        ctxCursorRemove_(ctx, new);
     }
 
     // If `old` does not exist
     if (oldIdx >= ctx->m_cursors.len || cursors[oldIdx] != old) {
-        ctxAddCursor_(ctx, new);
+        ctxCursorAdd_(ctx, new);
     }
 
     if (oldIdx == newIdx) {
