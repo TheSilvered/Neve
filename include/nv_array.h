@@ -1,6 +1,8 @@
 #ifndef NV_ARRAY_H_
 #define NV_ARRAY_H_
 
+#include <string.h>
+#include <assert.h>
 #include "nv_mem.h"
 
 // Dynamic array macros.
@@ -53,6 +55,30 @@
     do {                                                                       \
         arrReserve((arr), 1);                                                  \
         (arr)->items[(arr)->len++] = (__VA_ARGS__);                            \
+    } while (0)
+
+#define arrInsert(arr, idx, ...) \
+    do {                                                                       \
+        assert((idx) < (arr)->len);                                            \
+        arrReserve((arr), 1);                                                  \
+        memmove(                                                               \
+            &(arr)->items[(idx) + 1],                                          \
+            &(arr)->items[(idx)],                                              \
+            sizeof(*(arr)->items) * ((arr)->len - (idx))                       \
+        );                                                                     \
+        (arr)->items[(idx)] = (__VA_ARGS__);                                   \
+        (arr)->len++;                                                          \
+    } while (0)
+
+#define arrRemove(arr, idx) \
+    do { \
+        assert((idx) < (arr)->len); \
+        memmove( \
+            &(arr)->items[(idx)], \
+            &(arr)->items[(idx) + 1], \
+            sizeof(*(arr)->items) * ((arr)->len - (idx) - 1) \
+        ); \
+        (arr)->len--; \
     } while (0)
 
 #define arrDestroy(arr) memFree((arr)->items)

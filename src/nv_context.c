@@ -33,6 +33,13 @@ static void ctxLineAt_(
 // Get the index of the first character of a line
 static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo);
 
+// Get the index of the cursor at idx or  of the cursor on where it should be
+// inserted
+static size_t ctxCurAtIdx_(Ctx *ctx, size_t idx);
+static void ctxAddCursor_(Ctx *ctx, size_t idx);
+static void ctxRemoveCursor_(Ctx *ctx, size_t idx);
+static void ctxReplaceCursor_(Ctx *ctx, size_t old, size_t new);
+
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->m_lineRefs = (CtxLineRefs){ 0 };
     ctx->m_cursors = (CtxCursors){ 0 };
@@ -465,6 +472,66 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
 
     if (lineStart < len) {
         ctxBufInsert_(buf, &data[lineStart], len - lineStart);
+    }
+}
+
+static size_t ctxCurAtIdx_(Ctx *ctx, size_t idx) {
+    size_t hi = ctx->m_cursors.len;
+    size_t lo = 0;
+    size_t *cursors = ctx->m_cursors.items;
+
+    while (lo < hi) {
+        size_t mid = (lo + hi) / 2;
+        if (cursors[mid] == idx) {
+            return mid;
+        } else if (cursors[mid] > idx) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+
+    }
+
+    return lo;
+}
+
+static void ctxAddCursor_(Ctx *ctx, size_t idx) {
+    size_t curIdx = ctxCurAtIdx_(ctx, idx);
+    if (curIdx >= ctx->m_cursors.len) {
+        arrAppend(&ctx->m_cursors, idx);
+        return;
+    }
+    arrInsert(&ctx->m_cursors, curIdx, idx);
+}
+
+static void ctxRemoveCursor_(Ctx *ctx, size_t idx) {
+    size_t curIdx = ctxCurAtIdx_(ctx, idx);
+    if (curIdx < ctx->m_cursors.len && ctx->m_cursors.items[curIdx] == idx) {
+        arrRemove(&ctx->m_cursors, curIdx);
+    }
+}
+
+static void ctxReplaceCursor_(Ctx *ctx, size_t old, size_t new) {
+    size_t oldIdx = ctxCurAtIdx_(ctx, old);
+    size_t newIdx = ctxCurAtIdx_(ctx, new);
+    size_t *cursors = ctx->m_cursors.items;
+
+    if (oldIdx == newIdx) {
+        cursors[oldIdx] = new;
+    } else if (oldIdx < newIdx) {
+        memmove(
+            &cursors[oldIdx],
+            &cursors[oldIdx + 1],
+            sizeof(*cursors) * (newIdx - oldIdx - 1)
+        );
+        cursors[newIdx - 1] = new;
+    } else {
+        memmove(
+            &cursors[newIdx + 1],
+            &cursors[newIdx],
+            sizeof(*cursors) * (oldIdx - newIdx - 1)
+        );
+        cursors[newIdx] = new;
     }
 }
 
