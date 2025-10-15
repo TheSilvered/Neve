@@ -251,23 +251,41 @@ noLine:
 }
 
 ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    size_t i = ctxLineToIdx_(ctx, lineIdx + 1);
-    if (i <= 0) {
-        if (outCP) {
-            *outCP = -1;
+    ptrdiff_t i = ctxLineToIdx_(ctx, lineIdx + 1);
+    if (i == 0 || ctx->m_buf.len == 0) {
+        goto noLine;
+    } else if (i == -1) {
+        // the line might be the last line
+        size_t lineNo;
+        ctxLineAt_(ctx, ctx->m_buf.len, &lineNo, NULL);
+        if (lineNo != lineIdx) {
+            goto noLine;
         }
-        return -1;
+        i = ctx->m_buf.len - 1;
+    } else {
+        i -= 2;
     }
 
-    i--;
-    while (!ucdCh8RunLen(*ctxBufGet_(&ctx->m_buf, i))) {
+    UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, i);
+    while (!ucdCh8RunLen(*chPtr)) {
         i--;
+        chPtr = ctxBufGet_(&ctx->m_buf, i);
+    }
+
+    // The line is empty
+    if (*chPtr == '\n') {
+        goto noLine;
     }
 
     if (outCP) {
-        *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->m_buf, i));
+        *outCP = ucdCh8ToCP(chPtr);
     }
     return i;
+noLine:
+    if (outCP) {
+        *outCP = -1;
+    }
+    return -1;
 }
 
 ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
@@ -306,7 +324,7 @@ ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, idx);
     while (idx >= 0 && ucdCh8RunLen(*chPtr) == 0) {
         idx--;
-        chPtr--;
+        chPtr = ctxBufGet_(&ctx->m_buf, idx);
     }
     if (idx < 0 || *chPtr == '\n') {
         goto endReached;

@@ -10,7 +10,6 @@ void test_ctxLineNextStartEmpty(void) {
     testAssert(i == -1);
     i = ctxLineNextStart(&ctx, 1, NULL);
     testAssert(i == -1);
-    testAssert(i == -1);
 
     ctxDestroy(&ctx);
 }
