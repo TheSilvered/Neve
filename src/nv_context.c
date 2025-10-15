@@ -203,7 +203,7 @@ endReached:
 }
 
 ptrdiff_t ctxPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
-    if (idx == 0) {
+    if (idx == 0 || ctx->m_buf.len == 0) {
         goto endReached;
     } else if (idx < 0) {
         idx = ctx->m_buf.len;
