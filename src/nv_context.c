@@ -233,17 +233,29 @@ endReached:
 ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
     ptrdiff_t i = ctxLineToIdx_(ctx, lineIdx);
     if (i == ctx->m_buf.len || i < 0) {
-        return -1;
+        goto noLine;
+    }
+    if (*ctxBufGet_(&ctx->m_buf, i) == '\n') {
+        goto noLine;
     }
     if (outCP) {
         *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->m_buf, i));
     }
     return i;
+
+noLine:
+    if (outCP) {
+        *outCP = -1;
+    }
+    return -1;
 }
 
 ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
     size_t i = ctxLineToIdx_(ctx, lineIdx + 1);
     if (i <= 0) {
+        if (outCP) {
+            *outCP = -1;
+        }
         return -1;
     }
 
@@ -348,7 +360,7 @@ static void ctxLineAt_(
         }
     }
 
-    i = refs[lo - 1].idx + 1;
+    i = refs[lo - 1].idx;
     lineCount = refs[lo - 1].lineCount;
 
 preciseLine:
@@ -443,7 +455,7 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     size_t initialLen = buf->len;
     uint16_t lastBlockSize = ctx->m_lineRefs.len == 0
         ? initialLen
-        : initialLen - ctx->m_lineRefs.items[ctx->m_lineRefs.len - 1].idx - 1;
+        : initialLen - ctx->m_lineRefs.items[ctx->m_lineRefs.len - 1].idx;
     size_t lineCount;
     ctxLineAt_(ctx, initialLen, &lineCount, NULL);
 
@@ -464,7 +476,10 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
         if (lastBlockSize == lineRefMaxGap_) {
             arrAppend(
                 &ctx->m_lineRefs,
-                (CtxLineRef){ .idx = i + initialLen, .lineCount = lineCount }
+                (CtxLineRef){
+                    .idx = i + initialLen + 1,
+                    .lineCount = lineCount
+                }
             );
             lastBlockSize = 0;
         }
