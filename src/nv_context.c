@@ -31,7 +31,9 @@ static void ctxLineAt_(
 );
 
 // Get the index of the first character of a line
-static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo);
+static ptrdiff_t ctxLineStart_(const Ctx *ctx, size_t lineNo);
+// Get the index of the last characer of a line (newline excluded)
+static ptrdiff_t ctxLineEnd_(const Ctx *ctx, size_t lineNo);
 
 // Get the index of the cursor at idx or  of the cursor on where it should be
 // inserted
@@ -141,7 +143,7 @@ static void ctxBufRemove_(CtxBuf *buf, size_t len) {
 
     assert(
         buf->gapIdx == buf->len
-        || ucdCh8CPLen(*ctxBufGet_(buf, buf->gapIdx))
+        || ucdCh8IsStart(*ctxBufGet_(buf, buf->gapIdx))
     );
 
     ctxBufShrink_(buf);
@@ -151,7 +153,7 @@ static void ctxBufSetGapIdx_(CtxBuf *buf, size_t gapIdx) {
     assert(gapIdx <= buf->len);
     assert(
         gapIdx == buf->len
-        || ucdCh8CPLen(*ctxBufGet_(buf, gapIdx))
+        || ucdCh8IsStart(*ctxBufGet_(buf, gapIdx))
     );
     if (buf->gapIdx == gapIdx) {
         return;
@@ -210,7 +212,7 @@ ptrdiff_t ctxPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     }
     idx--;
     UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, idx);
-    while (idx >= 0 && ucdCh8RunLen(*chPtr) == 0) {
+    while (idx >= 0 && !ucdCh8IsStart(*chPtr)) {
         idx--;
         chPtr--;
     }
@@ -231,7 +233,7 @@ endReached:
 }
 
 ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    ptrdiff_t i = ctxLineToIdx_(ctx, lineIdx);
+    ptrdiff_t i = ctxLineStart_(ctx, lineIdx);
     if (i == ctx->m_buf.len || i < 0) {
         goto noLine;
     }
@@ -251,36 +253,18 @@ noLine:
 }
 
 ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    ptrdiff_t i = ctxLineToIdx_(ctx, lineIdx + 1);
-    if (i == 0 || ctx->m_buf.len == 0) {
-        goto noLine;
-    } else if (i == -1) {
-        // the line might be the last line
-        size_t lineNo;
-        ctxLineAt_(ctx, ctx->m_buf.len, &lineNo, NULL);
-        if (lineNo != lineIdx) {
-            goto noLine;
-        }
-        i = ctx->m_buf.len - 1;
-    } else {
-        i -= 2;
-    }
-
-    UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, i);
-    while (!ucdCh8RunLen(*chPtr)) {
-        i--;
-        chPtr = ctxBufGet_(&ctx->m_buf, i);
-    }
-
-    // The line is empty
-    if (*chPtr == '\n') {
+    ptrdiff_t i = ctxLineEnd_(ctx, lineIdx);
+    if (i == ctx->m_buf.len || i < 0) {
         goto noLine;
     }
-
+    if (*ctxBufGet_(&ctx->m_buf, i) == '\n') {
+        goto noLine;
+    }
     if (outCP) {
-        *outCP = ucdCh8ToCP(chPtr);
+        *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->m_buf, i));
     }
     return i;
+
 noLine:
     if (outCP) {
         *outCP = -1;
@@ -322,7 +306,7 @@ ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     }
     idx--;
     UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, idx);
-    while (idx >= 0 && ucdCh8RunLen(*chPtr) == 0) {
+    while (idx >= 0 && !ucdCh8IsStart(*chPtr)) {
         idx--;
         chPtr = ctxBufGet_(&ctx->m_buf, idx);
     }
@@ -408,19 +392,13 @@ preciseLine:
     *outStartIdx = i + 1;
 }
 
-static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo) {
-    if (lineNo == 0) {
-        return 0;
-    }
-
+// Get the block where line lineNo starts, -1 means the beginning of the file
+static ptrdiff_t ctxGetLineRefBlock_(const Ctx *ctx, size_t lineNo) {
     size_t refsLen = ctx->m_lineRefs.len;
     CtxLineRef *refs = ctx->m_lineRefs.items;
-    size_t i = 0;
-    size_t lineCount = 0;
-    size_t endIdx = refsLen == 0 ? ctx->m_buf.len : refs[0].idx;
 
-    if (refsLen == 0 || refs[0].lineCount >= lineNo) {
-        goto preciseIdx;
+    if (lineNo == 0 || refsLen == 0 || refs[0].lineCount >= lineNo) {
+        return -1;
     }
 
     size_t lo = 0;
@@ -436,15 +414,31 @@ static ptrdiff_t ctxLineToIdx_(const Ctx *ctx, size_t lineNo) {
         }
     }
 
-    i = refs[lo - 1].idx;
-    lineCount = refs[lo - 1].lineCount;
-    if (lo == refsLen) {
-        endIdx = ctx->m_buf.len;
-    } else {
-        endIdx = refs[lo].idx;
+    return lo - 1;
+}
+
+static ptrdiff_t ctxLineStart_(const Ctx *ctx, size_t lineNo) {
+    if (lineNo == 0) {
+        return 0;
     }
 
-preciseIdx:
+    ptrdiff_t refsIdx = ctxGetLineRefBlock_(ctx, lineNo);
+    size_t i;
+    size_t lineCount;
+
+    if (refsIdx == -1) {
+        i = 0;
+        lineCount = 0;
+    } else {
+        i = ctx->m_lineRefs.items[refsIdx].idx;
+        lineCount = ctx->m_lineRefs.items[refsIdx].lineCount;
+    }
+
+    size_t endIdx = (size_t)(refsIdx + 1) < ctx->m_lineRefs.len
+        ? ctx->m_lineRefs.items[refsIdx + 1].idx
+        : ctx->m_buf.len;
+
+    // Get the precise index
     for (; i < endIdx; i++) {
         if (*ctxBufGet_(&ctx->m_buf, i) != '\n') {
             continue;
@@ -457,6 +451,48 @@ preciseIdx:
 
     // The line does not exist
     return -1;
+}
+
+static ptrdiff_t ctxLineEnd_(const Ctx *ctx, size_t lineNo) {
+    ptrdiff_t refsIdx = ctxGetLineRefBlock_(ctx, lineNo + 1);
+    size_t i;
+    size_t lineCount;
+
+    if (refsIdx == -1) {
+        i = 0;
+        lineCount = 0;
+    } else {
+        i = ctx->m_lineRefs.items[refsIdx].idx;
+        lineCount = ctx->m_lineRefs.items[refsIdx].lineCount;
+    }
+
+    size_t endIdx = (size_t)(refsIdx + 1) < ctx->m_lineRefs.len
+        ? ctx->m_lineRefs.items[refsIdx + 1].idx
+        : ctx->m_buf.len;
+
+    for (; i < endIdx; i++) {
+        if (*ctxBufGet_(&ctx->m_buf, i) != '\n') {
+            continue;
+        }
+        lineCount++;
+        if (lineCount > lineNo) {
+            break;
+        }
+    }
+
+    if (lineCount < lineNo) {
+        return  -1;
+    } else if (i == 0) {
+        return i;
+    }
+
+    // i is either out of bounds or pointing to the newline character
+    i--;
+    // Find the actual codepoint start
+    while (!ucdCh8IsStart(*ctxBufGet_(&ctx->m_buf, i))) {
+        i--;
+    }
+    return i;
 }
 
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {

@@ -63,6 +63,8 @@ size_t ucdCh8CPLen(UcdCP cp);
 UcdCP ucdCh8ToCP(const UcdCh8 *bytes);
 // Encode a codepoint in UTF-8. Return the codepoint length.
 size_t ucdCh8FromCP(UcdCP cp, UcdCh8 *outBuf);
+// Check if the byte is a valid UTF-8 sequence start.
+bool ucdCh8IsStart(UcdCh8 ch);
 
 // Get the total number of `UcdCh16` of a UTF-16 codepoint given the first one.
 // Returns 0 if the character is not the start of a UTF-16 sequence.

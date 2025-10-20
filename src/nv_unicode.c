@@ -324,6 +324,10 @@ size_t ucdCh8FromCP(UcdCP cp, UcdCh8 *outBuf) {
     }
 }
 
+bool ucdCh8IsStart(UcdCh8 ch) {
+    return ch < 0x80 || (ch >= 0xc2 && ch <= 0xf4);
+}
+
 size_t ucdCh16RunLen(UcdCh16 firstCh) {
     return (
         1 + (!!(
