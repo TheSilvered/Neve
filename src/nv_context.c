@@ -30,9 +30,11 @@ static void ctxLineAt_(
     size_t *outStartIdx
 );
 
-// Get the index of the first character of a line
+// Get the index of the first character of a line, it may be equal to the length
+// of the buffer
 static ptrdiff_t ctxLineStart_(const Ctx *ctx, size_t lineNo);
-// Get the index of the last characer of a line (newline excluded)
+// Get the index of the last characer of a line, it may be equal to the length
+// of the buffer
 static ptrdiff_t ctxLineEnd_(const Ctx *ctx, size_t lineNo);
 
 // Get the index of the cursor at idx or  of the cursor on where it should be
@@ -254,14 +256,20 @@ noLine:
 
 ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
     ptrdiff_t i = ctxLineEnd_(ctx, lineIdx);
-    if (i == ctx->m_buf.len || i < 0) {
+    if (i <= 0) {
         goto noLine;
     }
-    if (*ctxBufGet_(&ctx->m_buf, i) == '\n') {
+    i--;
+    UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, i);
+    if (*chPtr == '\n') {
         goto noLine;
+    }
+    while (i >= 0 && !ucdCh8IsStart(*chPtr)) {
+        i--;
+        chPtr--;
     }
     if (outCP) {
-        *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->m_buf, i));
+        *outCP = ucdCh8ToCP(chPtr);
     }
     return i;
 
@@ -482,17 +490,9 @@ static ptrdiff_t ctxLineEnd_(const Ctx *ctx, size_t lineNo) {
 
     if (lineCount < lineNo) {
         return  -1;
-    } else if (i == 0) {
+    } else {
         return i;
     }
-
-    // i is either out of bounds or pointing to the newline character
-    i--;
-    // Find the actual codepoint start
-    while (!ucdCh8IsStart(*ctxBufGet_(&ctx->m_buf, i))) {
-        i--;
-    }
-    return i;
 }
 
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
