@@ -283,14 +283,19 @@ noLine:
 ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     if (idx < 0) {
         idx = 0;
-    } else if ((size_t)idx >= ctx->m_buf.len) {
-        goto endReached;
-    } else {
+    }
+
+    if ((size_t)idx < ctx->m_buf.len) {
         idx += ucdCh8RunLen(*ctxBufGet_(&ctx->m_buf, idx));
     }
+
+    if ((size_t)idx >= ctx->m_buf.len) {
+        goto endReached;
+    }
+
     UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, idx);
 
-    if ((size_t)idx >= ctx->m_buf.len || *chPtr == '\n') {
+    if (*chPtr == '\n') {
         goto endReached;
     }
 
@@ -307,10 +312,11 @@ endReached:
 }
 
 ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
+    if (idx < 0) {
+        idx = ctx->m_buf.len;
+    }
     if (idx == 0) {
         goto endReached;
-    } else if (idx < 0) {
-        idx = ctx->m_buf.len;
     }
     idx--;
     UcdCh8 *chPtr = ctxBufGet_(&ctx->m_buf, idx);
