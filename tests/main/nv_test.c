@@ -13,6 +13,7 @@ void testAssert_(bool expr, const char *exprStr, const char *file, int line) {
 
     g_failed = true;
     printf("  %s:%d %s\n", file, line, exprStr);
+    fflush(stdout);
 }
 
 bool testAssertWith_(
@@ -27,6 +28,7 @@ bool testAssertWith_(
 
     g_failed = true;
     printf("  %s:%d %s\n    Some checks were skipped.\n", file, line, exprStr);
+    fflush(stdout);
     return false;
 }
 
@@ -46,6 +48,7 @@ bool testAssertRequire_(
         "    Assertion is required to continue the test.\n",
         file, line, exprStr
     );
+    fflush(stdout);
     return false;
 }
 
@@ -57,6 +60,7 @@ int main(void) {
 
     for (size_t i = 0; i < testCount; i++) {
         printf("running test %s...\n", tests[i].name);
+        fflush(stdout);
         tests[i].callback();
     }
 

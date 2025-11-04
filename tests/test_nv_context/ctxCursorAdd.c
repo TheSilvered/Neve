@@ -5,34 +5,34 @@ void test_ctxCursorAdd(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
 
-    ctxCursorAdd_(&ctx, 3);
-    testAssert(ctx.m_cursors.len == 1);
-    testAssert(ctx.m_cursors.items[0] = 3);
+    ctxCurAdd(&ctx, 3);
+    testAssert(ctx._cursors.len == 1);
+    testAssert(ctx._cursors.items[0].idx = 3);
 
-    ctxCursorAdd_(&ctx, 5);
-    testAssert(ctx.m_cursors.len == 2);
-    testAssert(ctx.m_cursors.items[0] = 3);
-    testAssert(ctx.m_cursors.items[1] = 5);
+    ctxCurAdd(&ctx, 5);
+    testAssert(ctx._cursors.len == 2);
+    testAssert(ctx._cursors.items[0].idx = 3);
+    testAssert(ctx._cursors.items[1].idx = 5);
 
-    ctxCursorAdd_(&ctx, 2);
-    testAssert(ctx.m_cursors.len == 3);
-    testAssert(ctx.m_cursors.items[0] = 2);
-    testAssert(ctx.m_cursors.items[1] = 3);
-    testAssert(ctx.m_cursors.items[2] = 5);
+    ctxCurAdd(&ctx, 2);
+    testAssert(ctx._cursors.len == 3);
+    testAssert(ctx._cursors.items[0].idx = 2);
+    testAssert(ctx._cursors.items[1].idx = 3);
+    testAssert(ctx._cursors.items[2].idx = 5);
 
-    ctxCursorAdd_(&ctx, 4);
-    testAssert(ctx.m_cursors.len == 4);
-    testAssert(ctx.m_cursors.items[0] = 2);
-    testAssert(ctx.m_cursors.items[1] = 3);
-    testAssert(ctx.m_cursors.items[2] = 4);
-    testAssert(ctx.m_cursors.items[3] = 5);
+    ctxCurAdd(&ctx, 4);
+    testAssert(ctx._cursors.len == 4);
+    testAssert(ctx._cursors.items[0].idx = 2);
+    testAssert(ctx._cursors.items[1].idx = 3);
+    testAssert(ctx._cursors.items[2].idx = 4);
+    testAssert(ctx._cursors.items[3].idx = 5);
 
-    ctxCursorAdd_(&ctx, 4);
-    testAssert(ctx.m_cursors.len == 4);
-    testAssert(ctx.m_cursors.items[0] = 2);
-    testAssert(ctx.m_cursors.items[1] = 3);
-    testAssert(ctx.m_cursors.items[2] = 4);
-    testAssert(ctx.m_cursors.items[3] = 5);
+    ctxCurAdd(&ctx, 4);
+    testAssert(ctx._cursors.len == 4);
+    testAssert(ctx._cursors.items[0].idx = 2);
+    testAssert(ctx._cursors.items[1].idx = 3);
+    testAssert(ctx._cursors.items[2].idx = 4);
+    testAssert(ctx._cursors.items[3].idx = 5);
 
     ctxDestroy(&ctx);
 }

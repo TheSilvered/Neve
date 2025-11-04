@@ -179,7 +179,7 @@ UcdCP termGetInput(void) {
 
     // Read the full UTF-16 character
     UcdCh16 chBytes[2] = { ch, 0 };
-    size_t chLen = ucdCh16RunLen(ch);
+    uint8_t chLen = ucdCh16RunLen(ch);
     if (chLen == 1) {
         return ch;
     } else if (chLen == 2) {

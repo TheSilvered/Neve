@@ -260,14 +260,14 @@ size_t ucdCh8StrToCh16Str(
     return bufIdx;
 }
 
-size_t ucdCh8RunLen(UcdCh8 byte0) {
+uint8_t ucdCh8RunLen(UcdCh8 byte0) {
     return (byte0 < 0x80)
          + 2*((byte0 & ~UTF8_ByteMask2) == 0xc0)*(byte0 >= 0xc2)
          + 3*((byte0 & ~UTF8_ByteMask3) == 0xe0)
          + 4*((byte0 & ~UTF8_ByteMask4) == 0xf0)*(byte0 <= 0xf4);
 }
 
-size_t ucdCh8CPLen(UcdCP ch) {
+uint8_t ucdCh8CPLen(UcdCP ch) {
     return (ch >= 0 && ch < 0x80)
          + 2*(!!(ch >= 0x80 && ch < 0x800))
          + 3*(!!(ch >= 0x800 && ch < ucdHighSurrogateFirst))
@@ -296,7 +296,7 @@ UcdCP ucdCh8ToCP(const UcdCh8 *bytes) {
     }
 }
 
-size_t ucdCh8FromCP(UcdCP cp, UcdCh8 *outBuf) {
+uint8_t ucdCh8FromCP(UcdCP cp, UcdCh8 *outBuf) {
     if (!ucdIsCPValid(cp)) {
         return 0;
     }
@@ -328,7 +328,7 @@ bool ucdCh8IsStart(UcdCh8 ch) {
     return ch < 0x80 || (ch >= 0xc2 && ch <= 0xf4);
 }
 
-size_t ucdCh16RunLen(UcdCh16 firstCh) {
+uint8_t ucdCh16RunLen(UcdCh16 firstCh) {
     return (
         1 + (!!(
             firstCh >= ucdHighSurrogateFirst
@@ -339,7 +339,7 @@ size_t ucdCh16RunLen(UcdCh16 firstCh) {
     ));
 }
 
-size_t ucdCh16CPLen(UcdCP cp) {
+uint8_t ucdCh16CPLen(UcdCP cp) {
     return (1 + (cp > 0xffff)) * ucdIsCPValid(cp);
 }
 
@@ -361,7 +361,7 @@ UcdCh32 ucdCh16ToCP(const UcdCh16 *bytes) {
     return ((bytes[0] & 0x3ff) << 10) + (bytes[1] & 0x3ff) + 0x10000;
 }
 
-size_t ucdCh16FromCP(UcdCP cp, UcdCh16 *outBuf) {
+uint8_t ucdCh16FromCP(UcdCP cp, UcdCh16 *outBuf) {
     if (!ucdIsCPValid(cp)) {
         return 0;
     }

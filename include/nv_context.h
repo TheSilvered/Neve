@@ -10,12 +10,16 @@ typedef enum CtxMode {
     CtxMode_Insert
 } CtxMode;
 
-typedef struct CtxLineRef {
-    size_t idx, lineCount;
-} CtxLineRef;
+typedef struct CtxRef {
+    size_t idx, line, col;
+} CtxRef;
 
-typedef Arr(CtxLineRef) CtxLineRefs;
-typedef Arr(size_t) CtxCursors;
+typedef struct CtxCursor {
+    size_t idx, baseCol;
+} CtxCursor;
+
+typedef Arr(CtxRef) CtxRefs;
+typedef Arr(CtxCursor) CtxCursors;
 typedef Arr(size_t) CtxSelects;
 
 typedef struct CtxBuf {
@@ -27,10 +31,10 @@ typedef struct CtxBuf {
 
 // Editing context.
 typedef struct Ctx {
-    CtxLineRefs m_lineRefs;
-    CtxCursors m_cursors;
-    CtxSelects m_selects;
-    CtxBuf m_buf;
+    CtxRefs _refs;
+    CtxCursors _cursors;
+    CtxSelects _selects;
+    CtxBuf _buf;
     CtxMode mode;
     bool edited;
     bool multiline;
@@ -81,35 +85,48 @@ ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
 
 /****************************** Cursor movement *******************************/
 
-// Move the cursor by `dx` characters on the current line.
-void ctxMoveCurX(Ctx *ctx, ptrdiff_t dx);
-// Move the cursor by `dy` lines.
-void ctxMoveCurY(Ctx *ctx, ptrdiff_t dy);
-// Move the cursor by `diffIdx` characters across multiple lines.
-void ctxMoveCurIdx(Ctx *ctx, ptrdiff_t diffIdx);
+// Add a cursor at 'idx' in the file
+void ctxCurAdd(Ctx *ctx, size_t idx);
+// Remove the cursor at 'idx' in the file if it exists
+void ctxCurRemove(Ctx *ctx, size_t idx);
+// Replace the cursor at 'old' with the cursor at 'new'
+void ctxCurReplace(Ctx *ctx, size_t old, size_t new);
+
+// Move to the previous character in the line
+void ctxCurMoveLeft(Ctx *ctx);
+// Move to the next character in the line
+void ctxCurMoveRight(Ctx *ctx);
+// Move to the previous line
+void ctxCurMoveUp(Ctx *ctx);
+// Move to the next line
+void ctxCurMoveDown(Ctx *ctx);
+// Move to the next character
+void ctxCurMoveFwd(Ctx *ctx);
+// Move to the previous character
+void ctxCurMoveBack(Ctx *ctx);
 
 // Move the cursor to the start of the line
-void ctxMoveCurLineStart(Ctx *ctx);
+void ctxCurMoveToLineStart(Ctx *ctx);
 // Move the cursor to the end of the line
-void ctxMoveCurLineEnd(Ctx *ctx);
+void ctxCurMoveToLineEnd(Ctx *ctx);
 // Move the cursor to the start of the file
-void ctxMoveCurFileStart(Ctx *ctx);
+void ctxCurMoveToFileStart(Ctx *ctx);
 // Move the cursor to the end of the file
-void ctxMoveCurFileEnd(Ctx *ctx);
+void ctxCurMoveToFileEnd(Ctx *ctx);
 
 // Move to the beginning of the next word.
-void ctxMoveCurWordStartF(Ctx *ctx);
+void ctxCurMoveToNextWordStart(Ctx *ctx);
 // Move to the end of the word.
-void ctxMoveCurWordEndF(Ctx *ctx);
+void ctxCurMoveToNextWordEnd(Ctx *ctx);
 // Move to the beginning of the word.
-void ctxMoveCurWordStartB(Ctx *ctx);
-// Move to the start of the previous word.
-void ctxMoveCurWordEndB(Ctx *ctx);
+void ctxCurMoveToPrevWordStart(Ctx *ctx);
+// Move to the end of the previous word.
+void ctxCurMoveToPrevWordEnd(Ctx *ctx);
 
 // Move to the next blank linke.
-void ctxMoveCurParagraphF(Ctx *ctx);
+void ctxCurMoveToNextParagraph(Ctx *ctx);
 // Move to the previous blank line.
-void ctxMoveCurParagraphB(Ctx *ctx);
+void ctxCurMoveToPrevParagraph(Ctx *ctx);
 
 /********************************** Editing ***********************************/
 
@@ -142,32 +159,32 @@ StrView *ctxGetContent(Ctx *ctx);
 // Pass the returned value as `idx` to continue iterating.
 // The iteration ends once the return value is `-1`.
 // `idx` is the index of the first byte of the character in the text.
-ptrdiff_t ctxIterNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
 // Iterate over the whole content of the context from the end.
 // Use `idx == -1` to begin iterating.
 // Pass the returned value as `idx` to continue iterating.
 // The iteration ends once the return value is `-1`.
 // `idx` is the index of the first byte of the character in the text.
-ptrdiff_t ctxIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+ptrdiff_t ctxPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
 // Start iterating over one line of the context.
 // Pass the returned value as `idx` to `ctxLineIterNext` to continue iterating.
 // If the return value is `-1` there is nothing to iterate.
 // `idx` is the index of the first byte of the character in the text.
-ptrdiff_t ctxLineIterNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
 // Start iterating over one line of the context from the end.
 // Pass the returned value as `idx` to `ctxLineIterPrev` to continue iterating.
 // If the return value is `-1` there is nothing to iterate.
 // `idx` is the index of the first byte of the character in the text.
-ptrdiff_t ctxLineIterPrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
+ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP);
 // Continue iterating over one line of the context.
 // Pass the returned value as `idx` to continue iterating.
 // The iteration ends once the return value is `-1`.
 // `idx` is the index of the first byte of the character in the text.
-ptrdiff_t ctxLineIterNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
 // Continue iterating over one line of the context from the end.
 // Pass the returned value as `idx` to continue iterating.
 // The iteration ends once the return value is `-1`.
 // `idx` is the index of the first byte of the character in the text.
-ptrdiff_t ctxLineIterPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
+ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
 
 #endif // NV_CONTEXT_H_

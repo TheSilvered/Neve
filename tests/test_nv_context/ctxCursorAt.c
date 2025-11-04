@@ -5,11 +5,11 @@ void test_ctxCurAtIdx(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
 
-    ctxCursorAdd_(&ctx, 2);
-    ctxCursorAdd_(&ctx, 4);
-    ctxCursorAdd_(&ctx, 8);
-    ctxCursorAdd_(&ctx, 15);
-    ctxCursorAdd_(&ctx, 16);
+    ctxCurAdd(&ctx, 2);
+    ctxCurAdd(&ctx, 4);
+    ctxCurAdd(&ctx, 8);
+    ctxCurAdd(&ctx, 15);
+    ctxCurAdd(&ctx, 16);
 
     testAssert(ctxCursorAt_(&ctx, 0) == 0);
     testAssert(ctxCursorAt_(&ctx, 1) == 0);

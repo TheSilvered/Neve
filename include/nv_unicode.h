@@ -55,26 +55,26 @@ size_t ucdCh8StrToCh16Str(
 
 // Get the total number of bytes of a UTF-8 codepoint given the first byte.
 // Returns 0 if the byte is not the start of a UTF-8 sequence.
-size_t ucdCh8RunLen(UcdCh8 firstCh);
+uint8_t ucdCh8RunLen(UcdCh8 firstCh);
 // Get the total number of bytes needed to encode a codepoint in UTF-8.
 // Returns 0 if the codepoint is not valid.
-size_t ucdCh8CPLen(UcdCP cp);
+uint8_t ucdCh8CPLen(UcdCP cp);
 // Decode a codepoint encoded in UTF-8.
 UcdCP ucdCh8ToCP(const UcdCh8 *bytes);
 // Encode a codepoint in UTF-8. Return the codepoint length.
-size_t ucdCh8FromCP(UcdCP cp, UcdCh8 *outBuf);
+uint8_t ucdCh8FromCP(UcdCP cp, UcdCh8 *outBuf);
 // Check if the byte is a valid UTF-8 sequence start.
 bool ucdCh8IsStart(UcdCh8 ch);
 
 // Get the total number of `UcdCh16` of a UTF-16 codepoint given the first one.
 // Returns 0 if the character is not the start of a UTF-16 sequence.
-size_t ucdCh16RunLen(UcdCh16 firstCh);
+uint8_t ucdCh16RunLen(UcdCh16 firstCh);
 // Get the total number of `UcdCh16` needed to encode `cp` in UTF-16
 // Returns 0 if the codepoint is not valid.
-size_t ucdCh16CPLen(UcdCP cp);
+uint8_t ucdCh16CPLen(UcdCP cp);
 // Decode a codepoint encoded in UTF-16.
 UcdCP ucdCh16ToCP(const UcdCh16 *bytes);
 // Encode a codepoint in UTF-16. Return the codepoint length.
-size_t ucdCh16FromCP(UcdCP cp, UcdCh16 *outBuf);
+uint8_t ucdCh16FromCP(UcdCP cp, UcdCh16 *outBuf);
 
 #endif // !NV_UNICODE_H_

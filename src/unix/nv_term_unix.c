@@ -68,7 +68,7 @@ UcdCP termGetInput(void) {
 
     // Read the full UTF-8 character
     UcdCh8 chBytes[4] = { ch, 0, 0, 0 };
-    size_t chLen = ucdCh8RunLen(ch);
+    uint8_t chLen = ucdCh8RunLen(ch);
 
     // Do one less iteration as we already have the first byte
     for (size_t i = 1; i < chLen; i++) {

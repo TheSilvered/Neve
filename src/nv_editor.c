@@ -88,43 +88,43 @@ static void handleKeyNormalMode(int32_t key) {
         ctxMoveCurY(ctx, -1);
         return;
     case 'I':
-        ctxMoveCurParagraphB(ctx);
+        ctxCurMoveToParagraphStart(ctx);
         return;
     case TermKey_CtrlI:
-        ctxMoveCurFileStart(ctx);
+        ctxCurToFileStart(ctx);
         return;
     case 'k':
         ctxMoveCurY(ctx, 1);
         return;
     case 'K':
-        ctxMoveCurParagraphF(ctx);
+        ctxCurMoveParagraphF(ctx);
         return;
     case TermKey_CtrlK:
-        ctxMoveCurFileEnd(ctx);
+        ctxCurMoveToFileEnd(ctx);
         return;
     case 'j':
         ctxMoveCurX(ctx, -1);
         return;
     case 'J':
-        ctxMoveCurWordStartB(ctx);
+        ctxCurMoveToWordStartB(ctx);
         return;
     case TermKey_CtrlJ:
-        ctxMoveCurWordEndB(ctx);
+        ctxCurMoveToWordEndB(ctx);
         return;
     case 'l':
         ctxMoveCurX(ctx, 1);
         return;
     case 'L':
-        ctxMoveCurWordEndF(ctx);
+        ctxCurMoveToWordEndF(ctx);
         return;
     case TermKey_CtrlL:
-        ctxMoveCurWordStartF(ctx);
+        ctxCurMoveToWordStartF(ctx);
         return;
     case 'u':
-        ctxMoveCurLineStart(ctx);
+        ctxCurToLineStart(ctx);
         return;
     case 'o':
-        ctxMoveCurLineEnd(ctx);
+        ctxCurToLineEnd(ctx);
         return;
     case 'a':
         ctx->mode = CtxMode_Insert;
@@ -197,10 +197,10 @@ void editorHandleKey(uint32_t key) {
         ctxMoveCurX(ctx, 1);
         return;
     case TermKey_Home:
-        ctxMoveCurLineStart(ctx);
+        ctxCurToLineStart(ctx);
         return;
     case TermKey_End:
-        ctxMoveCurLineEnd(ctx);
+        ctxCurToLineEnd(ctx);
         return;
     case TermKey_Enter:
         if (g_ed.savingFile) {
