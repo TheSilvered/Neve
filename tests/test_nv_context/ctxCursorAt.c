@@ -4,6 +4,8 @@
 void test_ctxCurAtIdx(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
+    const char s[] = "abcdefghijklmnopq";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 2);
     ctxCurAdd(&ctx, 4);

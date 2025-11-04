@@ -4,6 +4,9 @@
 void test_ctxCursorReplace(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
+    ctxInit(&ctx, true);
+    const char s[] = "abcdefgh";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 2);
     ctxCurAdd(&ctx, 4);
