@@ -416,13 +416,15 @@ static ptrdiff_t ctxIdxAt_(const Ctx *ctx, size_t line, size_t col) {
 ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     if (idx < 0) {
         idx = 0;
-    } else if ((size_t)idx >= ctx->_buf.len) {
-        goto endReached;
-    } else {
+    } else if ((size_t)idx < ctx->_buf.len) {
         uint8_t offset = ucdCh8RunLen(*ctxBufGet_(&ctx->_buf, idx));
+        // If idx is not on a character boundary find the next one
         if (offset == 0) {
             idx++;
-            while (idx < ctx->_buf.len && *ctxBufGet_(&ctx->_buf, idx)) {
+            while (
+                idx < ctx->_buf.len
+                && !ucdCh8IsStart(*ctxBufGet_(&ctx->_buf, idx))
+            ) {
                 idx++;
             }
         } else {
@@ -431,19 +433,16 @@ ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     }
 
     if ((size_t)idx >= ctx->_buf.len) {
-        goto endReached;
+        if (outCP != NULL) {
+            *outCP = -1;
+        }
+        return -1;
     }
 
     if (outCP != NULL) {
         *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->_buf, idx));
     }
     return idx;
-
-endReached:
-    if (outCP != NULL) {
-        *outCP = -1;
-    }
-    return -1;
 }
 
 ptrdiff_t ctxPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
@@ -608,18 +607,24 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
             lineStart = i + 1;
             continue;
         }
-        lastBlockSize++;
-        if (lastBlockSize >= lineRefMaxGap_) {
-            ctxBufInsert_(buf, &data[lineStart], i - lineStart + 1);
-            lineStart = i + 1;
-            size_t line, col;
-            ctxPosAt_(ctx, ctx->_buf.len, &line, &col);
-            arrAppend(
-                &ctx->_refs,
-                (CtxRef){ .idx = ctx->_buf.len, .line = line, .col = col }
-            );
-            lastBlockSize = 0;
+
+        // Do not insert blocks in the middle of a UTF8 sequence
+        if (
+            ++lastBlockSize < lineRefMaxGap_
+            || (i + 1 < len && !ucdCh8IsStart(data[i + 1]))
+        ) {
+            continue;
         }
+
+        ctxBufInsert_(buf, &data[lineStart], i - lineStart + 1);
+        lineStart = i + 1;
+        size_t line, col;
+        ctxPosAt_(ctx, ctx->_buf.len, &line, &col);
+        arrAppend(
+            &ctx->_refs,
+            (CtxRef){ .idx = ctx->_buf.len, .line = line, .col = col }
+        );
+        lastBlockSize = 0;
     }
 
     if (lineStart < len) {
