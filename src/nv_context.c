@@ -33,10 +33,10 @@ static UcdCP ctxGetChAfter_(const Ctx *ctx, size_t idx);
 // Get the unicode character before `idx`
 static UcdCP ctxGetChBefore_(const Ctx *ctx, size_t idx);
 
-static size_t ctxFindNextWordStart_(Ctx *ctx, size_t idx);
-static size_t ctxFindNextWordEnd_(Ctx *ctx, size_t idx);
-static size_t ctxFindPrevWordStart_(Ctx *ctx, size_t idx);
-static size_t ctxFindPrevWordEnd_(Ctx *ctx, size_t idx);
+static size_t ctxFindNextWordStart_(const Ctx *ctx, size_t idx);
+static size_t ctxFindNextWordEnd_(const Ctx *ctx, size_t idx);
+static size_t ctxFindPrevWordStart_(const Ctx *ctx, size_t idx);
+static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx);
 
 // Get the index of the cursor at idx or  of the cursor on where it should be
 // inserted
@@ -602,12 +602,12 @@ static UcdCP ctxGetChBefore_(const Ctx *ctx, size_t idx) {
     return cp;
 }
 
-static size_t ctxFindNextWordStart_(Ctx *ctx, size_t idx) {
+static size_t ctxFindNextWordStart_(const Ctx *ctx, size_t idx) {
     if (idx >= ctx->_buf.len) {
         return ctx->_buf.len;
     }
     ptrdiff_t i = idx;
-    UcdCP cp = ctxGetChF(ctx);
+    UcdCP cp = ctxGetChAfter_(ctx, idx);
 
     if (ucdIsCPAlphanumeric(cp)) {
         for (
@@ -632,12 +632,12 @@ static size_t ctxFindNextWordStart_(Ctx *ctx, size_t idx) {
     return (size_t)i;
 }
 
-static size_t ctxFindNextWordEnd_(Ctx *ctx, size_t idx) {
+static size_t ctxFindNextWordEnd_(const Ctx *ctx, size_t idx) {
     if (idx >= ctx->_buf.len) {
         return ctx->_buf.len;
     }
     ptrdiff_t i = idx;
-    UcdCP cp = ctxGetChF(ctx);
+    UcdCP cp = ctxGetChAfter_(ctx, idx);
 
     // Skip white space
     for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxNext(ctx, i, &cp)) { }
@@ -662,12 +662,12 @@ static size_t ctxFindNextWordEnd_(Ctx *ctx, size_t idx) {
     return (size_t)i;
 }
 
-static size_t ctxFindPrevWordStart_(Ctx *ctx, size_t idx) {
+static size_t ctxFindPrevWordStart_(const Ctx *ctx, size_t idx) {
     if (idx == 0) {
         return 0;
     }
     ptrdiff_t i = idx;
-    UcdCP cp = ctxGetChB(ctx);
+    UcdCP cp = ctxGetChBefore_(ctx, idx);
 
     // Skip white space
     for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxPrev(ctx, i, &cp)) { }
@@ -688,17 +688,17 @@ static size_t ctxFindPrevWordStart_(Ctx *ctx, size_t idx) {
     if (i == -1) {
         i = 0;
     } else {
-        i = ctxIterNext(ctx, i, NULL);
+        i = ctxNext(ctx, i, NULL);
     }
     return i;
 }
 
-static size_t ctxFindPrevWordEnd_(Ctx *ctx, size_t idx) {
+static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx) {
     if (idx == 0) {
         return 0;
     }
     ptrdiff_t i = idx;
-    UcdCP cp = ctxGetChB(ctx);
+    UcdCP cp = ctxGetChBefore_(ctx, idx);
 
     if (ucdIsCPAlphanumeric(cp) && i != -1) {
         for (
@@ -721,7 +721,7 @@ static size_t ctxFindPrevWordEnd_(Ctx *ctx, size_t idx) {
     if (i == -1) {
         i = 0;
     } else {
-        i = ctxIterNext(ctx, i, NULL);
+        i = ctxNext(ctx, i, NULL);
     }
     return i;
 }
