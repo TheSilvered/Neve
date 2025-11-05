@@ -28,6 +28,16 @@ static ptrdiff_t ctxLineStart_(const Ctx *ctx, size_t lineNo);
 // of the buffer
 static ptrdiff_t ctxLineEnd_(const Ctx *ctx, size_t lineNo);
 
+// Get the unicode character after `idx`
+static UcdCP ctxGetChAfter_(const Ctx *ctx, size_t idx);
+// Get the unicode character before `idx`
+static UcdCP ctxGetChBefore_(const Ctx *ctx, size_t idx);
+
+static size_t ctxFindNextWordStart_(Ctx *ctx, size_t idx);
+static size_t ctxFindNextWordEnd_(Ctx *ctx, size_t idx);
+static size_t ctxFindPrevWordStart_(Ctx *ctx, size_t idx);
+static size_t ctxFindPrevWordEnd_(Ctx *ctx, size_t idx);
+
 // Get the index of the cursor at idx or  of the cursor on where it should be
 // inserted
 static size_t ctxCursorAt_(const Ctx *ctx, size_t idx);
@@ -579,6 +589,143 @@ endReached:
     return -1;
 }
 
+static UcdCP ctxGetChAfter_(const Ctx *ctx, size_t idx) {
+    if (idx >= ctx->_buf.len) {
+        return -1;
+    }
+    return ucdCh8ToCP(ctxBufGet_(&ctx->_buf, idx));
+}
+
+static UcdCP ctxGetChBefore_(const Ctx *ctx, size_t idx) {
+    UcdCP cp;
+    (void)ctxPrev(ctx, idx, &cp);
+    return cp;
+}
+
+static size_t ctxFindNextWordStart_(Ctx *ctx, size_t idx) {
+    if (idx >= ctx->_buf.len) {
+        return ctx->_buf.len;
+    }
+    ptrdiff_t i = idx;
+    UcdCP cp = ctxGetChF(ctx);
+
+    if (ucdIsCPAlphanumeric(cp)) {
+        for (
+            i = ctxNext(ctx, i, &cp);
+            i != -1 && ucdIsCPAlphanumeric(cp);
+            i = ctxNext(ctx, i, &cp)
+        ) { }
+    } else {
+        for (
+            i = ctxNext(ctx, i, &cp);
+            i != -1 && !ucdIsCPWhiteSpace(cp) && !ucdIsCPAlphanumeric(cp);
+            i = ctxNext(ctx, i, &cp)
+        ) { }
+    }
+
+    // Skip white space
+    for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxNext(ctx, i, &cp)) { }
+
+    if (i == -1) {
+        i = ctx->_buf.len;
+    }
+    return (size_t)i;
+}
+
+static size_t ctxFindNextWordEnd_(Ctx *ctx, size_t idx) {
+    if (idx >= ctx->_buf.len) {
+        return ctx->_buf.len;
+    }
+    ptrdiff_t i = idx;
+    UcdCP cp = ctxGetChF(ctx);
+
+    // Skip white space
+    for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxNext(ctx, i, &cp)) { }
+
+    if (ucdIsCPAlphanumeric(cp)) {
+        for (
+            i = ctxNext(ctx, i, &cp);
+            i != -1 && ucdIsCPAlphanumeric(cp);
+            i = ctxNext(ctx, i, &cp)
+        ) { }
+    } else {
+        for (
+            i = ctxNext(ctx, i, &cp);
+            i != -1 && !ucdIsCPWhiteSpace(cp) && !ucdIsCPAlphanumeric(cp);
+            i = ctxNext(ctx, i, &cp)
+        ) { }
+    }
+
+    if (i == -1) {
+        i = ctx->_buf.len;
+    }
+    return (size_t)i;
+}
+
+static size_t ctxFindPrevWordStart_(Ctx *ctx, size_t idx) {
+    if (idx == 0) {
+        return 0;
+    }
+    ptrdiff_t i = idx;
+    UcdCP cp = ctxGetChB(ctx);
+
+    // Skip white space
+    for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxPrev(ctx, i, &cp)) { }
+
+    if (ucdIsCPAlphanumeric(cp) && i != -1) {
+        for (
+            i = ctxPrev(ctx, i, &cp);
+            i != -1 && ucdIsCPAlphanumeric(cp);
+            i = ctxPrev(ctx, i, &cp)
+        ) { }
+    } else if (i != -1) {
+        for (
+            i = ctxPrev(ctx, i, &cp);
+            i != -1 && !ucdIsCPWhiteSpace(cp) && !ucdIsCPAlphanumeric(cp);
+            i = ctxPrev(ctx, i, &cp)
+        ) { }
+    }
+    if (i == -1) {
+        i = 0;
+    } else {
+        i = ctxIterNext(ctx, i, NULL);
+    }
+    return i;
+}
+
+static size_t ctxFindPrevWordEnd_(Ctx *ctx, size_t idx) {
+    if (idx == 0) {
+        return 0;
+    }
+    ptrdiff_t i = idx;
+    UcdCP cp = ctxGetChB(ctx);
+
+    if (ucdIsCPAlphanumeric(cp) && i != -1) {
+        for (
+            i = ctxPrev(ctx, i, &cp);
+            i != -1 && ucdIsCPAlphanumeric(cp);
+            i = ctxPrev(ctx, i, &cp)
+        ) { }
+    } else if (i != -1) {
+        for (
+            i = ctxPrev(ctx, i, &cp);
+            i != -1 && !ucdIsCPWhiteSpace(cp) && !ucdIsCPAlphanumeric(cp);
+            i = ctxPrev(ctx, i, &cp)
+        ) { }
+    }
+
+    // Skip white space
+    for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxPrev(ctx, i, &cp)) { }
+
+
+    if (i == -1) {
+        i = 0;
+    } else {
+        i = ctxIterNext(ctx, i, NULL);
+    }
+    return i;
+}
+
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     if (len == 0) {
         return;
@@ -854,13 +1001,39 @@ void ctxCurMoveToFileEnd(Ctx *ctx) {
     arrResize(&ctx->_cursors, 5);
 }
 
-void ctxCurMoveToNextWordStart(Ctx *ctx);
+void ctxCurMoveToNextWordStart(Ctx *ctx) {
+    for (size_t i = 0; i < ctx->_cursors.len; i++) {
+        // Move from the last cursor to avoid incorrect merging of cursors
+        size_t oldCur = ctx->_cursors.items[i + 1 - ctx->_cursors.len].idx;
+        size_t newCur = ctxFindNextWordStart_(ctx, oldCur);
+        ctxCurReplace(ctx, oldCur, newCur);
+    }
+}
 
-void ctxCurMoveToNextWordEnd(Ctx *ctx);
+void ctxCurMoveToNextWordEnd(Ctx *ctx) {
+    for (size_t i = 0; i < ctx->_cursors.len; i++) {
+        // Move from the last cursor to avoid incorrect merging of cursors
+        size_t oldCur = ctx->_cursors.items[i + 1 - ctx->_cursors.len].idx;
+        size_t newCur = ctxFindNextWordEnd_(ctx, oldCur);
+        ctxCurReplace(ctx, oldCur, newCur);
+    }
+}
 
-void ctxCurMoveToPrevWordStart(Ctx *ctx);
+void ctxCurMoveToPrevWordStart(Ctx *ctx) {
+    for (size_t i = 0; i < ctx->_cursors.len; i++) {
+        size_t oldCur = ctx->_cursors.items[i].idx;
+        size_t newCur = ctxFindPrevWordStart_(ctx, oldCur);
+        ctxCurReplace(ctx, oldCur, newCur);
+    }
+}
 
-void ctxCurMoveToPrevWordEnd(Ctx *ctx);
+void ctxCurMoveToPrevWordEnd(Ctx *ctx) {
+        for (size_t i = 0; i < ctx->_cursors.len; i++) {
+        size_t oldCur = ctx->_cursors.items[i].idx;
+        size_t newCur = ctxFindPrevWordEnd_(ctx, oldCur);
+        ctxCurReplace(ctx, oldCur, newCur);
+    }
+}
 
 void ctxCurMoveToNextParagraph(Ctx *ctx);
 

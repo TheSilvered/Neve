@@ -100,9 +100,11 @@ With `[ctrl]` they have yet another different behavior:
 - `[space][z][f]` fuzzy search files in the curren working directory
 - `[space][z][t]` fuzzy search in the current buffer
 
-- `[space][p]` move to the matching parenthesis
+- `[space][p]` move to the matching pair (brakets, quotes, ...)
 
 - `[space]m` duplicate cursor at the end of the movement
+- `[space]y` remove all cursors keeping only the first one
+- `[space]Y` remove all cursors keeping only the last one
 
 ### Advanced editing
 
@@ -170,7 +172,7 @@ In addition to selection via movement, you can also select various text objects:
 - `[w]` word the cursor is on
 - `[W]` word the cursor is on and the space around it
 - `[e]` the extended word (word + punctuation) the cursor is on
-- `[E]` the extended word (word + punctuation) the cursor is on and the space
+- `[E]` the extended word the cursor is on and the space around it
   around it
 
 ### Immediate selection
@@ -198,11 +200,14 @@ In edit mode the key bindings available are the following:
 - `[^R]` delete next word
 - `[^O]` new line above
 - `[^J]` new line below
-- `[^T]` indent
-- `[^D]` dedent
+- `[^T]` indent line
+- `[^D]` dedent line
 - `[^U]` delete to the start of the line
 - `[^L]` delete to the end of the line
 - `[^S]` suspend edit mode for one command
 - `[^V]` enter a digraph
 - `[^C]`/`[^Q]`/`[esc]` quit edit mode
 
+## Other key bindings
+
+- `[p]` open command palette
