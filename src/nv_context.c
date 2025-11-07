@@ -38,7 +38,7 @@ static size_t ctxFindNextWordEnd_(const Ctx *ctx, size_t idx);
 static size_t ctxFindPrevWordStart_(const Ctx *ctx, size_t idx);
 static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx);
 
-// Get the index of the cursor at idx or  of the cursor on where it should be
+// Get the index of the cursor at idx or of the cursor on where it should be
 // inserted
 static size_t ctxCursorAt_(const Ctx *ctx, size_t idx);
 static size_t ctxCurAdd_(Ctx *ctx, size_t idx);
