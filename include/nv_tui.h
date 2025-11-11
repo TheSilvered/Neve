@@ -33,38 +33,16 @@
 |--------------------------------------------------------------------------------|
 */
 
-typedef bool (*UIKeyHandler)(TermKey key);
+typedef struct UIBufPanel UIBufPanel;
 
-typedef enum UIPanelKind {
-    UIPanelKind_HSplit,
-    UIPanelKind_VSplit,
-    UIPanelKind_Buf,
-    UIPanelKind_Tabs
-} UIPanelKind;
+typedef bool (*UIKeyHandler)(UIBufPanel *panel, int32_t key);
 
-typedef struct UIPanel {
-    UIPanelKind kind;
-    int16_t x, y;
-    uint16_t w, h;
-    UIKeyHandler _keyHandler;
-} UIPanel;
-
-typedef struct UIPanelHSplit {
-    UIPanel panel;
-    UIPanel *left, *right;
-} UIPanelHSplit;
-
-typedef struct UIPanelVSplit {
-    UIPanel panel;
-    UIPanel *top, *bottom;
-} UIPanelVSplit;
-
-typedef struct UIPanelBuf {
-    UIPanel panel;
+struct UIBufPanel {
     Buf *buf;
-} UIPanelBuf;
+    uint16_t w, h;
+    UIKeyHandler keyHandler;
+};
 
-UIPanel *uiPanelBufNew(Buf *buf);
+void uiBufPanelInit(UIBufPanel *panel, Buf *buf);
 
 #endif // !NV_TUI_H_
-

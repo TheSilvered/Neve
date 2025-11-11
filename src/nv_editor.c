@@ -60,7 +60,7 @@ static void enterFileSaveMode(void) {
     Ctx *ctx = editorGetActiveCtx();
     ctx->mode = CtxMode_Normal;
     g_ed.savingFile = true;
-    g_ed.saveDialogCtx.mode = CtxMode_Insert;
+    g_ed.saveDialogCtx.mode = CtxMode_Edit;
 }
 
 static void exitFileSaveMode(void) {
@@ -127,7 +127,7 @@ static void handleKeyNormalMode(int32_t key) {
         ctxCurToLineEnd(ctx);
         return;
     case 'a':
-        ctx->mode = CtxMode_Insert;
+        ctx->mode = CtxMode_Edit;
         return;
     case 'W':
         enterFileSaveMode();
@@ -218,7 +218,7 @@ void editorHandleKey(uint32_t key) {
         case CtxMode_Normal:
             handleKeyNormalMode(key);
             return;
-        case CtxMode_Insert:
+        case CtxMode_Edit:
             handleKeyInsertMode(key);
             return;
         }
@@ -346,7 +346,7 @@ static void renderStatusBar_(void) {
     Ctx *ctx = editorGetActiveCtx();
     const char *mode;
     switch (ctx->mode) {
-    case CtxMode_Insert:
+    case CtxMode_Edit:
         mode = "Insert";
         break;
     case CtxMode_Normal:

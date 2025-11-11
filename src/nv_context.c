@@ -60,7 +60,7 @@ static ptrdiff_t ctxIdxAt_(const Ctx *ctx, size_t line, size_t col);
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->_refs = (CtxRefs){ 0 };
-    ctx->_cursors = (CtxCursors){ 0 };
+    ctx->cursors = (CtxCursors){ 0 };
     ctx->_selects = (CtxSelects){ 0 };
 
     ctx->_buf = (CtxBuf) {
@@ -78,7 +78,7 @@ void ctxInit(Ctx *ctx, bool multiline) {
 
 void ctxDestroy(Ctx *ctx) {
     arrDestroy(&ctx->_refs);
-    arrDestroy(&ctx->_cursors);
+    arrDestroy(&ctx->cursors);
     arrDestroy(&ctx->_selects);
 
     memFree(ctx->_buf.bytes);
@@ -780,9 +780,9 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
 }
 
 static size_t ctxCursorAt_(const Ctx *ctx, size_t idx) {
-    size_t hi = ctx->_cursors.len;
+    size_t hi = ctx->cursors.len;
     size_t lo = 0;
-    CtxCursor *cursors = ctx->_cursors.items;
+    CtxCursor *cursors = ctx->cursors.items;
 
     while (lo < hi) {
         size_t mid = (lo + hi) / 2;
@@ -809,12 +809,12 @@ static size_t ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col) {
     size_t curIdx = ctxCursorAt_(ctx, idx);
     CtxCursor cursor = { .idx = idx, .baseCol = col };
 
-    if (curIdx >= ctx->_cursors.len) {
-        arrAppend(&ctx->_cursors, cursor);
+    if (curIdx >= ctx->cursors.len) {
+        arrAppend(&ctx->cursors, cursor);
         return curIdx;
     // Do not duplicate cursors
-    } else if (ctx->_cursors.items[curIdx].idx != idx) {
-        arrInsert(&ctx->_cursors, curIdx, cursor);
+    } else if (ctx->cursors.items[curIdx].idx != idx) {
+        arrInsert(&ctx->cursors, curIdx, cursor);
     }
     return curIdx;
 }
@@ -825,8 +825,8 @@ void ctxCurAdd(Ctx *ctx, size_t idx) {
 
 void ctxCurRemove(Ctx *ctx, size_t idx) {
     size_t curIdx = ctxCursorAt_(ctx, idx);
-    if (curIdx < ctx->_cursors.len && ctx->_cursors.items[curIdx].idx == idx) {
-        arrRemove(&ctx->_cursors, curIdx);
+    if (curIdx < ctx->cursors.len && ctx->cursors.items[curIdx].idx == idx) {
+        arrRemove(&ctx->cursors, curIdx);
     }
 }
 
@@ -844,16 +844,16 @@ static size_t ctxCurReplaceEx_(
 ) {
     size_t oldIdx = ctxCursorAt_(ctx, old);
     size_t newIdx = ctxCursorAt_(ctx, new);
-    CtxCursor *cursors = ctx->_cursors.items;
+    CtxCursor *cursors = ctx->cursors.items;
 
     // If `new` is already a cursor
-    if (newIdx < ctx->_cursors.len && cursors[newIdx].idx == new) {
+    if (newIdx < ctx->cursors.len && cursors[newIdx].idx == new) {
         ctxCurRemove(ctx, old);
         return newIdx;
     }
 
     // If `old` does not exist
-    if (oldIdx >= ctx->_cursors.len || cursors[oldIdx].idx != old) {
+    if (oldIdx >= ctx->cursors.len || cursors[oldIdx].idx != old) {
         return ctxCurAdd_(ctx, new);
     }
 
@@ -883,8 +883,8 @@ void ctxCurReplace(Ctx *ctx, size_t old, size_t new) {
 }
 
 void ctxCurMoveLeft(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
-        size_t oldCur = ctx->_cursors.items[i].idx;
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t oldCur = ctx->cursors.items[i].idx;
         ptrdiff_t newCur = ctxLinePrev(ctx, oldCur, NULL);
         if (newCur < 0) {
             continue;
@@ -894,9 +894,9 @@ void ctxCurMoveLeft(Ctx *ctx) {
 }
 
 void ctxCurMoveRight(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last cursor to avoid incorrect merging of cursors
-        size_t oldCur = ctx->_cursors.items[i + 1 - ctx->_cursors.len].idx;
+        size_t oldCur = ctx->cursors.items[i + 1 - ctx->cursors.len].idx;
         ptrdiff_t newCur = ctxLineNext(ctx, oldCur, NULL);
         if (newCur < 0) {
             continue;
@@ -906,9 +906,9 @@ void ctxCurMoveRight(Ctx *ctx) {
 }
 
 void ctxCurMoveUp(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last cursor to avoid incorrect merging of cursors
-        CtxCursor oldCur = ctx->_cursors.items[i + 1 - ctx->_cursors.len];
+        CtxCursor oldCur = ctx->cursors.items[i + 1 - ctx->cursors.len];
         size_t oldLine;
         ctxPosAt_(ctx, oldCur.idx, &oldLine, NULL);
         ptrdiff_t newCur = ctxIdxAt_(ctx, oldLine + 1, oldCur.baseCol);
@@ -920,9 +920,9 @@ void ctxCurMoveUp(Ctx *ctx) {
 }
 
 void ctxCurMoveDown(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last cursor to avoid incorrect merging of cursors
-        CtxCursor oldCur = ctx->_cursors.items[i + 1 - ctx->_cursors.len];
+        CtxCursor oldCur = ctx->cursors.items[i + 1 - ctx->cursors.len];
         size_t oldLine;
         ctxPosAt_(ctx, oldCur.idx, &oldLine, NULL);
         ptrdiff_t newCur = ctxIdxAt_(ctx, oldLine + 1, oldCur.baseCol);
@@ -934,9 +934,9 @@ void ctxCurMoveDown(Ctx *ctx) {
 }
 
 void ctxCurMoveFwd(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last cursor to avoid incorrect merging of cursors
-        size_t oldCur = ctx->_cursors.items[i + 1 - ctx->_cursors.len].idx;
+        size_t oldCur = ctx->cursors.items[i + 1 - ctx->cursors.len].idx;
         ptrdiff_t newCur = ctxNext(ctx, oldCur, NULL);
         if (newCur < 0) {
             continue;
@@ -946,8 +946,8 @@ void ctxCurMoveFwd(Ctx *ctx) {
 }
 
 void ctxCurMoveBack(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
-        size_t oldCur = ctx->_cursors.items[i].idx;
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t oldCur = ctx->cursors.items[i].idx;
         ptrdiff_t newCur = ctxPrev(ctx, oldCur, NULL);
         if (newCur < 0) {
             continue;
@@ -957,8 +957,8 @@ void ctxCurMoveBack(Ctx *ctx) {
 }
 
 void ctxCurMoveToLineStart(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
-        size_t oldCur = ctx->_cursors.items[i].idx;
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t oldCur = ctx->cursors.items[i].idx;
         size_t newCur;
         ctxPosAt_(ctx, oldCur, NULL, &newCur);
         if (newCur < 0) {
@@ -969,8 +969,8 @@ void ctxCurMoveToLineStart(Ctx *ctx) {
 }
 
 void ctxCurMoveToLineEnd(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
-        size_t oldCur = ctx->_cursors.items[i].idx;
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t oldCur = ctx->cursors.items[i].idx;
         size_t lineNo;
         ctxPosAt_(ctx, oldCur, &lineNo, NULL);
         ptrdiff_t newCur = ctxLineEnd_(ctx, lineNo);
@@ -982,54 +982,54 @@ void ctxCurMoveToLineEnd(Ctx *ctx) {
 }
 
 void ctxCurMoveToFileStart(Ctx *ctx) {
-    if (ctx->_cursors.len == 0) {
+    if (ctx->cursors.len == 0) {
         return;
     }
-    ctx->_cursors.items[0].idx = 0;
-    ctx->_cursors.items[0].baseCol = 0;
-    ctx->_cursors.len = 1;
-    arrResize(&ctx->_cursors, 5);
+    ctx->cursors.items[0].idx = 0;
+    ctx->cursors.items[0].baseCol = 0;
+    ctx->cursors.len = 1;
+    arrResize(&ctx->cursors, 5);
 }
 
 void ctxCurMoveToFileEnd(Ctx *ctx) {
-    if (ctx->_cursors.len == 0) {
+    if (ctx->cursors.len == 0) {
         return;
     }
-    ctx->_cursors.items[0].idx = ctx->_buf.len;
-    ctxPosAt_(ctx, ctx->_buf.len, NULL, &ctx->_cursors.items[0].baseCol);
-    ctx->_cursors.len = 1;
-    arrResize(&ctx->_cursors, 5);
+    ctx->cursors.items[0].idx = ctx->_buf.len;
+    ctxPosAt_(ctx, ctx->_buf.len, NULL, &ctx->cursors.items[0].baseCol);
+    ctx->cursors.len = 1;
+    arrResize(&ctx->cursors, 5);
 }
 
 void ctxCurMoveToNextWordStart(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last cursor to avoid incorrect merging of cursors
-        size_t oldCur = ctx->_cursors.items[i + 1 - ctx->_cursors.len].idx;
+        size_t oldCur = ctx->cursors.items[i + 1 - ctx->cursors.len].idx;
         size_t newCur = ctxFindNextWordStart_(ctx, oldCur);
         ctxCurReplace(ctx, oldCur, newCur);
     }
 }
 
 void ctxCurMoveToNextWordEnd(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last cursor to avoid incorrect merging of cursors
-        size_t oldCur = ctx->_cursors.items[i + 1 - ctx->_cursors.len].idx;
+        size_t oldCur = ctx->cursors.items[i + 1 - ctx->cursors.len].idx;
         size_t newCur = ctxFindNextWordEnd_(ctx, oldCur);
         ctxCurReplace(ctx, oldCur, newCur);
     }
 }
 
 void ctxCurMoveToPrevWordStart(Ctx *ctx) {
-    for (size_t i = 0; i < ctx->_cursors.len; i++) {
-        size_t oldCur = ctx->_cursors.items[i].idx;
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t oldCur = ctx->cursors.items[i].idx;
         size_t newCur = ctxFindPrevWordStart_(ctx, oldCur);
         ctxCurReplace(ctx, oldCur, newCur);
     }
 }
 
 void ctxCurMoveToPrevWordEnd(Ctx *ctx) {
-        for (size_t i = 0; i < ctx->_cursors.len; i++) {
-        size_t oldCur = ctx->_cursors.items[i].idx;
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t oldCur = ctx->cursors.items[i].idx;
         size_t newCur = ctxFindPrevWordEnd_(ctx, oldCur);
         ctxCurReplace(ctx, oldCur, newCur);
     }

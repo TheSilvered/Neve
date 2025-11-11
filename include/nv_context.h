@@ -7,7 +7,8 @@
 // Context mode
 typedef enum CtxMode {
     CtxMode_Normal,
-    CtxMode_Insert
+    CtxMode_Edit,
+    CtxMode_Select
 } CtxMode;
 
 typedef struct CtxRef {
@@ -32,9 +33,9 @@ typedef struct CtxBuf {
 // Editing context.
 typedef struct Ctx {
     CtxRefs _refs;
-    CtxCursors _cursors;
     CtxSelects _selects;
     CtxBuf _buf;
+    CtxCursors cursors;
     CtxMode mode;
     bool edited;
     bool multiline;
