@@ -1035,6 +1035,73 @@ void ctxCurMoveToPrevWordEnd(Ctx *ctx) {
     }
 }
 
-void ctxCurMoveToNextParagraph(Ctx *ctx);
+static size_t lineCountUpperBound_(const Ctx *ctx) {
+    if (ctx->_refs.len == 0) {
+        return lineRefMaxGap_;
+    } else {
+        CtxRef *ref = &ctx->_refs.items[ctx->_refs.len - 1];
+        return ref->line + (ctx->_buf.len - ref->idx);
+    }
+}
 
-void ctxCurMoveToPrevParagraph(Ctx *ctx);
+void ctxCurMoveToNextParagraph(Ctx *ctx) {
+    size_t maxLineNo = lineCountUpperBound_(ctx);
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t oldCur = ctx->cursors.items[i + 1 - ctx->cursors.len].idx;
+        size_t lineNo;
+        ctxPosAt_(ctx, oldCur, &lineNo, NULL);
+        ptrdiff_t newCur = -1;
+        bool skippedBlankLines = false;
+        for (;;) {
+            ptrdiff_t lineStart = ctxLineStart_(ctx, lineNo);
+            if (lineStart < 0) {
+                break;
+            }
+            newCur = ctxLineEnd_(ctx, lineNo);
+            assert(newCur >= 0);
+            if (newCur - lineStart != 0) {
+                skippedBlankLines = true;
+            } else if (skippedBlankLines) {
+                break;
+            }
+            lineNo++;
+            // Avoid infinite loop
+            if (lineNo > lineCountUpperBound_) {
+                break;
+            }
+        }
+
+        assert(newCur >= 0);
+        ctxCurReplace(ctx, oldCur, (size_t)newCur);
+    }
+}
+
+void ctxCurMoveToPrevParagraph(Ctx *ctx) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t oldCur = ctx->cursors.items[i].idx;
+        size_t lineNo;
+        ctxPosAt_(ctx, oldCur, &lineNo, NULL);
+        ptrdiff_t newCur = -1;
+        bool skippedBlankLines = false;
+        for (;;) {
+            ptrdiff_t lineEnd = ctxLineEnd_(ctx, lineNo);
+            if (lineEnd < 0) {
+                break;
+            }
+            newCur = ctxLineStart_(ctx, lineNo);
+            assert(newCur >= 0);
+            if (lineEnd - newCur != 0) {
+                skippedBlankLines = true;
+            } else if (skippedBlankLines) {
+                break;
+            }
+            if (lineNo == 0) {
+                break;
+            }
+            lineNo--;
+        }
+
+        assert(newCur >= 0);
+        ctxCurReplace(ctx, oldCur, newCur);
+    }
+}
