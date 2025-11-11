@@ -100,7 +100,7 @@ static void handleKeyNormalMode(int32_t key) {
         ctxCurMoveParagraphF(ctx);
         return;
     case TermKey_CtrlK:
-        ctxCurMoveToFileEnd(ctx);
+        ctxCurMoveToTextEnd(ctx);
         return;
     case 'j':
         ctxMoveCurX(ctx, -1);

@@ -55,13 +55,13 @@ static bool uiBufHandleNormalMode_(Buf *buf, int32_t key) {
         ctxCurMoveToLineStart(&buf->ctx);
         break;
     case 'U':
-        ctxCurMoveToFileStart(&buf->ctx);
+        ctxCurMoveToTextStart(&buf->ctx);
         break;
     case 'o':
         ctxCurMoveToLineEnd(&buf->ctx);
         break;
     case 'O':
-        ctxCurMoveToFileEnd(&buf->ctx);
+        ctxCurMoveToTextEnd(&buf->ctx);
     case 'e':
         buf->ctx.mode = CtxMode_Edit;
         break;

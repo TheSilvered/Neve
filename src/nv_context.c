@@ -41,10 +41,10 @@ static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx);
 // Get the index of the cursor at idx or of the cursor on where it should be
 // inserted
 static size_t ctxCursorAt_(const Ctx *ctx, size_t idx);
-static size_t ctxCurAdd_(Ctx *ctx, size_t idx);
-static size_t ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col);
-static size_t ctxCurReplace_(Ctx *ctx, size_t old, size_t new);
-static size_t ctxCurReplaceEx_(Ctx *ctx, size_t old, size_t new, size_t newCol);
+static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col);
+// Return `true` if the new cursor already exists
+static bool ctxCurReplace_(Ctx *ctx, size_t old, size_t new);
+static bool ctxCurReplaceEx_(Ctx *ctx, size_t old, size_t new, size_t newCol);
 
 // Get the line and column at `idx`
 static void ctxPosAt_(
@@ -799,28 +799,22 @@ static size_t ctxCursorAt_(const Ctx *ctx, size_t idx) {
     return lo;
 }
 
-static size_t ctxCurAdd_(Ctx *ctx, size_t idx) {
-    size_t col;
-    ctxPosAt_(ctx, idx, NULL, &col);
-    return ctxCurAddEx_(ctx, idx, col);
-}
-
-static size_t ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col) {
+static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col) {
     size_t curIdx = ctxCursorAt_(ctx, idx);
     CtxCursor cursor = { .idx = idx, .baseCol = col };
 
     if (curIdx >= ctx->cursors.len) {
         arrAppend(&ctx->cursors, cursor);
-        return curIdx;
     // Do not duplicate cursors
     } else if (ctx->cursors.items[curIdx].idx != idx) {
         arrInsert(&ctx->cursors, curIdx, cursor);
     }
-    return curIdx;
 }
 
 void ctxCurAdd(Ctx *ctx, size_t idx) {
-    (void)ctxCurAdd_(ctx, idx);
+    size_t col;
+    ctxPosAt_(ctx, idx, NULL, &col);
+    ctxCurAddEx_(ctx, idx, col);
 }
 
 void ctxCurRemove(Ctx *ctx, size_t idx) {
@@ -830,13 +824,13 @@ void ctxCurRemove(Ctx *ctx, size_t idx) {
     }
 }
 
-static size_t ctxCurReplace_(Ctx *ctx, size_t old, size_t new) {
+static bool ctxCurReplace_(Ctx *ctx, size_t old, size_t new) {
     size_t newCol;
     ctxPosAt_(ctx, new, NULL, &newCol);
     return ctxCurReplaceEx_(ctx, old, new, newCol);
 }
 
-static size_t ctxCurReplaceEx_(
+static bool ctxCurReplaceEx_(
     Ctx *ctx,
     size_t old,
     size_t new,
@@ -849,12 +843,13 @@ static size_t ctxCurReplaceEx_(
     // If `new` is already a cursor
     if (newIdx < ctx->cursors.len && cursors[newIdx].idx == new) {
         ctxCurRemove(ctx, old);
-        return newIdx;
+        return true;
     }
 
     // If `old` does not exist
     if (oldIdx >= ctx->cursors.len || cursors[oldIdx].idx != old) {
-        return ctxCurAdd_(ctx, new);
+        ctxCurAdd(ctx, new);
+        return false;
     }
 
     CtxCursor newCursor = { .idx = new, .baseCol = newCol };
@@ -875,7 +870,7 @@ static size_t ctxCurReplaceEx_(
         );
         cursors[newIdx] = newCursor;
     }
-    return newIdx;
+    return false;
 }
 
 void ctxCurReplace(Ctx *ctx, size_t old, size_t new) {
@@ -889,7 +884,9 @@ void ctxCurMoveLeft(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        ctxCurReplace(ctx, oldCur, (size_t)newCur);
+        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+            i--;
+        }
     }
 }
 
@@ -901,7 +898,9 @@ void ctxCurMoveRight(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        ctxCurReplace(ctx, oldCur, (size_t)newCur);
+        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+            i--;
+        }
     }
 }
 
@@ -915,7 +914,9 @@ void ctxCurMoveUp(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        ctxCurReplaceEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol);
+        if (ctxCurReplaceEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
+            i--;
+        }
     }
 }
 
@@ -929,7 +930,9 @@ void ctxCurMoveDown(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        ctxCurReplaceEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol);
+        if (ctxCurReplaceEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
+            i--;
+        }
     }
 }
 
@@ -941,7 +944,9 @@ void ctxCurMoveFwd(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        ctxCurReplace(ctx, oldCur, (size_t)newCur);
+        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+            i--;
+        }
     }
 }
 
@@ -952,19 +957,24 @@ void ctxCurMoveBack(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        ctxCurReplace(ctx, oldCur, (size_t)newCur);
+        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+            i--;
+        }
     }
 }
 
 void ctxCurMoveToLineStart(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
-        size_t newCur;
-        ctxPosAt_(ctx, oldCur, NULL, &newCur);
+        size_t lineNo;
+        ctxPosAt_(ctx, oldCur, NULL, &lineNo);
+        ptrdiff_t newCur = ctxLineStart_(ctx, lineNo);
         if (newCur < 0) {
             continue;
         }
-        ctxCurReplace(ctx, oldCur, newCur);
+        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+            i--;
+        }
     }
 }
 
@@ -977,11 +987,13 @@ void ctxCurMoveToLineEnd(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        ctxCurReplace(ctx, oldCur, newCur);
+        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+            i--;
+        }
     }
 }
 
-void ctxCurMoveToFileStart(Ctx *ctx) {
+void ctxCurMoveToTextStart(Ctx *ctx) {
     if (ctx->cursors.len == 0) {
         return;
     }
@@ -991,7 +1003,7 @@ void ctxCurMoveToFileStart(Ctx *ctx) {
     arrResize(&ctx->cursors, 5);
 }
 
-void ctxCurMoveToFileEnd(Ctx *ctx) {
+void ctxCurMoveToTextEnd(Ctx *ctx) {
     if (ctx->cursors.len == 0) {
         return;
     }
@@ -1006,7 +1018,9 @@ void ctxCurMoveToNextWordStart(Ctx *ctx) {
         // Move from the last cursor to avoid incorrect merging of cursors
         size_t oldCur = ctx->cursors.items[i + 1 - ctx->cursors.len].idx;
         size_t newCur = ctxFindNextWordStart_(ctx, oldCur);
-        ctxCurReplace(ctx, oldCur, newCur);
+        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+            i--;
+        }
     }
 }
 
@@ -1015,7 +1029,9 @@ void ctxCurMoveToNextWordEnd(Ctx *ctx) {
         // Move from the last cursor to avoid incorrect merging of cursors
         size_t oldCur = ctx->cursors.items[i + 1 - ctx->cursors.len].idx;
         size_t newCur = ctxFindNextWordEnd_(ctx, oldCur);
-        ctxCurReplace(ctx, oldCur, newCur);
+        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+            i--;
+        }
     }
 }
 
@@ -1023,7 +1039,9 @@ void ctxCurMoveToPrevWordStart(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t newCur = ctxFindPrevWordStart_(ctx, oldCur);
-        ctxCurReplace(ctx, oldCur, newCur);
+        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+            i--;
+        }
     }
 }
 
@@ -1031,7 +1049,9 @@ void ctxCurMoveToPrevWordEnd(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t newCur = ctxFindPrevWordEnd_(ctx, oldCur);
-        ctxCurReplace(ctx, oldCur, newCur);
+        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+            i--;
+        }
     }
 }
 
@@ -1066,13 +1086,15 @@ void ctxCurMoveToNextParagraph(Ctx *ctx) {
             }
             lineNo++;
             // Avoid infinite loop
-            if (lineNo > lineCountUpperBound_) {
+            if (lineNo > maxLineNo) {
                 break;
             }
         }
 
         assert(newCur >= 0);
-        ctxCurReplace(ctx, oldCur, (size_t)newCur);
+        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+            i--;
+        }
     }
 }
 
@@ -1102,6 +1124,8 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx) {
         }
 
         assert(newCur >= 0);
-        ctxCurReplace(ctx, oldCur, newCur);
+        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+            i--;
+        }
     }
 }

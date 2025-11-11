@@ -110,10 +110,10 @@ void ctxCurMoveBack(Ctx *ctx);
 void ctxCurMoveToLineStart(Ctx *ctx);
 // Move the cursor to the end of the line
 void ctxCurMoveToLineEnd(Ctx *ctx);
-// Move the cursor to the start of the file
-void ctxCurMoveToFileStart(Ctx *ctx);
-// Move the cursor to the end of the file
-void ctxCurMoveToFileEnd(Ctx *ctx);
+// Move the cursor to the start of the text
+void ctxCurMoveToTextStart(Ctx *ctx);
+// Move the cursor to the end of the text
+void ctxCurMoveToTextEnd(Ctx *ctx);
 
 // Move to the beginning of the next word.
 void ctxCurMoveToNextWordStart(Ctx *ctx);
