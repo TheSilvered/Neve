@@ -393,13 +393,14 @@ static ptrdiff_t ctxIdxAt_(const Ctx *ctx, size_t line, size_t col) {
             continue;
         }
         refLine++;
+        refCol = 0;
         if (refLine == line) {
             i++;
             break;
         }
     }
 
-    if (i >= endIdx) {
+    if (refLine != line) {
         // The line does not exist
         return -1;
     }
