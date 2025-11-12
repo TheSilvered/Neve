@@ -1,7 +1,7 @@
 #include "nv_test.h"
 #include "nv_context.c"
 
-void test_ctxCursorAdd(void) {
+void test_ctxCurAdd(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcde";
@@ -40,6 +40,6 @@ void test_ctxCursorAdd(void) {
 }
 
 testList(
-    testMake(test_ctxCursorAdd)
+    testMake(test_ctxCurAdd)
 )
 

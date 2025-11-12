@@ -1,7 +1,7 @@
 #include "nv_test.h"
 #include "nv_context.c"
 
-void test_ctxCursorReplace(void) {
+void test_ctxCurReplace(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     ctxInit(&ctx, true);
@@ -47,6 +47,6 @@ void test_ctxCursorReplace(void) {
 }
 
 testList(
-    testMake(test_ctxCursorReplace)
+    testMake(test_ctxCurReplace)
 )
 
