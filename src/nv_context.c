@@ -40,7 +40,7 @@ static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx);
 
 // Get the index of the cursor at idx or of the cursor on where it should be
 // inserted
-static size_t ctxCursorAt_(const Ctx *ctx, size_t idx);
+static size_t ctxCurAt_(const Ctx *ctx, size_t idx);
 static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col);
 // Return `true` if the new cursor already exists
 static bool ctxCurReplace_(Ctx *ctx, size_t old, size_t new);
@@ -780,7 +780,7 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     }
 }
 
-static size_t ctxCursorAt_(const Ctx *ctx, size_t idx) {
+static size_t ctxCurAt_(const Ctx *ctx, size_t idx) {
     size_t hi = ctx->cursors.len;
     size_t lo = 0;
     CtxCursor *cursors = ctx->cursors.items;
@@ -801,7 +801,7 @@ static size_t ctxCursorAt_(const Ctx *ctx, size_t idx) {
 }
 
 static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col) {
-    size_t curIdx = ctxCursorAt_(ctx, idx);
+    size_t curIdx = ctxCurAt_(ctx, idx);
     CtxCursor cursor = { .idx = idx, .baseCol = col };
 
     if (curIdx >= ctx->cursors.len) {
@@ -819,7 +819,7 @@ void ctxCurAdd(Ctx *ctx, size_t idx) {
 }
 
 void ctxCurRemove(Ctx *ctx, size_t idx) {
-    size_t curIdx = ctxCursorAt_(ctx, idx);
+    size_t curIdx = ctxCurAt_(ctx, idx);
     if (curIdx < ctx->cursors.len && ctx->cursors.items[curIdx].idx == idx) {
         arrRemove(&ctx->cursors, curIdx);
     }
@@ -837,8 +837,8 @@ static bool ctxCurReplaceEx_(
     size_t new,
     size_t newCol
 ) {
-    size_t oldIdx = ctxCursorAt_(ctx, old);
-    size_t newIdx = ctxCursorAt_(ctx, new);
+    size_t oldIdx = ctxCurAt_(ctx, old);
+    size_t newIdx = ctxCurAt_(ctx, new);
     CtxCursor *cursors = ctx->cursors.items;
 
     // If `new` is already a cursor
