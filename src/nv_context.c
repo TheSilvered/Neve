@@ -912,11 +912,10 @@ void ctxCurMoveRight(Ctx *ctx) {
 
 void ctxCurMoveUp(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
-        // Move from the last cursor to avoid incorrect merging of cursors
-        CtxCursor oldCur = ctx->cursors.items[ctx->cursors.len - i - 1];
+        CtxCursor oldCur = ctx->cursors.items[i];
         size_t oldLine;
         ctxPosAt_(ctx, oldCur.idx, &oldLine, NULL);
-        ptrdiff_t newCur = ctxIdxAt_(ctx, oldLine + 1, oldCur.baseCol);
+        ptrdiff_t newCur = ctxIdxAt_(ctx, oldLine - 1, oldCur.baseCol);
         if (newCur < 0) {
             continue;
         }
