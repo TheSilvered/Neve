@@ -946,7 +946,7 @@ void ctxCurMoveFwd(Ctx *ctx) {
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
         ptrdiff_t newCur = ctxNext(ctx, oldCur, NULL);
         if (newCur < 0) {
-            continue;
+            newCur = ctx->_buf.len;
         }
         if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
             i--;
