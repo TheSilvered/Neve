@@ -4,13 +4,6 @@
 #include "nv_array.h"
 #include "nv_string.h"
 
-// Context mode
-typedef enum CtxMode {
-    CtxMode_Normal,
-    CtxMode_Edit,
-    CtxMode_Select
-} CtxMode;
-
 typedef struct CtxRef {
     size_t idx, line, col;
 } CtxRef;
@@ -36,7 +29,6 @@ typedef struct Ctx {
     CtxSelects _selects;
     CtxBuf _buf;
     CtxCursors cursors;
-    CtxMode mode;
     bool edited;
     bool multiline;
     uint8_t tabStop;

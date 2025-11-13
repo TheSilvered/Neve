@@ -70,7 +70,6 @@ void ctxInit(Ctx *ctx, bool multiline) {
         .gapIdx = 0
     };
 
-    ctx->mode = CtxMode_Normal;
     ctx->edited = false;
     ctx->multiline = multiline;
     ctx->tabStop = 8;
