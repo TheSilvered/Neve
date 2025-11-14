@@ -43,6 +43,12 @@ void test_ctxCurReplace(void) {
     testAssert(ctx.cursors.items[1].idx == 7);
     testAssert(ctx.cursors.items[2].idx == 8);
 
+    ctxCurReplace(&ctx, 4, 4);
+    testAssert(ctx.cursors.len == 3);
+    testAssert(ctx.cursors.items[0].idx == 4);
+    testAssert(ctx.cursors.items[1].idx == 7);
+    testAssert(ctx.cursors.items[2].idx == 8);
+
     ctxDestroy(&ctx);
 }
 

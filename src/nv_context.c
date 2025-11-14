@@ -840,16 +840,20 @@ static bool ctxCurReplaceEx_(
     size_t newIdx = ctxCurAt_(ctx, new);
     CtxCursor *cursors = ctx->cursors.items;
 
-    // If `new` is already a cursor
-    if (newIdx < ctx->cursors.len && cursors[newIdx].idx == new) {
-        ctxCurRemove(ctx, old);
-        return true;
-    }
-
     // If `old` does not exist
     if (oldIdx >= ctx->cursors.len || cursors[oldIdx].idx != old) {
         ctxCurAdd(ctx, new);
         return false;
+    }
+
+    if (old == new) {
+        return false;
+    }
+
+    // If `new` is already a cursor
+    if (newIdx < ctx->cursors.len && cursors[newIdx].idx == new) {
+        ctxCurRemove(ctx, old);
+        return true;
     }
 
     CtxCursor newCursor = { .idx = new, .baseCol = newCol };
@@ -971,7 +975,7 @@ void ctxCurMoveToLineStart(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t lineNo;
-        ctxPosAt_(ctx, oldCur, NULL, &lineNo);
+        ctxPosAt_(ctx, oldCur, &lineNo, NULL);
         ptrdiff_t newCur = ctxLineStart_(ctx, lineNo);
         if (newCur < 0) {
             continue;
