@@ -153,7 +153,7 @@ Additional keybindings:
 - `[space][c]` surround the selection with curly brackets
 - `[space][q]` surround the selection with double quotes
 - `[space][t]` surround the selection with single quotes
-- `[^C]`/`[^Q]`/`[esc]` quit selection mode
+- `[^Q]`/`[esc]` quit selection mode
 
 ### Text objects
 
@@ -206,7 +206,7 @@ In edit mode the key bindings available are the following:
 - `[^L]` delete to the end of the line
 - `[^S]` suspend edit mode for one command
 - `[^V]` enter a digraph
-- `[^C]`/`[^Q]`/`[esc]` quit edit mode
+- `[^Q]`/`[esc]` quit edit mode
 
 ## Other key bindings
 
