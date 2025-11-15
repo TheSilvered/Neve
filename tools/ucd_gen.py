@@ -4,13 +4,15 @@ from unicode_props import *
 from unicode_parser import *
 from table_generator import TableGenerator
 
+UCD_FOLDER = "ucd-17.0.0/"
+
 
 def load_east_asian_width() -> list[dict[str, Any]]:
     parser = Parser(
         range=CodePointRangeField(),
         width=UnicodeEnumPropField(EastAsianWidth)
     )
-    with open("ucd-16.0.0/EastAsianWidth.txt", encoding="utf8") as f:
+    with open(UCD_FOLDER + "/EastAsianWidth.txt", encoding="utf8") as f:
         east_asian_width = parser.parse(f)
 
     #   - The unassigned code points in the following blocks default to "W":
@@ -55,7 +57,7 @@ def load_special_casing() -> list[dict[str, Any]]:
         upper=CodePointSequenceField(),
         condition=StrField()
     )
-    with open("ucd-16.0.0/SpecialCasing.txt", encoding="utf8") as f:
+    with open(UCD_FOLDER + "/SpecialCasing.txt", encoding="utf8") as f:
         special_casing = parser.parse(f)
 
     return [(line.pop("condition"), line)[1] for line in special_casing if not line["condition"]]
@@ -79,7 +81,7 @@ def load_unicode_data() -> list[dict[str, Any]]:
         simple_lowercase=OptionalField(CodePointField()),
         simple_titlecase=OptionalField(CodePointField())
     )
-    with open("ucd-16.0.0/UnicodeData.txt", encoding="utf8") as f:
+    with open(UCD_FOLDER + "/UnicodeData.txt", encoding="utf8") as f:
         data = parser.parse(f)
 
     unicode_data: list[dict[str, Any]] = []
@@ -111,7 +113,7 @@ def create_cp_info_list(
     east_asian_width: list[dict[str, Any]]
 ) -> tuple[list[int], list[UdbCPInfo]]:
     unique_values: dict[UdbCPInfo, int] = {
-        (GeneralCategory.OTHER_NOT_ASSIGNED, EastAsianWidth.NEUTRAL,): 0  # default value
+        (GeneralCategory.OTHER_NOT_ASSIGNED, EastAsianWidth.NEUTRAL): 0  # default value
     }
     print("Generating default list")
     indices: list[int] = [0] * 0x10ffff
