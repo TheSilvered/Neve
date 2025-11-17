@@ -1065,7 +1065,7 @@ void ctxCurMoveToPrevWordEnd(Ctx *ctx) {
 
 static size_t lineCountUpperBound_(const Ctx *ctx) {
     if (ctx->_refs.len == 0) {
-        return lineRefMaxGap_;
+        return ctx->_buf.len;
     } else {
         CtxRef *ref = &ctx->_refs.items[ctx->_refs.len - 1];
         return ref->line + (ctx->_buf.len - ref->idx);
