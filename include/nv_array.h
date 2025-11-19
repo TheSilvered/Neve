@@ -79,6 +79,9 @@
             sizeof(*(arr)->items) * ((arr)->len - (idx) - 1)                   \
         );                                                                     \
         (arr)->len--;                                                          \
+        if ((arr)->len < ((arr)->cap >> 2)) {                                  \
+            arrResize((arr), (arr)->len * 2);                                  \
+        }                                                                      \
     } while (0)
 
 #define arrDestroy(arr) memFree((arr)->items)

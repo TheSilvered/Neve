@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include "nv_context.h"
@@ -59,6 +60,9 @@ static void ctxPosAt_(
 // The line must match exactly, the column is the closest to `col`.
 static ptrdiff_t ctxIdxAt_(const Ctx *ctx, size_t line, size_t col);
 
+// Join cursor selections in the _sels array
+static void ctxSelJoin_(Ctx *ctx);
+
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->_refs = (CtxRefs){ 0 };
     ctx->_sels = (CtxSelections){ 0 };
@@ -71,6 +75,7 @@ void ctxInit(Ctx *ctx, bool multiline) {
     };
 
     ctx->cursors = (CtxCursors){ 0 };
+    ctx->_selecting = false;
     ctx->edited = false;
     ctx->multiline = multiline;
     ctx->tabStop = 8;
@@ -854,14 +859,14 @@ static bool ctxCurMoveEx_(
     // If `new` is already a cursor
     if (newIdx < ctx->cursors.len && cursors[newIdx].idx == new) {
         if (new < old) {
-            cursors[new].selStart = NV_MAX(
-                cursors[new].selStart,
-                cursors[old].selStart
+            cursors[newIdx].selStart = NV_MAX(
+                cursors[newIdx].selStart,
+                cursors[oldIdx].selStart
             );
         } else {
-            cursors[new].selStart = NV_MIN(
-                cursors[new].selStart,
-                cursors[old].selStart
+            cursors[newIdx].selStart = NV_MIN(
+                cursors[newIdx].selStart,
+                cursors[oldIdx].selStart
             );
         }
         ctxCurRemove(ctx, old);
@@ -871,7 +876,7 @@ static bool ctxCurMoveEx_(
     CtxCursor newCursor = {
         .idx = new,
         .baseCol = newCol,
-        .selStart = cursors[old].selStart
+        .selStart = cursors[oldIdx].selStart
     };
     if (oldIdx == newIdx) {
         cursors[oldIdx] = newCursor;
@@ -1018,23 +1023,24 @@ void ctxCurMoveToLineEnd(Ctx *ctx) {
 }
 
 void ctxCurMoveToTextStart(Ctx *ctx) {
-    if (ctx->cursors.len == 0) {
-        return;
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t oldCur = ctx->cursors.items[i].idx;
+        if (ctxCurMove_(ctx, oldCur, 0)) {
+            i--;
+        }
     }
-    ctx->cursors.items[0].idx = 0;
-    ctx->cursors.items[0].baseCol = 0;
-    ctx->cursors.len = 1;
-    arrResize(&ctx->cursors, 5);
 }
 
 void ctxCurMoveToTextEnd(Ctx *ctx) {
-    if (ctx->cursors.len == 0) {
-        return;
+    size_t newBaseCol;
+    ctxPosAt_(ctx, ctx->_buf.len, NULL, &newBaseCol);
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        // Move from the last to reduce copying
+        size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
+        if (ctxCurMoveEx_(ctx, oldCur, ctx->_buf.len, newBaseCol)) {
+            i--;
+        }
     }
-    ctx->cursors.items[0].idx = ctx->_buf.len;
-    ctxPosAt_(ctx, ctx->_buf.len, NULL, &ctx->cursors.items[0].baseCol);
-    ctx->cursors.len = 1;
-    arrResize(&ctx->cursors, 5);
 }
 
 void ctxCurMoveToNextWordStart(Ctx *ctx) {
@@ -1154,13 +1160,68 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx) {
     }
 }
 
-void ctxSelBegin(Ctx *ctx);
+static int selCmp_(const void *a, const void *b) {
+    const CtxSelection *selA = a;
+    const CtxSelection *selB = b;
+    ptrdiff_t diff = (ptrdiff_t)selA->startIdx - (ptrdiff_t)selB->startIdx;
+    if (diff < 0) {
+        return -1;
+    } else if (diff > 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
 
-void ctxSelEnd(Ctx *ctx);
+static void ctxSelJoin_(Ctx *ctx) {
+    // Append non-empty selections
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        CtxCursor *cursor = &ctx->cursors.items[i];
+        CtxSelection sel;
+        if (cursor->idx < cursor->selStart) {
+            sel.startIdx = cursor->idx;
+            sel.endIdx = cursor->selStart;
+        } else if (cursor->selStart < cursor->idx) {
+            sel.startIdx = cursor->selStart;
+            sel.endIdx = cursor->idx;
+        }
+    }
 
-bool ctxSelIsActive(Ctx *ctx);
+    // Sort the selection based on the starting index
+    qsort(ctx->_sels.items, ctx->_sels.len, sizeof(*ctx->_sels.items), selCmp_);
 
-bool ctxSelIsPresent(Ctx *ctx);
+    // Join all overlapping or adjacent selections
+    for (size_t i = 1; i < ctx->_sels.len; i++) {
+        if (ctx->_sels.items[i - 1].endIdx < ctx->_sels.items[i].startIdx) {
+            continue;
+        }
+        if (ctx->_sels.items[i - 1].endIdx < ctx->_sels.items[i].endIdx) {
+            ctx->_sels.items[i - 1].endIdx = ctx->_sels.items[i].endIdx;
+        }
+        arrRemove(&ctx->_sels, i);
+        i--;
+    }
+}
+
+void ctxSelBegin(Ctx *ctx) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        ctx->cursors.items[i].selStart = ctx->cursors.items[i].idx;
+    }
+    ctx->_selecting = true;
+}
+
+void ctxSelEnd(Ctx *ctx) {
+    ctx->_selecting = false;
+    ctxSelJoin_(ctx);
+}
+
+bool ctxSelIsActive(Ctx *ctx) {
+    return ctx->_selecting;
+}
+
+bool ctxSelIsPresent(Ctx *ctx) {
+    return ctx->_selecting || ctx->_sels.len > 0;
+}
 
 Str *ctxSelText(Ctx *ctx);
 

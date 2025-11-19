@@ -34,6 +34,7 @@ typedef struct Ctx {
     CtxSelections _sels;
     CtxBuf _buf;
     CtxCursors cursors;
+    bool _selecting;
     bool edited;
     bool multiline;
     uint8_t tabStop;
