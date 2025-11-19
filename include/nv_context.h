@@ -76,7 +76,7 @@ ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
 // `idx` is the index of the first byte of the character in the text.
 ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP);
 
-/****************************** Cursor movement *******************************/
+/***************************** Cursor management ******************************/
 
 // Add a cursor at 'idx' in the file
 void ctxCurAdd(Ctx *ctx, size_t idx);
