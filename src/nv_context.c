@@ -1215,13 +1215,42 @@ void ctxSelEnd(Ctx *ctx) {
     ctxSelJoin_(ctx);
 }
 
-bool ctxSelIsActive(Ctx *ctx) {
+bool ctxSelIsActive(const Ctx *ctx) {
     return ctx->_selecting;
 }
 
-bool ctxSelIsPresent(Ctx *ctx) {
+bool ctxSelHas(const Ctx *ctx) {
     return ctx->_selecting || ctx->_sels.len > 0;
 }
 
-Str *ctxSelText(Ctx *ctx);
+static void strAppendBufSpan_(
+    const CtxBuf *buf,
+    Str *str,
+    size_t start,
+    size_t end
+) {
+    size_t gapIdx = buf->gapIdx;
 
+    if (gapIdx <= start || gapIdx >= end) {
+        strAppendRaw(str, ctxBufGet_(buf, start), end - start);
+        return;
+    }
+
+    strAppendRaw(str, ctxBufGet_(buf, start), gapIdx - start);
+    strAppendRaw(str, ctxBufGet_(buf, gapIdx), end - gapIdx);
+}
+
+Str *ctxSelText(Ctx *ctx) {
+    if (ctx->_selecting) {
+        ctxSelEnd(ctx);
+    }
+
+    Str *ret = strNew(0);
+    for (size_t i = 0; i < ctx->_sels.len; i++) {
+        CtxSelection sel = ctx->_sels.items[i];
+        strAppendBufSpan_(&ctx->_buf, ret, sel.startIdx, sel.endIdx);
+        strAppendC(ret, "\n");
+    }
+
+    return ret;
+}

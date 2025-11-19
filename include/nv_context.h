@@ -129,15 +129,16 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx);
 
 /********************************* Selecting **********************************/
 
-// Begin a selection at the position of each cursor
+// Begin a selection at the position of each cursor.
 void ctxSelBegin(Ctx *ctx);
-// Stops selecting
+// Stops selecting.
 void ctxSelEnd(Ctx *ctx);
-// Check if selection is active
-bool ctxSelIsActive(Ctx *ctx);
-// Check if there are any selections in the context
-bool ctxSelIsPresent(Ctx *ctx);
+// Check if selection is active.
+bool ctxSelIsActive(const Ctx *ctx);
+// Check if there are any selections in the context.
+bool ctxSelHas(const Ctx *ctx);
 // Get selected text. Each selection is separated by a line feed character.
+// Calling this function forces the selection to end.
 Str *ctxSelText(Ctx *ctx);
 
 /********************************** Editing ***********************************/

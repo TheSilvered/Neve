@@ -5,6 +5,7 @@ set(Sources
     ../main/nv_test.c
     # nv_context.c is included directly in the tests to test internal functions
     ../../src/nv_mem.c
+    ../../src/nv_string.c
     ../../src/nv_udb.c
     ../../src/nv_unicode.c
 )
