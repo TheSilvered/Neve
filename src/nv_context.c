@@ -1,6 +1,7 @@
 #include <string.h>
 #include <assert.h>
 #include "nv_context.h"
+#include "nv_array.h"
 #include "nv_mem.h"
 #include "nv_unicode.h"
 
@@ -43,8 +44,8 @@ static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx);
 static size_t ctxCurAt_(const Ctx *ctx, size_t idx);
 static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col);
 // Return `true` if the new cursor already exists
-static bool ctxCurReplace_(Ctx *ctx, size_t old, size_t new);
-static bool ctxCurReplaceEx_(Ctx *ctx, size_t old, size_t new, size_t newCol);
+static bool ctxCurMove_(Ctx *ctx, size_t old, size_t new);
+static bool ctxCurMoveEx_(Ctx *ctx, size_t old, size_t new, size_t newCol);
 
 // Get the line and column at `idx`
 static void ctxPosAt_(
@@ -60,8 +61,7 @@ static ptrdiff_t ctxIdxAt_(const Ctx *ctx, size_t line, size_t col);
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->_refs = (CtxRefs){ 0 };
-    ctx->cursors = (CtxCursors){ 0 };
-    ctx->_selects = (CtxSelects){ 0 };
+    ctx->_sels = (CtxSelections){ 0 };
 
     ctx->_buf = (CtxBuf) {
         .bytes = NULL,
@@ -70,6 +70,7 @@ void ctxInit(Ctx *ctx, bool multiline) {
         .gapIdx = 0
     };
 
+    ctx->cursors = (CtxCursors){ 0 };
     ctx->edited = false;
     ctx->multiline = multiline;
     ctx->tabStop = 8;
@@ -77,8 +78,8 @@ void ctxInit(Ctx *ctx, bool multiline) {
 
 void ctxDestroy(Ctx *ctx) {
     arrDestroy(&ctx->_refs);
+    arrDestroy(&ctx->_sels);
     arrDestroy(&ctx->cursors);
-    arrDestroy(&ctx->_selects);
 
     memFree(ctx->_buf.bytes);
 
@@ -801,7 +802,7 @@ static size_t ctxCurAt_(const Ctx *ctx, size_t idx) {
 
 static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col) {
     size_t curIdx = ctxCurAt_(ctx, idx);
-    CtxCursor cursor = { .idx = idx, .baseCol = col };
+    CtxCursor cursor = { .idx = idx, .baseCol = col, .selStart = idx };
 
     if (curIdx >= ctx->cursors.len) {
         arrAppend(&ctx->cursors, cursor);
@@ -824,13 +825,13 @@ void ctxCurRemove(Ctx *ctx, size_t idx) {
     }
 }
 
-static bool ctxCurReplace_(Ctx *ctx, size_t old, size_t new) {
+static bool ctxCurMove_(Ctx *ctx, size_t old, size_t new) {
     size_t newCol;
     ctxPosAt_(ctx, new, NULL, &newCol);
-    return ctxCurReplaceEx_(ctx, old, new, newCol);
+    return ctxCurMoveEx_(ctx, old, new, newCol);
 }
 
-static bool ctxCurReplaceEx_(
+static bool ctxCurMoveEx_(
     Ctx *ctx,
     size_t old,
     size_t new,
@@ -852,11 +853,26 @@ static bool ctxCurReplaceEx_(
 
     // If `new` is already a cursor
     if (newIdx < ctx->cursors.len && cursors[newIdx].idx == new) {
+        if (new < old) {
+            cursors[new].selStart = NV_MAX(
+                cursors[new].selStart,
+                cursors[old].selStart
+            );
+        } else {
+            cursors[new].selStart = NV_MIN(
+                cursors[new].selStart,
+                cursors[old].selStart
+            );
+        }
         ctxCurRemove(ctx, old);
         return true;
     }
 
-    CtxCursor newCursor = { .idx = new, .baseCol = newCol };
+    CtxCursor newCursor = {
+        .idx = new,
+        .baseCol = newCol,
+        .selStart = cursors[old].selStart
+    };
     if (oldIdx == newIdx) {
         cursors[oldIdx] = newCursor;
     } else if (oldIdx < newIdx) {
@@ -877,8 +893,8 @@ static bool ctxCurReplaceEx_(
     return false;
 }
 
-void ctxCurReplace(Ctx *ctx, size_t old, size_t new) {
-    (void)ctxCurReplace_(ctx, old, new);
+void ctxCurMove(Ctx *ctx, size_t old, size_t new) {
+    (void)ctxCurMove_(ctx, old, new);
 }
 
 void ctxCurMoveLeft(Ctx *ctx) {
@@ -888,7 +904,7 @@ void ctxCurMoveLeft(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -907,7 +923,7 @@ void ctxCurMoveRight(Ctx *ctx) {
         if (newCur < 0) {
             newCur = ctx->_buf.len;
         }
-        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -922,7 +938,7 @@ void ctxCurMoveUp(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurReplaceEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
+        if (ctxCurMoveEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
             i--;
         }
     }
@@ -938,7 +954,7 @@ void ctxCurMoveDown(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurReplaceEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
+        if (ctxCurMoveEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
             i--;
         }
     }
@@ -952,7 +968,7 @@ void ctxCurMoveFwd(Ctx *ctx) {
         if (newCur < 0) {
             newCur = ctx->_buf.len;
         }
-        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -965,7 +981,7 @@ void ctxCurMoveBack(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -980,7 +996,7 @@ void ctxCurMoveToLineStart(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+        if (ctxCurMove_(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -995,7 +1011,7 @@ void ctxCurMoveToLineEnd(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+        if (ctxCurMove_(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1026,7 +1042,7 @@ void ctxCurMoveToNextWordStart(Ctx *ctx) {
         // Move from the last cursor to avoid incorrect merging of cursors
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
         size_t newCur = ctxFindNextWordStart_(ctx, oldCur);
-        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+        if (ctxCurMove_(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1037,7 +1053,7 @@ void ctxCurMoveToNextWordEnd(Ctx *ctx) {
         // Move from the last cursor to avoid incorrect merging of cursors
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
         size_t newCur = ctxFindNextWordEnd_(ctx, oldCur);
-        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+        if (ctxCurMove_(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1047,7 +1063,7 @@ void ctxCurMoveToPrevWordStart(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t newCur = ctxFindPrevWordStart_(ctx, oldCur);
-        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+        if (ctxCurMove_(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1057,7 +1073,7 @@ void ctxCurMoveToPrevWordEnd(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t newCur = ctxFindPrevWordEnd_(ctx, oldCur);
-        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+        if (ctxCurMove_(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1100,7 +1116,7 @@ void ctxCurMoveToNextParagraph(Ctx *ctx) {
         }
 
         assert(newCur >= 0);
-        if (ctxCurReplace_(ctx, oldCur, (size_t)newCur)) {
+        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -1132,8 +1148,19 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx) {
         }
 
         assert(newCur >= 0);
-        if (ctxCurReplace_(ctx, oldCur, newCur)) {
+        if (ctxCurMove_(ctx, oldCur, newCur)) {
             i--;
         }
     }
 }
+
+void ctxSelBegin(Ctx *ctx);
+
+void ctxSelEnd(Ctx *ctx);
+
+bool ctxSelIsActive(Ctx *ctx);
+
+bool ctxSelIsPresent(Ctx *ctx);
+
+Str *ctxSelText(Ctx *ctx);
+

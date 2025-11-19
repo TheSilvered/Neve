@@ -10,11 +10,16 @@ typedef struct CtxRef {
 
 typedef struct CtxCursor {
     size_t idx, baseCol;
+    size_t selStart;
 } CtxCursor;
+
+typedef struct CtxSelection {
+    size_t startIdx, endIdx;
+} CtxSelection;
 
 typedef Arr(CtxRef) CtxRefs;
 typedef Arr(CtxCursor) CtxCursors;
-typedef Arr(size_t) CtxSelects;
+typedef Arr(CtxSelection) CtxSelections;
 
 typedef struct CtxBuf {
     UcdCh8 *bytes;
@@ -26,7 +31,7 @@ typedef struct CtxBuf {
 // Editing context.
 typedef struct Ctx {
     CtxRefs _refs;
-    CtxSelects _selects;
+    CtxSelections _sels;
     CtxBuf _buf;
     CtxCursors cursors;
     bool edited;
@@ -83,7 +88,7 @@ void ctxCurAdd(Ctx *ctx, size_t idx);
 // Remove the cursor at 'idx' in the file if it exists
 void ctxCurRemove(Ctx *ctx, size_t idx);
 // Replace the cursor at 'old' with the cursor at 'new'
-void ctxCurReplace(Ctx *ctx, size_t old, size_t new);
+void ctxCurMove(Ctx *ctx, size_t old, size_t new);
 
 // Move to the previous character in the line
 void ctxCurMoveLeft(Ctx *ctx);
@@ -120,6 +125,19 @@ void ctxCurMoveToPrevWordEnd(Ctx *ctx);
 void ctxCurMoveToNextParagraph(Ctx *ctx);
 // Move to the previous blank line.
 void ctxCurMoveToPrevParagraph(Ctx *ctx);
+
+/********************************* Selecting **********************************/
+
+// Begin a selection at the position of each cursor
+void ctxSelBegin(Ctx *ctx);
+// Stops selecting
+void ctxSelEnd(Ctx *ctx);
+// Check if selection is active
+bool ctxSelIsActive(Ctx *ctx);
+// Check if there are any selections in the context
+bool ctxSelIsPresent(Ctx *ctx);
+// Get selected text. Each selection is separated by a line feed character.
+Str *ctxSelText(Ctx *ctx);
 
 /********************************** Editing ***********************************/
 
