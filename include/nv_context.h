@@ -10,7 +10,7 @@ typedef struct CtxRef {
 
 typedef struct CtxCursor {
     size_t idx, baseCol;
-    size_t selStart;
+    size_t _selStart;
 } CtxCursor;
 
 typedef struct CtxSelection {

@@ -752,7 +752,6 @@ static void ctxReplaceSpan_(
     assert(end <= ctx->_buf.len);
 
     // TODO:
-    // - move cursors inside the span to the end
     // - selections inside the span:
     //   - If the begin before they are cut to the start
     //   - If they end after they are cut to the end
@@ -760,10 +759,49 @@ static void ctxReplaceSpan_(
     // - update ref cache
     // - check text for carriage returns
 
+    // Move all cursors inside the span to the end
+    size_t curIdx = ctxCurAt_(ctx, start) + 1;
+    if (curIdx < ctx->cursors.len) {
+        while (ctx->cursors.items[curIdx].idx < end) {
+            ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
+        }
+    }
+
+
     ptrdiff_t lenDiff = (ptrdiff_t)len - (ptrdiff_t)(end - start);
     ctxBufSetGapIdx_(&ctx->_buf, start);
     ctxBufRemove_(&ctx->_buf, end - start);
     ctxBufInsert_(&ctx->_buf, buf, len);
+
+    // Update cursors
+    bool selecting = ctx->_selecting;
+
+    // Move the active selections, if selecting
+    // When not selecting the value of _selStart is assumed to be not valid
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        CtxCursor *cur = &ctx->cursors.items[i];
+        if (cur->idx > end) {
+            cur->idx += lenDiff;
+        }
+        if (!selecting || cur->_selStart <= start) {
+            continue;
+        } else if (cur->_selStart >= end) {
+            cur->_selStart += lenDiff;
+        // From here we know that _selStart was inside the span
+        } else if (cur->idx <= start) {
+            cur->_selStart = start;
+        } else {
+            cur->_selStart = end + lenDiff;
+        }
+    }
+
+    // Update selections
+    for (size_t i = 0; i < ctx->_sels.len; i++) {
+        CtxSelection *sel = &ctx->_sels.items[i];
+        if (sel->endIdx <= start) {
+            continue;
+        }
+    }
 }
 
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
@@ -841,7 +879,7 @@ static size_t ctxCurAt_(const Ctx *ctx, size_t idx) {
 
 static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col) {
     size_t curIdx = ctxCurAt_(ctx, idx);
-    CtxCursor cursor = { .idx = idx, .baseCol = col, .selStart = idx };
+    CtxCursor cursor = { .idx = idx, .baseCol = col, ._selStart = idx };
 
     if (curIdx >= ctx->cursors.len) {
         arrAppend(&ctx->cursors, cursor);
@@ -893,14 +931,14 @@ static bool ctxCurMoveEx_(
     // If `new` is already a cursor
     if (newIdx < ctx->cursors.len && cursors[newIdx].idx == new) {
         if (new < old) {
-            cursors[newIdx].selStart = NV_MAX(
-                cursors[newIdx].selStart,
-                cursors[oldIdx].selStart
+            cursors[newIdx]._selStart = NV_MAX(
+                cursors[newIdx]._selStart,
+                cursors[oldIdx]._selStart
             );
         } else {
-            cursors[newIdx].selStart = NV_MIN(
-                cursors[newIdx].selStart,
-                cursors[oldIdx].selStart
+            cursors[newIdx]._selStart = NV_MIN(
+                cursors[newIdx]._selStart,
+                cursors[oldIdx]._selStart
             );
         }
         ctxCurRemove(ctx, old);
@@ -910,7 +948,7 @@ static bool ctxCurMoveEx_(
     CtxCursor newCursor = {
         .idx = new,
         .baseCol = newCol,
-        .selStart = cursors[oldIdx].selStart
+        ._selStart = cursors[oldIdx]._selStart
     };
     if (oldIdx == newIdx) {
         cursors[oldIdx] = newCursor;
@@ -1212,11 +1250,11 @@ static void ctxSelJoin_(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor *cursor = &ctx->cursors.items[i];
         CtxSelection sel;
-        if (cursor->idx < cursor->selStart) {
+        if (cursor->idx < cursor->_selStart) {
             sel.startIdx = cursor->idx;
-            sel.endIdx = cursor->selStart;
-        } else if (cursor->selStart < cursor->idx) {
-            sel.startIdx = cursor->selStart;
+            sel.endIdx = cursor->_selStart;
+        } else if (cursor->_selStart < cursor->idx) {
+            sel.startIdx = cursor->_selStart;
             sel.endIdx = cursor->idx;
         } else {
             continue;
@@ -1242,7 +1280,7 @@ static void ctxSelJoin_(Ctx *ctx) {
 
 void ctxSelBegin(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
-        ctx->cursors.items[i].selStart = ctx->cursors.items[i].idx;
+        ctx->cursors.items[i]._selStart = ctx->cursors.items[i].idx;
     }
     ctx->_selecting = true;
 }
