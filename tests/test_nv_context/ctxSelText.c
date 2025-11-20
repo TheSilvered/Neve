@@ -17,7 +17,7 @@ void test_ctxSelText(void) {
     ctxSelEnd(&ctx);
 
     Str *res = ctxSelText(&ctx);
-    testAssert(strcmp(strAsC(res), "ab\ncde\nf\ng\n"));
+    testAssert(strcmp(strAsC(res), "ab\ncde\nf\ng") == 0);
 
     strFree(res);
     ctxDestroy(&ctx);

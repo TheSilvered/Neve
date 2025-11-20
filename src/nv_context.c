@@ -40,6 +40,15 @@ static size_t ctxFindNextWordEnd_(const Ctx *ctx, size_t idx);
 static size_t ctxFindPrevWordStart_(const Ctx *ctx, size_t idx);
 static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx);
 
+// Replace the text in [start, end) with the contents of buf
+static void ctxReplaceSpan_(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    const UcdCh8 *buf,
+    size_t len
+);
+
 // Get the index of the cursor at idx or of the cursor on where it should be
 // inserted
 static size_t ctxCurAt_(const Ctx *ctx, size_t idx);
@@ -732,6 +741,31 @@ static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx) {
     return i;
 }
 
+static void ctxReplaceSpan_(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    const UcdCh8 *buf,
+    size_t len
+) {
+    assert(start <= end);
+    assert(end <= ctx->_buf.len);
+
+    // TODO:
+    // - move cursors inside the span to the end
+    // - selections inside the span:
+    //   - If the begin before they are cut to the start
+    //   - If they end after they are cut to the end
+    //   - If they are fully inside they are removed
+    // - update ref cache
+    // - check text for carriage returns
+
+    ptrdiff_t lenDiff = (ptrdiff_t)len - (ptrdiff_t)(end - start);
+    ctxBufSetGapIdx_(&ctx->_buf, start);
+    ctxBufRemove_(&ctx->_buf, end - start);
+    ctxBufInsert_(&ctx->_buf, buf, len);
+}
+
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     if (len == 0) {
         return;
@@ -1184,7 +1218,10 @@ static void ctxSelJoin_(Ctx *ctx) {
         } else if (cursor->selStart < cursor->idx) {
             sel.startIdx = cursor->selStart;
             sel.endIdx = cursor->idx;
+        } else {
+            continue;
         }
+        arrAppend(&ctx->_sels, sel);
     }
 
     // Sort the selection based on the starting index
@@ -1249,7 +1286,9 @@ Str *ctxSelText(Ctx *ctx) {
     for (size_t i = 0; i < ctx->_sels.len; i++) {
         CtxSelection sel = ctx->_sels.items[i];
         strAppendBufSpan_(&ctx->_buf, ret, sel.startIdx, sel.endIdx);
-        strAppendC(ret, "\n");
+        if (i + 1 != ctx->_sels.len) {
+            strAppendC(ret, "\n");
+        }
     }
 
     return ret;
