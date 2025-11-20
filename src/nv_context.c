@@ -234,6 +234,33 @@ static ptrdiff_t ctxGetLineRefBlock_(const Ctx *ctx, size_t lineNo) {
     return lo - 1;
 }
 
+// Get the block that contains idx
+static ptrdiff_t ctxGetIdxRefBlock_(const Ctx *ctx, size_t idx) {
+    size_t refsLen = ctx->_refs.len;
+    CtxRef *refs = ctx->_refs.items;
+
+    if (idx == 0 || refsLen == 0 || refs[0].idx > idx) {
+        return -1;
+    }
+
+    size_t lo = 0;
+    size_t hi = refsLen;
+
+    while (lo < hi) {
+        size_t mid = (hi + lo) / 2;
+
+        if (refs[mid].idx == idx) {
+            return mid;
+        } else if (refs[mid].idx > idx) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+
+    return lo - 1;
+}
+
 static ptrdiff_t ctxLineStart_(const Ctx *ctx, size_t lineNo) {
     if (lineNo == 0) {
         return 0;
@@ -319,26 +346,11 @@ static void ctxPosAt_(
     size_t startIdx = 0;
     size_t col = 0;
 
-    if (refsLen != 0 && idx >= refs[0].idx) {
-        size_t lo = 0;
-        size_t hi = refsLen;
-
-        while (lo < hi) {
-            size_t mid = (hi + lo) / 2;
-
-            if (refs[mid].idx == idx) {
-                lo = mid + 1;
-                break;
-            } else if (refs[mid].idx >= idx) {
-                hi = mid;
-            } else {
-                lo = mid + 1;
-            }
-        }
-
-        startIdx = refs[lo - 1].idx;
-        line = refs[lo - 1].line;
-        col = refs[lo - 1].col;
+    ptrdiff_t refIdx = ctxGetIdxRefBlock_(ctx, idx);
+    if (refIdx >= 0) {
+        startIdx = refs[refIdx].idx;
+        line = refs[refIdx].line;
+        col = refs[refIdx].col;
     }
 
     for (size_t i = startIdx; i < idx; i++) {
@@ -751,13 +763,7 @@ static void ctxReplaceSpan_(
     assert(start <= end);
     assert(end <= ctx->_buf.len);
 
-    // TODO:
-    // - selections inside the span:
-    //   - If the begin before they are cut to the start
-    //   - If they end after they are cut to the end
-    //   - If they are fully inside they are removed
-    // - update ref cache
-    // - check text for carriage returns
+    // - check text for carriage returns ??
 
     // Move all cursors inside the span to the end
     size_t curIdx = ctxCurAt_(ctx, start) + 1;
@@ -766,7 +772,6 @@ static void ctxReplaceSpan_(
             ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
         }
     }
-
 
     ptrdiff_t lenDiff = (ptrdiff_t)len - (ptrdiff_t)(end - start);
     ctxBufSetGapIdx_(&ctx->_buf, start);
@@ -777,7 +782,7 @@ static void ctxReplaceSpan_(
     bool selecting = ctx->_selecting;
 
     // Move the active selections, if selecting
-    // When not selecting the value of _selStart is assumed to be not valid
+    // When not selecting the value of _selStart is assumed to be invalid
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor *cur = &ctx->cursors.items[i];
         if (cur->idx > end) {
@@ -800,8 +805,23 @@ static void ctxReplaceSpan_(
         CtxSelection *sel = &ctx->_sels.items[i];
         if (sel->endIdx <= start) {
             continue;
+        } else if (sel->startIdx >= end) {
+            sel->startIdx += lenDiff;
+            sel->endIdx += lenDiff;
+        } else if (sel->startIdx >= start && sel->endIdx <= end) {
+            arrRemove(&ctx->_sels, i);
+            i--;
+        } else if (sel->startIdx < start && sel->endIdx > end) {
+            sel->endIdx += lenDiff;
+        } else if (sel->startIdx < start) {
+            sel->endIdx = start;
+        } else {
+            sel->startIdx = end + lenDiff;
         }
     }
+
+    // Update ref cache
+    ptrdiff_t refIdx = ctxGetIdxRefBlock_(ctx, start);
 }
 
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
