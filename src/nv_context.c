@@ -753,32 +753,12 @@ static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx) {
     return i;
 }
 
-static void ctxReplaceSpan_(
+static void ctxReplaceUpdateCursors_(
     Ctx *ctx,
     size_t start,
     size_t end,
-    const UcdCh8 *buf,
-    size_t len
+    ptrdiff_t lenDiff
 ) {
-    assert(start <= end);
-    assert(end <= ctx->_buf.len);
-
-    // - check text for carriage returns ??
-
-    // Move all cursors inside the span to the end
-    size_t curIdx = ctxCurAt_(ctx, start) + 1;
-    if (curIdx < ctx->cursors.len) {
-        while (ctx->cursors.items[curIdx].idx < end) {
-            ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
-        }
-    }
-
-    ptrdiff_t lenDiff = (ptrdiff_t)len - (ptrdiff_t)(end - start);
-    ctxBufSetGapIdx_(&ctx->_buf, start);
-    ctxBufRemove_(&ctx->_buf, end - start);
-    ctxBufInsert_(&ctx->_buf, buf, len);
-
-    // Update cursors
     bool selecting = ctx->_selecting;
 
     // Move the active selections, if selecting
@@ -799,8 +779,14 @@ static void ctxReplaceSpan_(
             cur->_selStart = end + lenDiff;
         }
     }
+}
 
-    // Update selections
+static void ctxReplaceUpdateSelections_(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    ptrdiff_t lenDiff
+) {
     for (size_t i = 0; i < ctx->_sels.len; i++) {
         CtxSelection *sel = &ctx->_sels.items[i];
         if (sel->endIdx <= start) {
@@ -819,9 +805,126 @@ static void ctxReplaceSpan_(
             sel->startIdx = end + lenDiff;
         }
     }
+}
 
-    // Update ref cache
-    ptrdiff_t refIdx = ctxGetIdxRefBlock_(ctx, start);
+static void ctxReplaceSpan_(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    const UcdCh8 *data,
+    size_t len
+) {
+    assert(start <= end);
+    assert(end <= ctx->_buf.len);
+
+    ctx->edited = true;
+
+    // Move all cursors inside the span to the end
+    size_t curIdx = ctxCurAt_(ctx, start) + 1;
+    if (curIdx < ctx->cursors.len) {
+        while (ctx->cursors.items[curIdx].idx < end) {
+            ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
+        }
+    }
+
+    // Ref blocks are inserted while copying the text, any gaps too small or
+    // too large at the end are fixed later
+
+    size_t spanStart = 0;
+    bool ignoreNL = !ctx->multiline;
+    CtxBuf *buf = &ctx->_buf;
+    ptrdiff_t lenDiff = (ptrdiff_t)len - (ptrdiff_t)(end - start);
+    ptrdiff_t refBlock = ctxGetIdxRefBlock_(ctx, start);
+    size_t lastBlockIdx = refBlock < 0 ? 0 : ctx->_refs.items[refBlock].idx;
+    refBlock++; // Ensures that refBlock is positive
+
+    // Keep track of line and column while iterating because the ref cache is
+    // not valid after ctxBufRemove_
+    size_t line, col;
+    ctxPosAt_(ctx, start, &line, &col);
+
+    ctxBufSetGapIdx_(&ctx->_buf, start);
+    ctxBufRemove_(&ctx->_buf, end - start);
+    ctxBufReserve_(&ctx->_buf, len);
+
+    StrView sv = {
+        .buf = data,
+        .len = len
+    };
+
+    UcdCP cp;
+    ptrdiff_t idx;
+    for (
+        idx = strViewNext(&sv, 0, &cp);
+        idx >= 0;
+        idx = strViewNext(&sv, idx, &cp)
+    ) {
+        if (cp == '\r' || (cp == '\n' && ignoreNL)) {
+            ctxBufInsert_(buf, &data[spanStart], idx - spanStart);
+            spanStart = idx + 1;
+            lenDiff--;
+            continue;
+        } else if (cp == '\n') {
+            line++;
+            col = 0;
+        } else {
+            col += ucdCPWidth(cp, ctx->tabStop, col);
+        }
+
+        if (idx - lastBlockIdx < lineRefMaxGap_) {
+            continue;
+        }
+
+        ctxBufInsert_(buf, &data[spanStart], idx - spanStart + 1);
+        spanStart = idx + 1;
+        lastBlockIdx = idx;
+        arrInsert(
+            &ctx->_refs,
+            refBlock,
+            (CtxRef){ .idx = idx, .line = line, .col = col }
+        );
+        refBlock++;
+    }
+
+    if (spanStart < len) {
+        ctxBufInsert_(buf, &data[spanStart], len - spanStart);
+    }
+
+    ctxReplaceUpdateCursors_(ctx, start, end, lenDiff);
+    ctxReplaceUpdateSelections_(ctx, start, end, lenDiff);
+
+    // Remove all blocks that were inside the modified span
+    while (
+        (size_t)refBlock < ctx->_refs.len
+        && ctx->_refs.items[refBlock].idx < end
+    ) {
+        arrRemove(&ctx->_refs, refBlock);
+    }
+    if (refBlock >= ctx->_refs.len) {
+        return;
+    }
+
+    // Any block before refBlock is already valid
+    for (size_t i = refBlock; i < ctx->_refs.len; i++) {
+        CtxRef *ref = &ctx->_refs.items[i];
+        ref->idx += lenDiff;
+    }
+
+    // Recalculate line and col until the next block
+    for (
+        idx = ctxNext(ctx, idx, &cp);
+        idx >= 0 && idx < ctx->_refs.items[refBlock].idx;
+        idx = ctxNext(ctx, idx, &cp)
+    ) {
+        if (cp == '\n') {
+            line++;
+            col = 0;
+        } else {
+            col += ucdCPWidth(cp, ctx->tabStop, col);
+        }
+    }
+    ctx->_refs.items[refBlock].line = line;
+    ctx->_refs.items[refBlock].col = col;
 }
 
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
@@ -831,25 +934,19 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
 
     ctx->edited = true;
 
-    size_t lineStart = 0;
+    size_t spanStart = 0;
     bool ignoreNL = !ctx->multiline;
-
     CtxBuf *buf = &ctx->_buf;
-    size_t initialLen = buf->len;
     uint16_t lastBlockSize = ctx->_refs.len == 0
-        ? initialLen
-        : initialLen - ctx->_refs.items[ctx->_refs.len - 1].idx;
+        ? buf->len
+        : buf->len - ctx->_refs.items[ctx->_refs.len - 1].idx;
 
-    ctxBufSetGapIdx_(buf, initialLen);
+    ctxBufSetGapIdx_(buf, buf->len);
 
     for (size_t i = 0; i < len; i++) {
-        if (data[i] == '\n' && !ignoreNL) {
-            ctxBufInsert_(buf, &data[lineStart], i - lineStart);
-            ctxBufInsert_(buf, (const UcdCh8 *)"\n", 1);
-            lineStart = i + 1;
-        } else if (data[i] == '\r' || data[i] == '\n') {
-            ctxBufInsert_(buf, &data[lineStart], i - lineStart);
-            lineStart = i + 1;
+        if (data[i] == '\r' || (data[i] == '\n' && ignoreNL)) {
+            ctxBufInsert_(buf, &data[spanStart], i - spanStart);
+            spanStart = i + 1;
             continue;
         }
 
@@ -861,8 +958,8 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
             continue;
         }
 
-        ctxBufInsert_(buf, &data[lineStart], i - lineStart + 1);
-        lineStart = i + 1;
+        ctxBufInsert_(buf, &data[spanStart], i - spanStart + 1);
+        spanStart = i + 1;
         size_t line, col;
         ctxPosAt_(ctx, ctx->_buf.len, &line, &col);
         arrAppend(
@@ -872,8 +969,8 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
         lastBlockSize = 0;
     }
 
-    if (lineStart < len) {
-        ctxBufInsert_(buf, &data[lineStart], len - lineStart);
+    if (spanStart < len) {
+        ctxBufInsert_(buf, &data[spanStart], len - spanStart);
     }
 }
 
