@@ -807,6 +807,55 @@ static void ctxReplaceUpdateSelections_(
     }
 }
 
+// Assume all blocks before refBlock are well-balanced
+// Balance the intervals [refBlock - 1, refBlock] and [refBlock, refBlock + 1]
+// So that they are not too big or too small
+// Return true if the block at refBlock should be updated
+#define minWidth_ (lineRefMaxGap_ / 2)
+#define maxWidth_ (lineRefMaxGap_ + minWidth_)
+void ctxReplaceBalanceRefBlocks_(Ctx *ctx, size_t refBlock) {
+    CtxRefs *refs = &ctx->_refs;
+    size_t prevIdx = refBlock == 0 ? 0 : refs->items[refBlock - 1].idx;
+    size_t idx = refs->items[refBlock].idx;
+    size_t nextIdx = refBlock + 1 >= refs->len
+        ? ctx->_buf.len
+        : refs->items[refBlock + 1].idx;
+
+    // An interval is too small if it is less than half of lineRefMaxGap_
+    // And is too big if it is bigger than 1.5 * lineRefMaxGap_
+
+    size_t width = idx - prevIdx;
+    size_t totalWidth = nextIdx - prevIdx;
+
+    if (width >= minWidth_ && width <= maxWidth_) {
+        // the interval is already valid
+        return;
+    }
+
+    if (totalWidth <= maxWidth_) {
+        // the interval should be removed
+        arrRemove(refs, refBlock);
+        return;
+    }
+
+    if (totalWidth <= 2 * maxWidth_) {
+        refs->items[refBlock].idx = (prevIdx / 2) + (nextIdx / 2);
+        return;
+    }
+
+    arrInsert(
+        refs,
+        refBlock,
+        (CtxRef){
+            .idx = prevIdx + width / 2,
+            .line = 0,
+            .col = 0
+        }
+    );
+}
+#undef minWidth_
+#undef maxWidth_
+
 static void ctxReplaceSpan_(
     Ctx *ctx,
     size_t start,
@@ -831,6 +880,7 @@ static void ctxReplaceSpan_(
     // too large at the end are fixed later
 
     size_t spanStart = 0;
+    uint8_t tabStop = ctx->tabStop;
     bool ignoreNL = !ctx->multiline;
     CtxBuf *buf = &ctx->_buf;
     ptrdiff_t lenDiff = (ptrdiff_t)len - (ptrdiff_t)(end - start);
@@ -868,7 +918,7 @@ static void ctxReplaceSpan_(
             line++;
             col = 0;
         } else {
-            col += ucdCPWidth(cp, ctx->tabStop, col);
+            col += ucdCPWidth(cp, tabStop, col);
         }
 
         if (idx - lastBlockIdx < lineRefMaxGap_) {
@@ -904,27 +954,62 @@ static void ctxReplaceSpan_(
         return;
     }
 
-    // Any block before refBlock is already valid
+    CtxRef *refs = ctx->_refs.items;
     for (size_t i = refBlock; i < ctx->_refs.len; i++) {
-        CtxRef *ref = &ctx->_refs.items[i];
-        ref->idx += lenDiff;
+        refs[i].idx += lenDiff;
     }
 
     // Recalculate line and col until the next block
+    ctxReplaceBalanceRefBlocks_(ctx, refBlock);
+
+    CtxRef *ref = &refs[refBlock];
     for (
         idx = ctxNext(ctx, idx, &cp);
-        idx >= 0 && idx < ctx->_refs.items[refBlock].idx;
+        idx >= 0 && idx < ref->idx;
         idx = ctxNext(ctx, idx, &cp)
     ) {
         if (cp == '\n') {
             line++;
             col = 0;
         } else {
-            col += ucdCPWidth(cp, ctx->tabStop, col);
+            col += ucdCPWidth(cp, tabStop, col);
         }
     }
-    ctx->_refs.items[refBlock].line = line;
-    ctx->_refs.items[refBlock].col = col;
+    ptrdiff_t lineDiff = line - ref->line;
+    ptrdiff_t colDiff = col - ref->col;
+    ref->line = line;
+    ref->col = col;
+    ref->idx = idx;
+    bool checkForTabs = tabStop != 0 && colDiff % tabStop != 0;
+
+    for (size_t i = refBlock + 1; i < ctx->_refs.len; i++) {
+        ref = &refs[i];
+        ref->line += lineDiff;
+        if (colDiff == 0 || ref->line != refs[i - 1].line) {
+            colDiff = 0;
+            continue;
+        } else if (!checkForTabs) {
+            ref->col += colDiff;
+            continue;
+        }
+
+        size_t prevIdx = refs[i - 1].idx;
+        // Guaranteed to all be after buf->gapIdx
+        UcdCh8 *s = ctxBufGet_(buf, prevIdx);
+        size_t len = ref->idx - prevIdx;
+        UcdCh8 *p = memchr(s, '\t', len);
+        if (p == NULL) {
+            ref->col += colDiff;
+            continue;
+        }
+        size_t width;
+        // OK since all block indices are updated and only the previous block
+        // is actually used
+        ctxPosAt_(ctx, p - s + prevIdx, NULL, &width);
+        colDiff = colDiff + ((width - colDiff) % tabStop) - (width % tabStop);
+        checkForTabs = false;
+        ref->col += colDiff;
+    }
 }
 
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
