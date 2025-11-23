@@ -165,7 +165,7 @@ size_t ctxCursorCount(const Ctx *ctx);
 
 // Get the content of the context as a string view.
 // The view is valid until the text is edited.
-StrView *ctxGetContent(Ctx *ctx);
+StrView ctxGetContent(Ctx *ctx);
 
 // Iterate over the whole content of the context.
 // Use `idx == -1` to begin iterating.

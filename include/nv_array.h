@@ -50,7 +50,6 @@
         }                                                                      \
     } while (0)
 
-
 #define arrAppend(arr, ...)                                                    \
     do {                                                                       \
         arrReserve((arr), 1);                                                  \

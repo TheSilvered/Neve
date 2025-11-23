@@ -629,6 +629,11 @@ static UcdCP ctxGetChBefore_(const Ctx *ctx, size_t idx) {
     return cp;
 }
 
+StrView ctxGetContent(Ctx *ctx) {
+    ctxBufSetGapIdx_(&ctx->_buf, ctx->_buf.len);
+    return (StrView) { .buf = ctx->_buf.bytes, .len = ctx->_buf.len };
+}
+
 static size_t ctxFindNextWordStart_(const Ctx *ctx, size_t idx) {
     if (idx >= ctx->_buf.len) {
         return ctx->_buf.len;
@@ -744,7 +749,6 @@ static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx) {
     // Skip white space
     for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxPrev(ctx, i, &cp)) { }
 
-
     if (i == -1) {
         i = 0;
     } else {
@@ -760,13 +764,19 @@ static void ctxReplaceUpdateCursors_(
     ptrdiff_t lenDiff
 ) {
     bool selecting = ctx->_selecting;
+    size_t changedLine;
+    ctxPosAt_(ctx, end + lenDiff, &changedLine, NULL);
+    size_t lastBaseIdxCalc = ctxLineEnd_(ctx, changedLine);
 
     // Move the active selections, if selecting
     // When not selecting the value of _selStart is assumed to be invalid
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor *cur = &ctx->cursors.items[i];
-        if (cur->idx > end) {
+        if (cur->idx >= end) {
             cur->idx += lenDiff;
+            if (cur->idx <= lastBaseIdxCalc) {
+                ctxPosAt_(ctx, cur->idx, NULL, &cur->baseCol);
+            }
         }
         if (!selecting || cur->_selStart <= start) {
             continue;
@@ -893,7 +903,7 @@ static void ctxReplaceSpan_(
     size_t line, col;
     ctxPosAt_(ctx, start, &line, &col);
 
-    ctxBufSetGapIdx_(&ctx->_buf, start);
+    ctxBufSetGapIdx_(&ctx->_buf, end);
     ctxBufRemove_(&ctx->_buf, end - start);
     ctxBufReserve_(&ctx->_buf, len);
 
@@ -940,7 +950,6 @@ static void ctxReplaceSpan_(
         ctxBufInsert_(buf, &data[spanStart], len - spanStart);
     }
 
-    ctxReplaceUpdateCursors_(ctx, start, end, lenDiff);
     ctxReplaceUpdateSelections_(ctx, start, end, lenDiff);
 
     // Remove all blocks that were inside the modified span
@@ -951,7 +960,7 @@ static void ctxReplaceSpan_(
         arrRemove(&ctx->_refs, refBlock);
     }
     if (refBlock >= ctx->_refs.len) {
-        return;
+        goto updateCursors;
     }
 
     CtxRef *refs = ctx->_refs.items;
@@ -1010,6 +1019,9 @@ static void ctxReplaceSpan_(
         checkForTabs = false;
         ref->col += colDiff;
     }
+
+updateCursors:
+    ctxReplaceUpdateCursors_(ctx, start, end, lenDiff);
 }
 
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
