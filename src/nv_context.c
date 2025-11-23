@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 #include "nv_context.h"
 #include "nv_array.h"
 #include "nv_mem.h"
@@ -41,7 +42,7 @@ static size_t ctxFindPrevWordStart_(const Ctx *ctx, size_t idx);
 static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx);
 
 // Replace the text in [start, end) with the contents of buf
-static void ctxReplaceSpan_(
+static void ctxReplace_(
     Ctx *ctx,
     size_t start,
     size_t end,
@@ -764,6 +765,7 @@ static void ctxReplaceUpdateCursors_(
     ptrdiff_t lenDiff
 ) {
     bool selecting = ctx->_selecting;
+    CtxCursor *cursors = ctx->cursors.items;
     size_t changedLine;
     ctxPosAt_(ctx, end + lenDiff, &changedLine, NULL);
     size_t lastBaseIdxCalc = ctxLineEnd_(ctx, changedLine);
@@ -771,7 +773,13 @@ static void ctxReplaceUpdateCursors_(
     // Move the active selections, if selecting
     // When not selecting the value of _selStart is assumed to be invalid
     for (size_t i = 0; i < ctx->cursors.len; i++) {
-        CtxCursor *cur = &ctx->cursors.items[i];
+        CtxCursor *cur = &cursors[i];
+        if (cur->idx == end && i > 0 && cursors[i - 1].idx == end + lenDiff) {
+            arrRemove(&ctx->cursors, i);
+            i--;
+            continue;
+        }
+
         if (cur->idx >= end) {
             cur->idx += lenDiff;
             if (cur->idx <= lastBaseIdxCalc) {
@@ -797,6 +805,7 @@ static void ctxReplaceUpdateSelections_(
     size_t end,
     ptrdiff_t lenDiff
 ) {
+    bool mayJoin = -lenDiff == end - start;
     for (size_t i = 0; i < ctx->_sels.len; i++) {
         CtxSelection *sel = &ctx->_sels.items[i];
         if (sel->endIdx <= start) {
@@ -813,7 +822,16 @@ static void ctxReplaceUpdateSelections_(
             sel->endIdx = start;
         } else {
             sel->startIdx = end + lenDiff;
+            sel->endIdx += lenDiff;
         }
+        if (!mayJoin || sel->startIdx < start) {
+            continue;
+        }
+        if (i > 0 && sel->startIdx == ctx->_sels.items[i - 1].endIdx) {
+            ctx->_sels.items[i - 1].endIdx = sel->endIdx;
+            arrRemove(&ctx->_sels, i);
+        }
+        mayJoin = false;
     }
 }
 
@@ -843,7 +861,6 @@ void ctxReplaceBalanceRefBlocks_(Ctx *ctx, size_t refBlock) {
     }
 
     if (totalWidth <= maxWidth_) {
-        // the interval should be removed
         arrRemove(refs, refBlock);
         return;
     }
@@ -866,7 +883,7 @@ void ctxReplaceBalanceRefBlocks_(Ctx *ctx, size_t refBlock) {
 #undef minWidth_
 #undef maxWidth_
 
-static void ctxReplaceSpan_(
+static void ctxReplace_(
     Ctx *ctx,
     size_t start,
     size_t end,
