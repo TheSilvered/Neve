@@ -4,7 +4,6 @@
 void test_ctxCurMove(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
-    ctxInit(&ctx, true);
     const char s[] = "abcdefgh";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
@@ -67,6 +66,15 @@ void test_ctxCurMove(void) {
     testAssert(ctx.cursors.items[1]._selStart == 2);
     testAssert(ctx.cursors.items[2].idx == 8);
     testAssert(ctx.cursors.items[2]._selStart == 8);
+
+    ctxCurMove(&ctx, 8, 1);
+    testAssert(ctx.cursors.len == 3);
+    testAssert(ctx.cursors.items[0].idx == 1);
+    testAssert(ctx.cursors.items[0]._selStart == 8);
+    testAssert(ctx.cursors.items[1].idx == 4);
+    testAssert(ctx.cursors.items[1]._selStart == 4);
+    testAssert(ctx.cursors.items[2].idx == 7);
+    testAssert(ctx.cursors.items[2]._selStart == 2);
 
     ctxDestroy(&ctx);
 }

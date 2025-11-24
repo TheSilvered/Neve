@@ -6,7 +6,7 @@ bool eqStrViewCStr(StrView *sv, const char *cStr) {
     return strncmp((char *)sv->buf, cStr, sv->len) == 0;
 }
 
-void test_ctxReplaceSpanSameLen(void) {
+void test_ctxReplaceSameLen(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -21,7 +21,7 @@ void test_ctxReplaceSpanSameLen(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanShorter(void) {
+void test_ctxReplaceShorter(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -36,7 +36,7 @@ void test_ctxReplaceSpanShorter(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanEmpty(void) {
+void test_ctxReplaceEmpty(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -51,7 +51,7 @@ void test_ctxReplaceSpanEmpty(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanLonger(void) {
+void test_ctxReplaceLonger(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -66,7 +66,7 @@ void test_ctxReplaceSpanLonger(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanSameLenWCursors(void) {
+void test_ctxReplaceSameLenWCursors(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -89,7 +89,7 @@ void test_ctxReplaceSpanSameLenWCursors(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanShorterWCursors(void) {
+void test_ctxReplaceShorterWCursors(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -112,7 +112,7 @@ void test_ctxReplaceSpanShorterWCursors(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanEmptyWCursors(void) {
+void test_ctxReplaceEmptyWCursors(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -133,7 +133,158 @@ void test_ctxReplaceSpanEmptyWCursors(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanSameLenWSelections(void) {
+void test_ctxReplaceLongerWCursors(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "abcdefg";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    ctxCurAdd(&ctx, 2);
+    ctxCurAdd(&ctx, 3);
+    ctxCurAdd(&ctx, 5);
+    ctxCurAdd(&ctx, 6);
+
+    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
+    testAssert(ctx.cursors.len == 3);
+    testAssert(ctx.cursors.items[0].idx == 2);
+    testAssert(ctx.cursors.items[0].baseCol == 2);
+    testAssert(ctx.cursors.items[1].idx == 6);
+    testAssert(ctx.cursors.items[1].baseCol == 6);
+    testAssert(ctx.cursors.items[2].idx == 7);
+    testAssert(ctx.cursors.items[2].baseCol == 7);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceSameLenWSelCursors(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "abcdefg";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    ctxCurAdd(&ctx, 1);
+    ctxCurAdd(&ctx, 7);
+    ctxCurAdd(&ctx, 3);
+    ctxCurAdd(&ctx, 4);
+
+    ctxSelBegin(&ctx);
+
+    ctxCurMove(&ctx, 1, 6);
+    ctxCurMove(&ctx, 7, 1);
+    ctxCurMove(&ctx, 3, 0);
+    ctxCurMove(&ctx, 4, 7);
+
+    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
+    testAssert(ctx.cursors.len == 4);
+    testAssert(ctx.cursors.items[0].idx == 0);
+    testAssert(ctx.cursors.items[0]._selStart == 2);
+    testAssert(ctx.cursors.items[1].idx == 1);
+    testAssert(ctx.cursors.items[1]._selStart == 7);
+    testAssert(ctx.cursors.items[2].idx == 6);
+    testAssert(ctx.cursors.items[2]._selStart == 1);
+    testAssert(ctx.cursors.items[3].idx == 7);
+    testAssert(ctx.cursors.items[3]._selStart == 5);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceShorterWSelCursors(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "abcdefg";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    ctxCurAdd(&ctx, 1);
+    ctxCurAdd(&ctx, 7);
+    ctxCurAdd(&ctx, 3);
+    ctxCurAdd(&ctx, 4);
+
+    ctxSelBegin(&ctx);
+
+    ctxCurMove(&ctx, 1, 6);
+    ctxCurMove(&ctx, 7, 1);
+    ctxCurMove(&ctx, 3, 0);
+    ctxCurMove(&ctx, 4, 7);
+
+    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
+    testAssert(ctx.cursors.len == 4);
+    testAssert(ctx.cursors.items[0].idx == 0);
+    testAssert(ctx.cursors.items[0]._selStart == 2);
+    testAssert(ctx.cursors.items[1].idx == 1);
+    testAssert(ctx.cursors.items[1]._selStart == 6);
+    testAssert(ctx.cursors.items[2].idx == 5);
+    testAssert(ctx.cursors.items[2]._selStart == 1);
+    testAssert(ctx.cursors.items[3].idx == 6);
+    testAssert(ctx.cursors.items[3]._selStart == 4);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceEmptyWSelCursors(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "abcdefg";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    ctxCurAdd(&ctx, 1);
+    ctxCurAdd(&ctx, 7);
+    ctxCurAdd(&ctx, 3);
+    ctxCurAdd(&ctx, 4);
+
+    ctxSelBegin(&ctx);
+
+    ctxCurMove(&ctx, 1, 6);
+    ctxCurMove(&ctx, 7, 1);
+    ctxCurMove(&ctx, 3, 0);
+    ctxCurMove(&ctx, 4, 7);
+
+    ctxReplace_(&ctx, 2, 5, NULL, 0);
+    testAssert(ctx.cursors.len == 4);
+    testAssert(ctx.cursors.items[0].idx == 0);
+    testAssert(ctx.cursors.items[0]._selStart == 2);
+    testAssert(ctx.cursors.items[1].idx == 1);
+    testAssert(ctx.cursors.items[1]._selStart == 4);
+    testAssert(ctx.cursors.items[2].idx == 3);
+    testAssert(ctx.cursors.items[2]._selStart == 1);
+    testAssert(ctx.cursors.items[3].idx == 4);
+    testAssert(ctx.cursors.items[3]._selStart == 2);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceLongerWSelCursors(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "abcdefg";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    ctxCurAdd(&ctx, 1);
+    ctxCurAdd(&ctx, 7);
+    ctxCurAdd(&ctx, 3);
+    ctxCurAdd(&ctx, 4);
+
+    ctxSelBegin(&ctx);
+
+    ctxCurMove(&ctx, 1, 6);
+    ctxCurMove(&ctx, 7, 1);
+    ctxCurMove(&ctx, 3, 0);
+    ctxCurMove(&ctx, 4, 7);
+
+    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
+    testAssert(ctx.cursors.len == 4);
+    testAssert(ctx.cursors.items[0].idx == 0);
+    testAssert(ctx.cursors.items[0]._selStart == 2);
+    testAssert(ctx.cursors.items[1].idx == 1);
+    testAssert(ctx.cursors.items[1]._selStart == 8);
+    testAssert(ctx.cursors.items[2].idx == 7);
+    testAssert(ctx.cursors.items[2]._selStart == 1);
+    testAssert(ctx.cursors.items[3].idx == 8);
+    testAssert(ctx.cursors.items[3]._selStart == 6);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceSameLenWSelections(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -164,7 +315,7 @@ void test_ctxReplaceSpanSameLenWSelections(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanShorterWSelections(void) {
+void test_ctxReplaceShorterWSelections(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -195,7 +346,7 @@ void test_ctxReplaceSpanShorterWSelections(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanEmptyWSelections(void) {
+void test_ctxReplaceEmptyWSelections(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -226,7 +377,7 @@ void test_ctxReplaceSpanEmptyWSelections(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanEmptyJoinSelections(void) {
+void test_ctxReplaceEmptyJoinSelections(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -243,7 +394,7 @@ void test_ctxReplaceSpanEmptyJoinSelections(void) {
     ctxDestroy(&ctx);
 }
 
-void test_ctxReplaceSpanLongerWSelections(void) {
+void test_ctxReplaceLongerWSelections(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
@@ -275,16 +426,24 @@ void test_ctxReplaceSpanLongerWSelections(void) {
 }
 
 testList(
-    testMake(test_ctxReplaceSpanSameLen),
-    testMake(test_ctxReplaceSpanShorter),
-    testMake(test_ctxReplaceSpanEmpty),
-    testMake(test_ctxReplaceSpanLonger),
-    testMake(test_ctxReplaceSpanSameLenWCursors),
-    testMake(test_ctxReplaceSpanShorterWCursors),
-    testMake(test_ctxReplaceSpanEmptyWCursors),
-    testMake(test_ctxReplaceSpanSameLenWSelections),
-    testMake(test_ctxReplaceSpanShorterWSelections),
-    testMake(test_ctxReplaceSpanEmptyWSelections),
-    testMake(test_ctxReplaceSpanEmptyJoinSelections),
-    testMake(test_ctxReplaceSpanLongerWSelections)
+    testMake(test_ctxReplaceSameLen),
+    testMake(test_ctxReplaceShorter),
+    testMake(test_ctxReplaceEmpty),
+    testMake(test_ctxReplaceLonger),
+
+    testMake(test_ctxReplaceSameLenWCursors),
+    testMake(test_ctxReplaceShorterWCursors),
+    testMake(test_ctxReplaceEmptyWCursors),
+    testMake(test_ctxReplaceLongerWCursors),
+
+    testMake(test_ctxReplaceSameLenWSelCursors),
+    testMake(test_ctxReplaceShorterWSelCursors),
+    testMake(test_ctxReplaceEmptyWSelCursors),
+    testMake(test_ctxReplaceLongerWSelCursors),
+
+    testMake(test_ctxReplaceSameLenWSelections),
+    testMake(test_ctxReplaceShorterWSelections),
+    testMake(test_ctxReplaceEmptyWSelections),
+    testMake(test_ctxReplaceEmptyJoinSelections),
+    testMake(test_ctxReplaceLongerWSelections)
 )

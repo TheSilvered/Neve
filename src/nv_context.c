@@ -1187,14 +1187,14 @@ static bool ctxCurMoveEx_(
         memmove(
             &cursors[oldIdx],
             &cursors[oldIdx + 1],
-            sizeof(*cursors) * (newIdx - oldIdx - 1)
+            sizeof(*cursors) * (newIdx - oldIdx)
         );
         cursors[newIdx - 1] = newCursor;
     } else {
         memmove(
             &cursors[newIdx + 1],
             &cursors[newIdx],
-            sizeof(*cursors) * (oldIdx - newIdx - 1)
+            sizeof(*cursors) * (oldIdx - newIdx)
         );
         cursors[newIdx] = newCursor;
     }
