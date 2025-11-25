@@ -80,4 +80,3 @@ testList(
     testMake(test_ctxCurMoveBackMultiline),
     testMake(text_ctxCurMoveBackUnicode)
 )
-

@@ -37,4 +37,3 @@ testList(
     testMake(test_ctxLineStartNoLineRef),
     testMake(test_ctxLineStartWithLineRef)
 )
-

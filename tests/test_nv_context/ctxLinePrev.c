@@ -95,4 +95,3 @@ testList(
     testMake(test_ctxLinePrevLast),
     testMake(test_ctxLinePrevEmpty)
 )
-

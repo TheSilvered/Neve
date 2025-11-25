@@ -19,4 +19,3 @@ bool keyQueueEnq(KeyQueue *queue, TermKey key);
 TermKey keyQueueDeq(KeyQueue *queue);
 
 #endif // !NV_KEY_QUEUE_H_
-

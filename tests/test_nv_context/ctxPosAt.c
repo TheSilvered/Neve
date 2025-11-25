@@ -107,4 +107,3 @@ testList(
     testMake(test_ctxPosAtNoLineRef),
     testMake(test_ctxPosAtWithLineRef)
 )
-

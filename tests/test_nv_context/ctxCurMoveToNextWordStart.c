@@ -89,4 +89,3 @@ testList(
     testMake(test_ctxCurMoveToNextWordStartPunctuation),
     testMake(test_ctxCurMoveToNextWordStartMixed)
 )
-

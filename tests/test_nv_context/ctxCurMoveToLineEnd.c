@@ -50,4 +50,3 @@ testList(
     testMake(test_ctxCurMoveLineEndSingleLine),
     testMake(test_ctxCurMoveLineEndMultiline)
 )
-

@@ -67,4 +67,3 @@ testList(
     testMake(test_ctxLinePrevStartOneLine),
     testMake(test_ctxLinePrevStartMultiLine)
 )
-

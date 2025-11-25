@@ -42,4 +42,3 @@ void test_ctxCurAdd(void) {
 testList(
     testMake(test_ctxCurAdd)
 )
-

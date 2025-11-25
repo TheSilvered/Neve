@@ -39,4 +39,3 @@ testList(
     testMake(test_ctxBufRemoveFromEnd),
     testMake(test_ctxBufRemoveFromMiddle)
 )
-

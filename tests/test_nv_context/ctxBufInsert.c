@@ -37,4 +37,3 @@ testList(
     testMake(test_ctxBufInsertFromEmpty),
     testMake(test_ctxBufInsertFromEnd)
 )
-

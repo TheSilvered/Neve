@@ -49,4 +49,3 @@ testList(
     testMake(test_ctxBufShrinkEmpty),
     testMake(test_ctxShrkinkFull)
 )
-

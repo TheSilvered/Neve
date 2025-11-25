@@ -17,4 +17,3 @@ void test_arrDestroy(void) {
 testList(
     testMake(test_arrDestroy)
 )
-

@@ -46,4 +46,3 @@ void test_ctxCurRemove(void) {
 testList(
     testMake(test_ctxCurRemove)
 )
-

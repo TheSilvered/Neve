@@ -52,4 +52,3 @@ testList(
     testMake(test_ctxIdxAtNoLineRef),
     testMake(test_ctxIdxAtWithLineRef)
 )
-

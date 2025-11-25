@@ -41,4 +41,3 @@ testList(
     testMake(test_ctxCurMoveToTextStartWithCursors),
     testMake(test_ctxCurMoveToTextStartNoCursors)
 )
-

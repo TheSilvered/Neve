@@ -19,4 +19,3 @@ TermKey keyQueueDeq(KeyQueue *queue) {
     queue->front = Q_INC_IDX(queue->front);
     return key;
 }
-

@@ -35,4 +35,3 @@ testList(
     testMake(test_arrReserveFromEmpty),
     testMake(test_arrReserveFromFull),
 )
-

@@ -138,4 +138,3 @@ void screenClear(Screen *screen, int32_t line);
 bool screenRefresh(Screen *screen);
 
 #endif // !NV_RENDER_H_
-

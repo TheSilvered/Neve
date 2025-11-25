@@ -86,4 +86,3 @@ testList(
     testMake(test_ctxCurMoveUpMultiline),
     testMake(test_ctxCurMoveUpBaseCol)
 )
-

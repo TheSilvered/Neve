@@ -26,4 +26,3 @@ void test_ctxSelText(void) {
 testList(
     testMake(test_ctxSelText)
 )
-

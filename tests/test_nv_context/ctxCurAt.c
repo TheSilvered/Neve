@@ -38,4 +38,3 @@ void test_ctxCurAt(void) {
 testList(
     testMake(test_ctxCurAt)
 )
-

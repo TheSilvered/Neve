@@ -72,4 +72,3 @@ testList(
     testMake(test_arrResizeToBigger),
     testMake(test_arrResizeToSmaller),
 )
-

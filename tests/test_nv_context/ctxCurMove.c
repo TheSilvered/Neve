@@ -82,4 +82,3 @@ void test_ctxCurMove(void) {
 testList(
     testMake(test_ctxCurMove)
 )
-

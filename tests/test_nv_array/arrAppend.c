@@ -20,4 +20,3 @@ void test_arrAppend(void) {
 testList(
     testMake(test_arrAppend)
 )
-

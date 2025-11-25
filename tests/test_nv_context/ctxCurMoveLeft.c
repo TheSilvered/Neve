@@ -78,4 +78,3 @@ testList(
     testMake(test_ctxCurMoveLeftMultiline),
     testMake(text_ctxCurMoveLeftUnicode)
 )
-

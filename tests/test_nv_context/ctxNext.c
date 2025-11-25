@@ -75,4 +75,3 @@ testList(
     testMake(test_ctxNextAscii),
     testMake(test_ctxNextUTF8)
 )
-

@@ -34,4 +34,3 @@ testList(
     testMake(test_ctxBufSetGapIdxZero),
     testMake(test_ctxBufSetGapIdxEnd)
 )
-
