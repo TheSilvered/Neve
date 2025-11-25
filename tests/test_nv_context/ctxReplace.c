@@ -425,6 +425,144 @@ void test_ctxReplaceLongerWSelections(void) {
     ctxDestroy(&ctx);
 }
 
+void test_ctxReplaceSameLenCacheUpdate(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "01234567abc";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 8);
+
+    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
+
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 8);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceShorterCacheUpdate(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "01234567abc";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 8);
+
+    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
+
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 7);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 7);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceMuchShorterCacheUpdate(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "01234567abcdefghijk";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    testAssert(ctx._refs.len == 2);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 8);
+    testAssert(ctx._refs.items[1].idx == 16);
+    testAssert(ctx._refs.items[1].line == 0);
+    testAssert(ctx._refs.items[1].col == 16);
+
+    ctxReplace_(&ctx, 1, 6, NULL, 0);
+
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 11);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 11);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceEmptyCacheUpdate(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "01234567abc";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 8);
+
+    ctxReplace_(&ctx, 2, 5, NULL, 0);
+
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 5);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 5);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceLongerCacheUpdate(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "01234567abc";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 8);
+
+    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
+
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 9);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 9);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceMuchLongerCacheUpdate(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "01234567abcdefghijk";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    testAssert(ctx._refs.len == 2);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 8);
+    testAssert(ctx._refs.items[1].idx == 16);
+    testAssert(ctx._refs.items[1].line == 0);
+    testAssert(ctx._refs.items[1].col == 16);
+
+    ctxReplace_(&ctx, 2, 2, (UcdCh8 *)"replace", 7);
+
+    testAssert(ctx._refs.len == 3);
+    testAssert(ctx._refs.items[0].idx == 7);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 7);
+    testAssert(ctx._refs.items[1].idx == 15);
+    testAssert(ctx._refs.items[1].line == 0);
+    testAssert(ctx._refs.items[1].col == 15);
+    testAssert(ctx._refs.items[2].idx == 23);
+    testAssert(ctx._refs.items[2].line == 0);
+    testAssert(ctx._refs.items[2].col == 23);
+
+    ctxDestroy(&ctx);
+}
+
 testList(
     testMake(test_ctxReplaceSameLen),
     testMake(test_ctxReplaceShorter),
@@ -445,5 +583,12 @@ testList(
     testMake(test_ctxReplaceShorterWSelections),
     testMake(test_ctxReplaceEmptyWSelections),
     testMake(test_ctxReplaceEmptyJoinSelections),
-    testMake(test_ctxReplaceLongerWSelections)
+    testMake(test_ctxReplaceLongerWSelections),
+
+    testMake(test_ctxReplaceSameLenCacheUpdate),
+    testMake(test_ctxReplaceShorterCacheUpdate),
+    testMake(test_ctxReplaceMuchShorterCacheUpdate),
+    testMake(test_ctxReplaceEmptyCacheUpdate),
+    testMake(test_ctxReplaceLongerCacheUpdate),
+    testMake(test_ctxReplaceMuchLongerCacheUpdate),
 )
