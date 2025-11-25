@@ -987,8 +987,8 @@ static void ctxReplace_(
     ptrdiff_t lineEnd = ctxLineEnd_(ctx, line);
     assert(lineEnd >= 0);
     if (tabStop != 0 && colDiff % tabStop != 0) {
-        void *s = ctxBufGet_(buf, end + lenDiff);
-        void *p = memchr(s, '\t', lineEnd - end - lenDiff);
+        UcdCh8 *s = ctxBufGet_(buf, end + lenDiff);
+        UcdCh8 *p = memchr(s, '\t', lineEnd - end - lenDiff);
         if (p != NULL) {
             tabIdx = p - s + end + lenDiff;
         }
