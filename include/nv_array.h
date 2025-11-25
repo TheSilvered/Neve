@@ -25,22 +25,25 @@
 
 #define arrResize(arr, requiredLen)                                            \
     do {                                                                       \
-        if (requiredLen == (arr)->len) {                                       \
+        if ((requiredLen) < (arr)->len) {                                      \
+            (arr)->len = (requiredLen);                                        \
+        }                                                                      \
+        if ((requiredLen) == (arr)->len) {                                     \
             break;                                                             \
-        } else if (requiredLen == 0) {                                         \
+        } else if ((requiredLen) == 0) {                                       \
             memFree((arr)->items);                                             \
             (arr)->items = NULL;                                               \
             (arr)->len = 0;                                                    \
             (arr)->cap = 0;                                                    \
-        } else if (requiredLen < (arr)->cap / 4) {                             \
+        } else if ((requiredLen) < (arr)->cap / 4) {                           \
             (arr)->items = memShrink(                                          \
                 (arr)->items,                                                  \
                 (arr)->cap / 2,                                                \
                 sizeof(*(arr)->items)                                          \
             );                                                                 \
             (arr)->cap /= 2;                                                   \
-        } else if (requiredLen > (arr)->cap) {                                 \
-            size_t newCap = requiredLen + requiredLen / 2;                     \
+        } else if ((requiredLen) > (arr)->cap) {                               \
+            size_t newCap = (requiredLen) + (requiredLen) / 2;                 \
             (arr)->items = memChange(                                          \
                 (arr)->items,                                                  \
                 newCap,                                                        \
@@ -56,7 +59,7 @@
         (arr)->items[(arr)->len++] = (__VA_ARGS__);                            \
     } while (0)
 
-#define arrInsert(arr, idx, ...) \
+#define arrInsert(arr, idx, ...)                                               \
     do {                                                                       \
         assert((idx) < (arr)->len);                                            \
         arrReserve((arr), 1);                                                  \
@@ -83,6 +86,12 @@
         }                                                                      \
     } while (0)
 
-#define arrDestroy(arr) memFree((arr)->items)
+#define arrDestroy(arr)                                                        \
+    do {                                                                       \
+        memFree((arr)->items);                                                 \
+        (arr)->items = NULL;                                                   \
+        (arr)->len = 0;                                                        \
+        (arr)->cap = 0;                                                        \
+    } while (0)
 
 #endif // !NV_ARRAY_H_
