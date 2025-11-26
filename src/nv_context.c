@@ -871,7 +871,7 @@ void ctxReplaceBalanceRefBlocks_(Ctx *ctx, size_t refBlock) {
         );
     } else if (!isLastBlock && fullWidth <= maxWidth) {
         arrRemove(&ctx->_refs, refBlock);
-    } else {
+    } else if (!isLastBlock) {
         size_t newIdx = blockStart / 2 + nextBlockEnd / 2;
         size_t line, col;
         ctxPosAt_(ctx, newIdx, &line, &col);
@@ -1075,7 +1075,7 @@ static void ctxInsertRepSels_(
         return;
     }
 
-    bool useLines = lines != NULL && lines->len == selsLen - 1;
+    bool useLines = lines != NULL && lines->len == selsLen + 1;
     for (size_t i = 0; i < selsLen; i++) {
         CtxSelection sel = sels->items[selsLen - i - 1];
         arrRemove(sels, selsLen - i - 1);
@@ -1105,7 +1105,7 @@ static void ctxInsertCursors_(
         return;
     }
 
-    bool useLines = lines != NULL && lines->len == cursorsLen - 1;
+    bool useLines = lines != NULL && lines->len == cursorsLen + 1;
     for (size_t i = 0; i < cursorsLen; i++) {
         CtxCursor *cur = &cursors->items[i];
         if (useLines) {
@@ -1140,15 +1140,15 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     }
 
     InsertLines lines = { 0 };
+    arrAppend(&lines, data);
     const UcdCh8 *p = data;
     const UcdCh8 *end = data + len;
     while (p < end) {
-        if (*p == '\n') {
+        if (*p++ == '\n') {
             arrAppend(&lines, p);
         }
-        p++;
     }
-    if (lines.len == 0 || lines.items[lines.len - 1] != (p - 1)) {
+    if (lines.len == 0 || lines.items[lines.len - 1] != p) {
         arrAppend(&lines, end + 1);
     }
     if (ctx->_sels.len != 0 || wasSelecting) {
