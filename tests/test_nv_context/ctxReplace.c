@@ -651,6 +651,25 @@ void test_ctxReplaceCacheUpdateWithTabMuchLonger(void) {
     ctxDestroy(&ctx);
 }
 
+void test_ctxReplaceCacheUpdateWithLineFeed(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "01234567abc\nefgh1234";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"r\np", 3);
+
+    testAssert(ctx._refs.len == 2);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].line == 1);
+    testAssert(ctx._refs.items[0].col == 4);
+    testAssert(ctx._refs.items[1].idx == 16);
+    testAssert(ctx._refs.items[1].line == 2);
+    testAssert(ctx._refs.items[1].col == 4);
+
+    ctxDestroy(&ctx);
+}
+
 testList(
     testMake(test_ctxReplaceSameLen),
     testMake(test_ctxReplaceShorter),
@@ -683,5 +702,7 @@ testList(
     testMake(test_ctxReplaceCacheUpdateWithTabShorter),
     testMake(test_ctxReplaceCacheUpdateWithTabMuchShorter),
     testMake(test_ctxReplaceCacheUpdateWithTabLonger),
-    testMake(test_ctxReplaceCacheUpdateWithTabMuchLonger)
+    testMake(test_ctxReplaceCacheUpdateWithTabMuchLonger),
+
+    testMake(test_ctxReplaceCacheUpdateWithLineFeed)
 )
