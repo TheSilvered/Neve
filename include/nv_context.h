@@ -143,10 +143,10 @@ Str *ctxSelText(Ctx *ctx);
 
 /********************************** Editing ***********************************/
 
-// Write in a context.
-void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len);
 // Append to a context, does not change the cursor position.
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len);
+// Write in a context.
+void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len);
 // Insert a codepoint. Any invalid codepoint is ignored.
 void ctxInsertCP(Ctx *ctx, UcdCP cp);
 // Remove the cahracter before the cursor.

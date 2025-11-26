@@ -1061,6 +1061,117 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     }
 }
 
+typedef Arr(const UcdCh8 *) InsertLines;
+
+static void ctxInsertRepSels_(
+    Ctx *ctx,
+    const UcdCh8 *data,
+    size_t len,
+    InsertLines *lines
+) {
+    CtxSelections *sels = &ctx->_sels;
+    size_t selsLen = sels->len;
+    if (selsLen == 0) {
+        return;
+    }
+
+    bool useLines = lines != NULL && lines->len == selsLen - 1;
+    for (size_t i = 0; i < selsLen; i++) {
+        CtxSelection sel = sels->items[selsLen - i - 1];
+        arrRemove(sels, selsLen - i - 1);
+        if (useLines) {
+            ctxReplace_(
+                ctx,
+                sel.startIdx,
+                sel.endIdx,
+                lines->items[i],
+                lines->items[i + 1] - lines->items[i] - 1
+            );
+        } else {
+            ctxReplace_(ctx, sel.startIdx, sel.endIdx, data, len);
+        }
+    }
+}
+
+static void ctxInsertCursors_(
+    Ctx *ctx,
+    const UcdCh8 *data,
+    size_t len,
+    InsertLines *lines
+) {
+    CtxCursors *cursors = &ctx->cursors;
+    size_t cursorsLen = cursors->len;
+    if (cursorsLen == 0) {
+        return;
+    }
+
+    bool useLines = lines != NULL && lines->len == cursorsLen - 1;
+    for (size_t i = 0; i < cursorsLen; i++) {
+        CtxCursor *cur = &cursors->items[i];
+        if (useLines) {
+            ctxReplace_(
+                ctx,
+                cur->idx,
+                cur->idx,
+                lines->items[i],
+                lines->items[i + 1] - lines->items[i] - 1
+            );
+        } else {
+            ctxReplace_(ctx, cur->idx, cur->idx, data, len);
+        }
+    }
+}
+
+void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
+    bool wasSelecting = ctx->_selecting;
+    if (ctx->_selecting) {
+        ctxSelEnd(ctx);
+    }
+    if (ctx->_sels.len == 0 && ctx->cursors.len == 0) {
+        return;
+    }
+
+    if (ctx->_sels.len == 1) {
+        ctxInsertRepSels_(ctx, data, len, NULL);
+        return;
+    } else if (ctx->cursors.len == 1 && !wasSelecting) {
+        ctxInsertCursors_(ctx, data, len, NULL);
+        return;
+    }
+
+    InsertLines lines = { 0 };
+    const UcdCh8 *p = data;
+    const UcdCh8 *end = data + len;
+    while (p < end) {
+        if (*p == '\n') {
+            arrAppend(&lines, p);
+        }
+        p++;
+    }
+    if (lines.len == 0 || lines.items[lines.len - 1] != (p - 1)) {
+        arrAppend(&lines, end + 1);
+    }
+    if (ctx->_sels.len != 0 || wasSelecting) {
+        ctxInsertRepSels_(ctx, data, len, &lines);
+    } else {
+        ctxInsertCursors_(ctx, data, len, &lines);
+    }
+}
+
+void ctxInsertCP(Ctx *ctx, UcdCP cp) {
+    UcdCh8 buf[4];
+    uint8_t len = ucdCh8FromCP(cp, buf);
+    ctxInsert(ctx, buf, len);
+}
+
+void ctxRemoveBack(Ctx *ctx) {
+
+}
+
+void ctxRemoveForeward(Ctx *ctx) {
+
+}
+
 static size_t ctxCurAt_(const Ctx *ctx, size_t idx) {
     size_t hi = ctx->cursors.len;
     size_t lo = 0;
