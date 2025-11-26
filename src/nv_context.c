@@ -986,7 +986,7 @@ static void ctxReplace_(
     size_t tabIdx = buf->len;
     ptrdiff_t lineEnd = ctxLineEnd_(ctx, line);
     assert(lineEnd >= 0);
-    if (tabStop != 0 && colDiff % tabStop != 0) {
+    if (tabStop != 0 && colDiff % tabStop != 0 && end + lenDiff < buf->len) {
         UcdCh8 *s = ctxBufGet_(buf, end + lenDiff);
         UcdCh8 *p = memchr(s, '\t', lineEnd - end - lenDiff);
         if (p != NULL) {

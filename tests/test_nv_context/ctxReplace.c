@@ -66,6 +66,38 @@ void test_ctxReplaceLonger(void) {
     ctxDestroy(&ctx);
 }
 
+void test_ctxReplaceAtBeginning(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "abcdefg";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    ctxReplace_(&ctx, 0, 3, (UcdCh8 *)"rplx", 4);
+
+    StrView content = ctxGetContent(&ctx);
+    testAssert(eqStrViewCStr(&content, "rplxdefg"));
+    testAssert(content.len == 8);
+    testAssert(ctx._refs.len == 0);
+
+    ctxDestroy(&ctx);
+}
+
+void test_ctxReplaceAtEnd(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "abcdefg";
+    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+
+    ctxReplace_(&ctx, 4, 7, (UcdCh8 *)"rplx", 4);
+
+    StrView content = ctxGetContent(&ctx);
+    testAssert(eqStrViewCStr(&content, "abcdrplx"));
+    testAssert(content.len == 8);
+    testAssert(ctx._refs.len == 0);
+
+    ctxDestroy(&ctx);
+}
+
 void test_ctxReplaceSameLenWCursors(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
@@ -675,6 +707,9 @@ testList(
     testMake(test_ctxReplaceShorter),
     testMake(test_ctxReplaceEmpty),
     testMake(test_ctxReplaceLonger),
+
+    testMake(test_ctxReplaceAtBeginning),
+    testMake(test_ctxReplaceAtEnd),
 
     testMake(test_ctxReplaceSameLenWCursors),
     testMake(test_ctxReplaceShorterWCursors),
