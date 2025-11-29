@@ -86,7 +86,7 @@
         }                                                                      \
     } while (0)
 
-#define arrDestroy(arr)                                                        \
+#define arrClear(arr)                                                        \
     do {                                                                       \
         memFree((arr)->items);                                                 \
         (arr)->items = NULL;                                                   \

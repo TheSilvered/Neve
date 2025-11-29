@@ -2,8 +2,8 @@
 #define lineRefMaxGap_ 8
 #include "nv_context.c"
 
-bool eqStrViewCStr(StrView *sv, const char *cStr) {
-    return strncmp((char *)sv->buf, cStr, sv->len) == 0;
+bool eqStrViewCStr(StrView sv, const char *cStr) {
+    return strncmp((char *)sv.buf, cStr, sv.len) == 0;
 }
 
 void test_ctxReplaceSameLen(void) {
@@ -14,7 +14,7 @@ void test_ctxReplaceSameLen(void) {
 
     ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
     StrView content = ctxGetContent(&ctx);
-    testAssert(eqStrViewCStr(&content, "abrplfg"));
+    testAssert(eqStrViewCStr(content, "abrplfg"));
     testAssert(content.len == 7);
     testAssert(ctx._refs.len == 0);
 
@@ -29,7 +29,7 @@ void test_ctxReplaceShorter(void) {
 
     ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
     StrView content = ctxGetContent(&ctx);
-    testAssert(eqStrViewCStr(&content, "abrpfg"));
+    testAssert(eqStrViewCStr(content, "abrpfg"));
     testAssert(content.len == 6);
     testAssert(ctx._refs.len == 0);
 
@@ -44,7 +44,7 @@ void test_ctxReplaceEmpty(void) {
 
     ctxReplace_(&ctx, 2, 5, NULL, 0);
     StrView content = ctxGetContent(&ctx);
-    testAssert(eqStrViewCStr(&content, "abfg"));
+    testAssert(eqStrViewCStr(content, "abfg"));
     testAssert(content.len == 4);
     testAssert(ctx._refs.len == 0);
 
@@ -59,7 +59,7 @@ void test_ctxReplaceLonger(void) {
 
     ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
     StrView content = ctxGetContent(&ctx);
-    testAssert(eqStrViewCStr(&content, "abrplxfg"));
+    testAssert(eqStrViewCStr(content, "abrplxfg"));
     testAssert(content.len == 8);
     testAssert(ctx._refs.len == 0);
 
@@ -75,7 +75,7 @@ void test_ctxReplaceAtBeginning(void) {
     ctxReplace_(&ctx, 0, 3, (UcdCh8 *)"rplx", 4);
 
     StrView content = ctxGetContent(&ctx);
-    testAssert(eqStrViewCStr(&content, "rplxdefg"));
+    testAssert(eqStrViewCStr(content, "rplxdefg"));
     testAssert(content.len == 8);
     testAssert(ctx._refs.len == 0);
 
@@ -91,7 +91,7 @@ void test_ctxReplaceAtEnd(void) {
     ctxReplace_(&ctx, 4, 7, (UcdCh8 *)"rplx", 4);
 
     StrView content = ctxGetContent(&ctx);
-    testAssert(eqStrViewCStr(&content, "abcdrplx"));
+    testAssert(eqStrViewCStr(content, "abcdrplx"));
     testAssert(content.len == 8);
     testAssert(ctx._refs.len == 0);
 

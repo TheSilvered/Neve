@@ -8,7 +8,7 @@ void test_arrResizeFromEmpty(void) {
 
     testAssert(arr.cap >= 10);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrResizeToSameLen(void) {
@@ -29,7 +29,7 @@ void test_arrResizeToSameLen(void) {
     testAssert(arr.items[1] == 2);
     testAssert(arr.items[2] == 3);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrResizeToBigger(void) {
@@ -46,7 +46,7 @@ void test_arrResizeToBigger(void) {
     testAssert(arr.items[1] == 2);
     testAssert(arr.items[2] == 3);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrResizeToSmaller(void) {
@@ -63,7 +63,7 @@ void test_arrResizeToSmaller(void) {
     testAssert(arr.items[0] == 1);
     testAssert(arr.items[1] == 2);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 testList(

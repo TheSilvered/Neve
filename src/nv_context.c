@@ -92,9 +92,9 @@ void ctxInit(Ctx *ctx, bool multiline) {
 }
 
 void ctxDestroy(Ctx *ctx) {
-    arrDestroy(&ctx->_refs);
-    arrDestroy(&ctx->_sels);
-    arrDestroy(&ctx->cursors);
+    arrClear(&ctx->_refs);
+    arrClear(&ctx->_sels);
+    arrClear(&ctx->cursors);
 
     memFree(ctx->_buf.bytes);
 
@@ -1166,11 +1166,39 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
 }
 
 void ctxRemoveBack(Ctx *ctx) {
+    if (ctx->_selecting) {
+        ctxSelEnd(ctx);
+    }
 
+    if (ctx->_sels.len == 0) {
+        ctxSelBegin(ctx);
+		ctxCurMoveBack(ctx);
+        ctxSelEnd(ctx);
+    }
+
+    for (size_t i = 0; i < ctx->_sels.len; i++) {
+        CtxSelection sel = ctx->_sels.items[i];
+        ctxReplace_(ctx, sel.startIdx, sel.endIdx, NULL, 0);
+    }
+    arrClear(&ctx->_sels);
 }
 
-void ctxRemoveForeward(Ctx *ctx) {
+void ctxRemoveFwd(Ctx *ctx) {
+    if (ctx->_selecting) {
+        ctxSelEnd(ctx);
+    }
 
+    if (ctx->_sels.len == 0) {
+        ctxSelBegin(ctx);
+        ctxCurMoveFwd(ctx);
+        ctxSelEnd(ctx);
+    }
+
+    for (size_t i = 0; i < ctx->_sels.len; i++) {
+        CtxSelection sel = ctx->_sels.items[i];
+        ctxReplace_(ctx, sel.startIdx, sel.endIdx, NULL, 0);
+    }
+    arrClear(&ctx->_sels);
 }
 
 static size_t ctxCurAt_(const Ctx *ctx, size_t idx) {

@@ -15,7 +15,7 @@ void test_arrRemoveBeginning(void) {
     testAssert(arr.items[1] == 3);
     testAssert(arr.items[2] == 4);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrRemoveMiddle1(void) {
@@ -32,7 +32,7 @@ void test_arrRemoveMiddle1(void) {
     testAssert(arr.items[1] == 3);
     testAssert(arr.items[2] == 4);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrRemoveMiddle2(void) {
@@ -49,7 +49,7 @@ void test_arrRemoveMiddle2(void) {
     testAssert(arr.items[1] == 2);
     testAssert(arr.items[2] == 4);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrRemoveEnd(void) {
@@ -66,7 +66,7 @@ void test_arrRemoveEnd(void) {
     testAssert(arr.items[1] == 2);
     testAssert(arr.items[2] == 3);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 testList(

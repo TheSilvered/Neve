@@ -12,7 +12,7 @@ void test_arrReserveFromEmpty(void) {
     testAssert(arr.len == 0);
     testAssert(arr.cap >= 10);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrReserveFromFull(void) {
@@ -28,7 +28,7 @@ void test_arrReserveFromFull(void) {
     testAssert(arr.len == 3);
     testAssert(arr.cap >= 10);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 testList(

@@ -152,7 +152,7 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp);
 // Remove the cahracter before the cursor.
 void ctxRemoveBack(Ctx *ctx);
 // Remove the character after the cursor.
-void ctxRemoveForeward(Ctx *ctx);
+void ctxRemoveFwd(Ctx *ctx);
 
 /*********************************** Other ************************************/
 
@@ -160,8 +160,6 @@ void ctxRemoveForeward(Ctx *ctx);
 size_t ctxLineCount(const Ctx *ctx);
 // Get the length of a line in characters.
 size_t ctxLineLen(const Ctx *ctx, size_t lineIdx);
-// Get the number of cursors in the context
-size_t ctxCursorCount(const Ctx *ctx);
 
 // Get the content of the context as a string view.
 // The view is valid until the text is edited.

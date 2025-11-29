@@ -17,7 +17,7 @@ void test_arrInsertBeginning(void) {
     testAssert(arr.items[3] == 3);
     testAssert(arr.items[4] == 4);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrInsertMiddle1(void) {
@@ -36,7 +36,7 @@ void test_arrInsertMiddle1(void) {
     testAssert(arr.items[3] == 3);
     testAssert(arr.items[4] == 4);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrInsertMiddle2(void) {
@@ -55,7 +55,7 @@ void test_arrInsertMiddle2(void) {
     testAssert(arr.items[3] == 3);
     testAssert(arr.items[4] == 4);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 void test_arrInsertEnd(void) {
@@ -74,7 +74,7 @@ void test_arrInsertEnd(void) {
     testAssert(arr.items[3] == 10);
     testAssert(arr.items[4] == 4);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 testList(

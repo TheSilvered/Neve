@@ -153,7 +153,7 @@ static void handleInsertionKeys(int32_t key) {
         return;
     }
     case TermKey_Delete: {
-        ctxRemoveForeward(ctx);
+        ctxRemoveFwd(ctx);
         return;
     }
     case '\r':

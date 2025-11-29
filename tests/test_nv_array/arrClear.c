@@ -7,7 +7,7 @@ void test_arrDestroy(void) {
     arrAppend(&arr, 2);
     arrAppend(&arr, 3);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 
     testAssert(arr.items == NULL);
     testAssert(arr.len == 0);

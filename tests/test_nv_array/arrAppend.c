@@ -14,7 +14,7 @@ void test_arrAppend(void) {
     testAssert(arr.items[2] == 3);
     testAssert(arr.cap >= arr.len);
 
-    arrDestroy(&arr);
+    arrClear(&arr);
 }
 
 testList(
