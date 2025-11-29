@@ -1077,15 +1077,16 @@ static void ctxInsertRepSels_(
 
     bool useLines = lines != NULL && lines->len == selsLen + 1;
     for (size_t i = 0; i < selsLen; i++) {
-        CtxSelection sel = sels->items[selsLen - i - 1];
-        arrRemove(sels, selsLen - i - 1);
+        size_t idx = selsLen - i - 1;
+        CtxSelection sel = sels->items[idx];
+        arrRemove(sels, idx);
         if (useLines) {
             ctxReplace_(
                 ctx,
                 sel.startIdx,
                 sel.endIdx,
-                lines->items[i],
-                lines->items[i + 1] - lines->items[i] - 1
+                lines->items[idx],
+                lines->items[idx + 1] - lines->items[idx] - 1
             );
         } else {
             ctxReplace_(ctx, sel.startIdx, sel.endIdx, data, len);

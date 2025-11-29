@@ -53,8 +53,42 @@ void test_ctxInsertMultipleCursors(void) {
     ctxDestroy(&ctx);
 }
 
+void test_ctxInsertMultipleSelections(void) {
+    Ctx ctx;
+	ctxInit(&ctx, true);
+    ctxAppend(&ctx, sLen("abcde"));
+
+    ctxCurAdd(&ctx, 1);
+    ctxCurAdd(&ctx, 3);
+
+    ctxSelBegin(&ctx);
+    ctxCurMoveFwd(&ctx);
+    ctxSelEnd(&ctx);
+
+    ctxInsert(&ctx, sLen("xyz"));
+    testAssert(eqStrViewCStr(ctxGetContent(&ctx), "axyzcxyze"));
+    testAssert(ctx._sels.len == 0);
+
+    ctxSelBegin(&ctx);
+    ctxCurMoveBack(&ctx);
+    ctxSelEnd(&ctx);
+
+    ctxInsert(&ctx, sLen("12\n34"));
+    testAssert(eqStrViewCStr(ctxGetContent(&ctx), "axy12cxy34e"));
+
+    ctxSelBegin(&ctx);
+    ctxCurMoveBack(&ctx);
+    ctxSelEnd(&ctx);
+
+    ctxInsert(&ctx, sLen("56\n78\n"));
+    testAssert(eqStrViewCStr(ctxGetContent(&ctx), "ax5612cx7834e"));
+
+	ctxDestroy(&ctx);
+}
+
 testList(
     testMake(test_ctxInsertFromEmpty),
     testMake(test_ctxInsertFromEmptyActiveSel),
-    testMake(test_ctxInsertMultipleCursors)
+    testMake(test_ctxInsertMultipleCursors),
+	testMake(test_ctxInsertMultipleSelections)
 )
