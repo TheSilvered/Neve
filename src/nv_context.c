@@ -816,6 +816,7 @@ static void ctxReplaceUpdateSelections_(
         } else if (sel->startIdx >= start && sel->endIdx <= end) {
             arrRemove(&ctx->_sels, i);
             i--;
+            continue;
         } else if (sel->startIdx < start && sel->endIdx > end) {
             sel->endIdx += lenDiff;
         } else if (sel->startIdx < start) {
@@ -830,6 +831,7 @@ static void ctxReplaceUpdateSelections_(
         if (i > 0 && sel->startIdx == ctx->_sels.items[i - 1].endIdx) {
             ctx->_sels.items[i - 1].endIdx = sel->endIdx;
             arrRemove(&ctx->_sels, i);
+            i--;
         }
         mayJoin = false;
     }
@@ -1100,6 +1102,10 @@ static void ctxInsertCursors_(
     size_t len,
     InsertLines *lines
 ) {
+    if (len == 0) {
+        return;
+    }
+
     CtxCursors *cursors = &ctx->cursors;
     size_t cursorsLen = cursors->len;
     if (cursorsLen == 0) {
@@ -1165,6 +1171,14 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
     ctxInsert(ctx, buf, len);
 }
 
+static void ctxRemoveSelections_(Ctx *ctx) {
+    for (ptrdiff_t i = ctx->_sels.len - 1; i >= 0; i--) {
+        CtxSelection sel = ctx->_sels.items[i];
+        ctxReplace_(ctx, sel.startIdx, sel.endIdx, NULL, 0);
+    }
+    arrClear(&ctx->_sels);
+}
+
 void ctxRemoveBack(Ctx *ctx) {
     if (ctx->_selecting) {
         ctxSelEnd(ctx);
@@ -1176,11 +1190,7 @@ void ctxRemoveBack(Ctx *ctx) {
         ctxSelEnd(ctx);
     }
 
-    for (size_t i = 0; i < ctx->_sels.len; i++) {
-        CtxSelection sel = ctx->_sels.items[i];
-        ctxReplace_(ctx, sel.startIdx, sel.endIdx, NULL, 0);
-    }
-    arrClear(&ctx->_sels);
+    ctxRemoveSelections_(ctx);
 }
 
 void ctxRemoveFwd(Ctx *ctx) {
@@ -1194,11 +1204,7 @@ void ctxRemoveFwd(Ctx *ctx) {
         ctxSelEnd(ctx);
     }
 
-    for (size_t i = 0; i < ctx->_sels.len; i++) {
-        CtxSelection sel = ctx->_sels.items[i];
-        ctxReplace_(ctx, sel.startIdx, sel.endIdx, NULL, 0);
-    }
-    arrClear(&ctx->_sels);
+    ctxRemoveSelections_(ctx);
 }
 
 static size_t ctxCurAt_(const Ctx *ctx, size_t idx) {
