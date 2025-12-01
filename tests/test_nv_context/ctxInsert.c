@@ -55,7 +55,7 @@ void test_ctxInsertMultipleCursors(void) {
 
 void test_ctxInsertMultipleSelections(void) {
     Ctx ctx;
-	ctxInit(&ctx, true);
+    ctxInit(&ctx, true);
     ctxAppend(&ctx, sLen("abcde"));
 
     ctxCurAdd(&ctx, 1);
@@ -83,12 +83,12 @@ void test_ctxInsertMultipleSelections(void) {
     ctxInsert(&ctx, sLen("56\n78\n"));
     testAssert(eqStrViewCStr(ctxGetContent(&ctx), "ax5612cx7834e"));
 
-	ctxDestroy(&ctx);
+    ctxDestroy(&ctx);
 }
 
 testList(
     testMake(test_ctxInsertFromEmpty),
     testMake(test_ctxInsertFromEmptyActiveSel),
     testMake(test_ctxInsertMultipleCursors),
-	testMake(test_ctxInsertMultipleSelections)
+    testMake(test_ctxInsertMultipleSelections)
 )

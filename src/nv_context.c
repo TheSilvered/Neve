@@ -1186,7 +1186,7 @@ void ctxRemoveBack(Ctx *ctx) {
 
     if (ctx->_sels.len == 0) {
         ctxSelBegin(ctx);
-		ctxCurMoveBack(ctx);
+        ctxCurMoveBack(ctx);
         ctxSelEnd(ctx);
     }
 
