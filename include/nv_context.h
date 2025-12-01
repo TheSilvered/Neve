@@ -156,6 +156,9 @@ void ctxRemoveFwd(Ctx *ctx);
 
 /*********************************** Other ************************************/
 
+// Get the line and column at `idx`
+void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol);
+
 // Get the number of lines in the text of a context.
 size_t ctxLineCount(const Ctx *ctx);
 // Get the length of a line in characters.

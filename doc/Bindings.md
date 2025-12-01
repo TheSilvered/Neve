@@ -198,11 +198,11 @@ In edit mode the key bindings available are the following:
 - `[^K]` delete foreward
 - `[^W]` delete previous word
 - `[^R]` delete next word
-- `[^O]` new line above
-- `[^J]` new line below
+- `[^O]` new line above (over)
+- `[^U]` new line below (under)
 - `[^T]` indent line
 - `[^D]` dedent line
-- `[^U]` delete to the start of the line
+- `[^J]` delete to the start of the line
 - `[^L]` delete to the end of the line
 - `[^S]` suspend edit mode for one command
 - `[^V]` enter a digraph

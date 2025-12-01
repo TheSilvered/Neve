@@ -6,6 +6,7 @@
 #include "nv_array.h"
 #include "nv_mem.h"
 #include "nv_unicode.h"
+#include "nv_udb.h"
 
 #ifndef lineRefMaxGap_
 #define lineRefMaxGap_ 4096
@@ -57,14 +58,6 @@ static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col);
 // Return `true` if the new cursor already exists
 static bool ctxCurMove_(Ctx *ctx, size_t old, size_t new);
 static bool ctxCurMoveEx_(Ctx *ctx, size_t old, size_t new, size_t newCol);
-
-// Get the line and column at `idx`
-static void ctxPosAt_(
-    const Ctx *ctx,
-    size_t idx,
-    size_t *outLine,
-    size_t *outCol
-);
 
 // Find the index at position `line`, `col`.
 // The line must match exactly, the column is the closest to `col`.
@@ -332,12 +325,7 @@ static ptrdiff_t ctxLineEnd_(const Ctx *ctx, size_t lineNo) {
     }
 }
 
-static void ctxPosAt_(
-    const Ctx *ctx,
-    size_t idx,
-    size_t *outLine,
-    size_t *outCol
-) {
+void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol) {
     assert(idx <= ctx->_buf.len);
 
     size_t refsLen = ctx->_refs.len;
@@ -767,7 +755,7 @@ static void ctxReplaceUpdateCursors_(
     bool selecting = ctx->_selecting;
     CtxCursor *cursors = ctx->cursors.items;
     size_t changedLine;
-    ctxPosAt_(ctx, end + lenDiff, &changedLine, NULL);
+    ctxPosAt(ctx, end + lenDiff, &changedLine, NULL);
     size_t lastBaseIdxCalc = ctxLineEnd_(ctx, changedLine);
 
     // Move the active selections, if selecting
@@ -783,7 +771,7 @@ static void ctxReplaceUpdateCursors_(
         if (cur->idx >= end) {
             cur->idx += lenDiff;
             if (cur->idx <= lastBaseIdxCalc) {
-                ctxPosAt_(ctx, cur->idx, NULL, &cur->baseCol);
+                ctxPosAt(ctx, cur->idx, NULL, &cur->baseCol);
             }
         }
         if (!selecting || cur->_selStart <= start) {
@@ -865,7 +853,7 @@ void ctxReplaceBalanceRefBlocks_(Ctx *ctx, size_t refBlock) {
         // Divide both to avoid overflow
         size_t newIdx = blockStart / 2 + blockEnd / 2;
         size_t line, col;
-        ctxPosAt_(ctx, newIdx, &line, &col);
+        ctxPosAt(ctx, newIdx, &line, &col);
         arrInsert(
             &ctx->_refs,
             refBlock,
@@ -876,7 +864,7 @@ void ctxReplaceBalanceRefBlocks_(Ctx *ctx, size_t refBlock) {
     } else if (!isLastBlock) {
         size_t newIdx = blockStart / 2 + nextBlockEnd / 2;
         size_t line, col;
-        ctxPosAt_(ctx, newIdx, &line, &col);
+        ctxPosAt(ctx, newIdx, &line, &col);
         ctx->_refs.items[refBlock].idx = newIdx;
         ctx->_refs.items[refBlock].line = line;
         ctx->_refs.items[refBlock].col = col;
@@ -919,9 +907,9 @@ static void ctxReplace_(
     // Keep track of line and column while iterating because the ref cache is
     // not valid after ctxBufRemove_
     size_t line, col;
-    ctxPosAt_(ctx, start, &line, &col);
+    ctxPosAt(ctx, start, &line, &col);
     size_t prevLine, prevCol;
-    ctxPosAt_(ctx, end, &prevLine, &prevCol);
+    ctxPosAt(ctx, end, &prevLine, &prevCol);
 
     ctxBufSetGapIdx_(buf, end);
     ctxBufRemove_(buf, end - start);
@@ -1005,7 +993,7 @@ static void ctxReplace_(
             continue;
         }
         size_t width;
-        ctxPosAt_(ctx, tabIdx, NULL, &width);
+        ctxPosAt(ctx, tabIdx, NULL, &width);
         colDiff += ((width - colDiff) % tabStop) - (width % tabStop);
         ref->col += colDiff;
         tabIdx = buf->len;
@@ -1050,7 +1038,7 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
         ctxBufInsert_(buf, &data[spanStart], i - spanStart + 1);
         spanStart = i + 1;
         size_t line, col;
-        ctxPosAt_(ctx, ctx->_buf.len, &line, &col);
+        ctxPosAt(ctx, ctx->_buf.len, &line, &col);
         arrAppend(
             &ctx->_refs,
             (CtxRef){ .idx = ctx->_buf.len, .line = line, .col = col }
@@ -1165,9 +1153,35 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     }
 }
 
+static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, UcdCh8 *outBuf) {
+    if (cp < 0 || cp > UcdCPMax) {
+        return 0;
+    }
+
+    UdbCPInfo info = udbGetCPInfo(cp);
+    // Do not insert control characters
+    if (
+        (cp != '\n' || !allowLF)
+        && cp != '\t'
+        && UdbMajorCategory(info.category) == UdbCategory_C
+    ) {
+        return 0;
+    }
+
+    return ucdCh8FromCP(cp, outBuf);
+}
+
 void ctxInsertCP(Ctx *ctx, UcdCP cp) {
+    if (cp == 0) {
+        return;
+    }
+
     UcdCh8 buf[4];
-    uint8_t len = ucdCh8FromCP(cp, buf);
+    size_t len = cpToUTF8Filtered_(cp, ctx->multiline, buf);
+    if (len == 0) {
+        return;
+    }
+
     ctxInsert(ctx, buf, len);
 }
 
@@ -1207,6 +1221,12 @@ void ctxRemoveFwd(Ctx *ctx) {
     ctxRemoveSelections_(ctx);
 }
 
+size_t ctxLineCount(const Ctx *ctx) {
+    size_t line;
+    ctxPosAt(ctx, ctx->_buf.len, &line, NULL);
+    return line + 1;
+}
+
 static size_t ctxCurAt_(const Ctx *ctx, size_t idx) {
     size_t hi = ctx->cursors.len;
     size_t lo = 0;
@@ -1241,7 +1261,7 @@ static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col) {
 
 void ctxCurAdd(Ctx *ctx, size_t idx) {
     size_t col;
-    ctxPosAt_(ctx, idx, NULL, &col);
+    ctxPosAt(ctx, idx, NULL, &col);
     ctxCurAddEx_(ctx, idx, col);
 }
 
@@ -1254,7 +1274,7 @@ void ctxCurRemove(Ctx *ctx, size_t idx) {
 
 static bool ctxCurMove_(Ctx *ctx, size_t old, size_t new) {
     size_t newCol;
-    ctxPosAt_(ctx, new, NULL, &newCol);
+    ctxPosAt(ctx, new, NULL, &newCol);
     return ctxCurMoveEx_(ctx, old, new, newCol);
 }
 
@@ -1360,7 +1380,7 @@ void ctxCurMoveUp(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor oldCur = ctx->cursors.items[i];
         size_t oldLine;
-        ctxPosAt_(ctx, oldCur.idx, &oldLine, NULL);
+        ctxPosAt(ctx, oldCur.idx, &oldLine, NULL);
         ptrdiff_t newCur = ctxIdxAt_(ctx, oldLine - 1, oldCur.baseCol);
         if (newCur < 0) {
             continue;
@@ -1376,7 +1396,7 @@ void ctxCurMoveDown(Ctx *ctx) {
         // Move from the last cursor to avoid incorrect merging of cursors
         CtxCursor oldCur = ctx->cursors.items[ctx->cursors.len - i - 1];
         size_t oldLine;
-        ctxPosAt_(ctx, oldCur.idx, &oldLine, NULL);
+        ctxPosAt(ctx, oldCur.idx, &oldLine, NULL);
         ptrdiff_t newCur = ctxIdxAt_(ctx, oldLine + 1, oldCur.baseCol);
         if (newCur < 0) {
             continue;
@@ -1418,7 +1438,7 @@ void ctxCurMoveToLineStart(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t lineNo;
-        ctxPosAt_(ctx, oldCur, &lineNo, NULL);
+        ctxPosAt(ctx, oldCur, &lineNo, NULL);
         ptrdiff_t newCur = ctxLineStart_(ctx, lineNo);
         if (newCur < 0) {
             continue;
@@ -1433,7 +1453,7 @@ void ctxCurMoveToLineEnd(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t lineNo;
-        ctxPosAt_(ctx, oldCur, &lineNo, NULL);
+        ctxPosAt(ctx, oldCur, &lineNo, NULL);
         ptrdiff_t newCur = ctxLineEnd_(ctx, lineNo);
         if (newCur < 0) {
             continue;
@@ -1455,7 +1475,7 @@ void ctxCurMoveToTextStart(Ctx *ctx) {
 
 void ctxCurMoveToTextEnd(Ctx *ctx) {
     size_t newBaseCol;
-    ctxPosAt_(ctx, ctx->_buf.len, NULL, &newBaseCol);
+    ctxPosAt(ctx, ctx->_buf.len, NULL, &newBaseCol);
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last to reduce copying
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
@@ -1521,7 +1541,7 @@ void ctxCurMoveToNextParagraph(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
         size_t lineNo;
-        ctxPosAt_(ctx, oldCur, &lineNo, NULL);
+        ctxPosAt(ctx, oldCur, &lineNo, NULL);
         ptrdiff_t newCur = -1;
         bool skippedBlankLines = false;
         for (;;) {
@@ -1554,7 +1574,7 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t lineNo;
-        ctxPosAt_(ctx, oldCur, &lineNo, NULL);
+        ctxPosAt(ctx, oldCur, &lineNo, NULL);
         ptrdiff_t newCur = -1;
         bool skippedBlankLines = false;
         for (;;) {

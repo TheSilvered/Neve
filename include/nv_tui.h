@@ -36,13 +36,24 @@
 typedef struct UIBufPanel UIBufPanel;
 
 typedef bool (*UIKeyHandler)(UIBufPanel *panel, int32_t key);
+typedef void (*UIUpdater)(UIBufPanel *panel);
+
+typedef enum UIBufMode {
+    UIBufMode_Normal,
+    UIBufMode_Edit,
+    UIBufMode_Selection
+} UIBufMode;
 
 struct UIBufPanel {
     Buf *buf;
+    UIBufMode mode;
     uint16_t w, h;
+    size_t scrollX, scrollY;
     UIKeyHandler keyHandler;
+    UIUpdater updater;
 };
 
+// TODO: separate buffers and tabs
 void uiBufPanelInit(UIBufPanel *panel, Buf *buf);
 
 #endif // !NV_TUI_H_
