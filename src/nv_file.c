@@ -81,10 +81,10 @@ FileIOResult fileRead(
         *outBytesRead = bytesRead;
     }
 
-    if (bytesRead == bufSize || feof(file->fp)) {
-        return FileIOResult_Success;
+    if (ferror(file->fp)) {
+        return FileIOResult_OtherIOError;
     }
-    return FileIOResult_OtherIOError;
+    return FileIOResult_Success;
 }
 
 FileIOResult fileWrite(File *file, const uint8_t *buf, size_t bufSize) {
