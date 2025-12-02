@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "nv_buffer.h"
 #include "nv_file.h"
 
@@ -15,12 +16,12 @@ static void bufMapInsert_(BufMap *map, Buf buf) {
         bufMapExpand_(map);
     }
 
-    // if speed ever becomes an issue we will use a better algorithm but linear
-    // search will do for now
-
     uint32_t mask = (1 << map->cap) - 1;
     uint32_t idx = buf._handle & mask;
-    while (map->buffers[idx]._handle != bufInvalidHandle) {
+    for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
+        if (map->buffers[idx]._handle == bufInvalidHandle) {
+            break;
+        }
         idx = (idx + 1) & mask;
     }
     map->buffers[idx] = buf;
@@ -72,7 +73,9 @@ BufHandle bufNewEmpty(BufMap *map) {
     return handle;
 }
 
-BufHandle bufInitFromFile(BufMap *map, File *file) {
+FileIOResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
+    assert(outHandle != NULL);
+
     Ctx ctx;
     ctxInit(&ctx, true);
 
@@ -83,7 +86,8 @@ BufHandle bufInitFromFile(BufMap *map, File *file) {
         FileIOResult result = fileRead(file, readBuf, readBufSize, &bytesRead);
         if (result != FileIOResult_Success) {
             ctxDestroy(&ctx);
-            return bufInvalidHandle;
+            *outHandle = bufInvalidHandle;
+            return result;
         } else if (bytesRead != 0) {
             ctxAppend(&ctx, readBuf, bytesRead);
         } else {
@@ -98,16 +102,66 @@ BufHandle bufInitFromFile(BufMap *map, File *file) {
     strInit(&buf.path, 0);
     buf._handle = handle;
     bufMapInsert_(map, buf);
-    return handle;
+    *outHandle = handle;
+    return FileIOResult_Success;
 }
 
-// Get a reference to a buffer
-Buf *bufRef(BufMap *map, BufHandle bufH);
+Buf *bufRef(BufMap *map, BufHandle bufH) {
+    uint32_t mask = (1 << map->cap) - 1;
+    uint32_t idx = bufH & mask;
+    for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
+        if (map->buffers[idx]._handle == bufInvalidHandle) {
+            return NULL;
+        } else if (map->buffers[idx]._handle == bufH) {
+            return &map->buffers[idx];
+        }
+        idx = (idx + 1) & mask;
+    }
+    return NULL;
+}
 
-// Close a buffer
-void bufClose(BufMap *map, BufHandle bufH);
+void bufClose(BufMap *map, BufHandle bufH) {
+    uint32_t mask = (1 << map->cap) - 1;
+    uint32_t idx = bufH & mask;
+    for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
+        if (map->buffers[idx]._handle == bufInvalidHandle) {
+            return; // buffer not in the map
+        } else if (map->buffers[idx]._handle == bufH) {
+            break;
+        }
+        idx = (idx + 1) & mask;
+    }
+    if (map->buffers[idx]._handle != bufH) {
+        return;
+    }
 
-// Save the buffer if the path is valid.
-bool bufWriteToDisk(BufMap *map, BufHandle bufH);
-// Set the file path of the buffer.
-void bufSetPath(BufMap *map, BufHandle bufH, StrView *path);
+    ctxDestroy(&map->buffers[idx].ctx);
+    strDestroy(&map->buffers[idx].path);
+
+    idx = (idx + 1) & mask;
+    for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
+        if (map->buffers[idx]._handle == bufInvalidHandle) {
+            break;
+        }
+        Buf buf = map->buffers[idx];
+        map->buffers[idx]._handle = bufInvalidHandle;
+        bufMapInsert_(map, buf);
+        idx = (idx + 1) & mask;
+    }
+}
+
+FileIOResult bufWriteToDisk(Buf *buf) {
+    if (buf->path.len == 0) {
+        return FileIOResult_BadPath;
+    }
+
+    File file;
+    FileIOResult result = fileOpen(&file, strAsC(&buf->path), FileMode_Write);
+    if (result != FileIOResult_Success) {
+        return result;
+    }
+    StrView content = ctxGetContent(&buf->ctx);
+    result = fileWrite(&file, content.buf, content.len);
+    fileClose(&file);
+    return result;
+}

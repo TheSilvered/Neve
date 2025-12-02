@@ -30,17 +30,13 @@ void bufMapDestroy(BufMap *map);
 // Initialize an empty buffer.
 BufHandle bufNewEmpty(BufMap *map);
 // Create a new buffer from an existing file.
-BufHandle bufInitFromFile(BufMap *map, File *file);
-
+FileIOResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle);
 // Get a reference to a buffer
 Buf *bufRef(BufMap *map, BufHandle bufH);
-
 // Close a buffer
 void bufClose(BufMap *map, BufHandle bufH);
 
 // Save the buffer if the path is valid.
-bool bufWriteToDisk(BufMap *map, BufHandle bufH);
-// Set the file path of the buffer.
-void bufSetPath(BufMap *map, BufHandle bufH, StrView *path);
+FileIOResult bufWriteToDisk(Buf *buf);
 
 #endif // !NV_BUFFER_H_
