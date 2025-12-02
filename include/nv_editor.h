@@ -13,8 +13,7 @@ typedef struct EditorStrings {
 // The state of the editor.
 typedef struct Editor {
     Screen screen;
-    Buf fileBuf; // TODO: multiple file buffers
-    Ctx saveDialogCtx;
+
     EditorStrings strings;
     bool running; // If the editor is running.
     bool savingFile;

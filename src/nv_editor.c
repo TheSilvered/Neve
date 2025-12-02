@@ -40,7 +40,6 @@ bool editorUpdateSize(void) {
     }
 
     screenResize(&g_ed.screen, cols, rows);
-    ctxSetFrameSize(&editorGetActiveBuf()->ctx, cols, rows - 2);
 
     if (g_ed.savingFile) {
         // TODO: use visual width of savePrompt
