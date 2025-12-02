@@ -133,6 +133,8 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx);
 void ctxSelBegin(Ctx *ctx);
 // Stops selecting.
 void ctxSelEnd(Ctx *ctx);
+// Stop selecting and remove all selections
+void ctxSelCancel(Ctx *ctx);
 // Check if selection is active.
 bool ctxSelIsActive(const Ctx *ctx);
 // Check if there are any selections in the context.
@@ -153,6 +155,10 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp);
 void ctxRemoveBack(Ctx *ctx);
 // Remove the character after the cursor.
 void ctxRemoveFwd(Ctx *ctx);
+// Create a new line above and move the cursor(s) to it
+void ctxInsertLineAbove(Ctx *ctx);
+// Create a new line below and move the cursor(s) to it
+void ctxInsertLineBelow(Ctx *ctx);
 
 /*********************************** Other ************************************/
 

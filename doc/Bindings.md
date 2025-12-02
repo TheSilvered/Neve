@@ -120,10 +120,10 @@ With `[ctrl]` they have yet another different behavior:
 - `[d]` indent current line
 - `[D]` dedent current line
 
-- `[q]` delete character before cursor (= `[y][j]`)
-- `[Q]` delete character after cursor (= `[y][l]`)
-- `[space][q]c` replace character before cursor with `c`
-- `[space][Q]c` replace character after cursor with `c`
+- `[q]` delete the character before the cursor (= `[y][j]`)
+- `[Q]` delete the character after the cursor (= `[y][l]`)
+- `[space][q]c` replace the character before the cursor with `c`
+- `[space][Q]c` replace the character after the cursor with `c`
 
 - `[g]` global selection of a given pattern
 - `[G]` incremental global selection (for each match ask to select or skip)
@@ -188,23 +188,25 @@ In immediate selection text object still work.
 
 In edit mode the key bindings available are the following:
 
+GKLC
+
 - `[^A]` move to the start of the line
 - `[^E]` move to the end of the line
 - `[^F]` move cursor foreward
 - `[^B]` move cursor backward
-- `[^P]` move cursor up
-- `[^N]` move cursor down
-- `[^H]` delete backward (backspace)
-- `[^K]` delete foreward
+- `[^P]` move cursor up (previous line)
+- `[^N]` move cursor down (next line)
+- `[^Z]` delete backward (backspace)
+- `[^X]` delete foreward
 - `[^W]` delete previous word
 - `[^R]` delete next word
 - `[^O]` new line above (over)
 - `[^U]` new line below (under)
-- `[^T]` indent line
-- `[^D]` dedent line
-- `[^J]` delete to the start of the line
-- `[^L]` delete to the end of the line
-- `[^S]` suspend edit mode for one command
+- `[^D]` indent line
+- `[^S]` dedent line
+- `[^T]` delete to the start of the line
+- `[^Y]` delete to the end of the line
+- `[^H]` suspend edit mode for one command
 - `[^V]` enter a digraph
 - `[^Q]`/`[esc]` quit edit mode
 

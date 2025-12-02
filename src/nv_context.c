@@ -1221,6 +1221,17 @@ void ctxRemoveFwd(Ctx *ctx) {
     ctxRemoveSelections_(ctx);
 }
 
+void ctxInsertLineAbove(Ctx *ctx) {
+    ctxCurMoveToLineStart(ctx);
+    ctxInsert(ctx, "\n", 1);
+    ctxCurMoveBack(ctx);
+}
+
+void ctxInsertLineBelow(Ctx *ctx) {
+    ctxCurMoveToLineEnd(ctx);
+    ctxInsert(ctx, "\n", 1);
+}
+
 size_t ctxLineCount(const Ctx *ctx) {
     size_t line;
     ctxPosAt(ctx, ctx->_buf.len, &line, NULL);
@@ -1658,6 +1669,11 @@ void ctxSelBegin(Ctx *ctx) {
 void ctxSelEnd(Ctx *ctx) {
     ctx->_selecting = false;
     ctxSelJoin_(ctx);
+}
+
+void ctxSelCancel(Ctx *ctx) {
+    ctx->_selecting = false;
+    arrClear(&ctx->_sels);
 }
 
 bool ctxSelIsActive(const Ctx *ctx) {

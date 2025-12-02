@@ -5,6 +5,8 @@ static bool uiBufPanelKeyHandler_(UIBufPanel *panel, int32_t key);
 static bool uiBufHandleNormalMode_(UIBufPanel *panel, int32_t key);
 static bool uiBufHandleEditMode_(UIBufPanel *panel, int32_t key);
 static bool uiBufHandleSelectionMode_(UIBufPanel *panel, int32_t key);
+static bool uiHandleNormalMovement_(UIBufPanel *panel, int32_t key);
+static bool uiHandleArrowKeys_(UIBufPanel *panel, int32_t key);
 
 void uiBufPanelInit(UIBufPanel *panel, Buf *buf) {
 panel->buf = buf;
@@ -44,89 +46,163 @@ static void uiBufPanelUpdater_(UIBufPanel *panel) {
 static bool uiBufPanelKeyHandler_(UIBufPanel *panel, int32_t key) {
     switch (panel->mode) {
     case UIBufMode_Normal:
-        return uiBufHandleNormalMode_(panel->buf, key);
+        return uiBufHandleNormalMode_(panel, key);
     case UIBufMode_Edit:
-        // TODO: edit
-        return false;
+        return uiBufHandleEditMode_(panel, key);
     case UIBufMode_Selection:
-        // TODO: selection
-        return false;
+        return uiBufHandleSelectionMode_(panel, key);
     default:
         return false;
     }
 }
 
-static bool uiBufHandleNormalMode_(UIBufPanel *panel, int32_t key) {
-    Buf *buf = panel->buf;
+static bool uiHandleNormalMovement_(UIBufPanel *panel, int32_t key) {
+    Ctx *ctx = &panel->buf->ctx;
     switch (key) {
     case 'i':
-        ctxCurMoveUp(&buf->ctx);
+        ctxCurMoveUp(ctx);
         break;
     case 'I':
-        ctxCurMoveToPrevParagraph(&buf->ctx);
+        ctxCurMoveToPrevParagraph(ctx);
         break;
     case TermKey_CtrlI:
         for (uint16_t i = 0; i < panel->w / 2; i++) {
-            ctxCurMoveUp(&buf->ctx);
+            ctxCurMoveUp(ctx);
         }
         break;
     case 'k':
-        ctxCurMoveDown(&buf->ctx);
+        ctxCurMoveDown(ctx);
         break;
     case 'K':
-        ctxCurMoveToNextParagraph(&buf->ctx);
+        ctxCurMoveToNextParagraph(ctx);
         break;
     case TermKey_CtrlK:
         for (uint16_t i = 0; i < panel->w / 2; i++) {
-            ctxCurMoveDown(&buf->ctx);
+            ctxCurMoveDown(ctx);
         }
         break;
     case 'j':
-        ctxCurMoveLeft(&buf->ctx);
+        ctxCurMoveLeft(ctx);
         break;
     case 'J':
-        ctxCurMoveToPrevWordStart(&buf->ctx);
+        ctxCurMoveToPrevWordStart(ctx);
         break;
     case TermKey_CtrlJ:
-        ctxCurMoveToPrevWordEnd(&buf->ctx);
+        ctxCurMoveToPrevWordEnd(ctx);
         break;
     case 'l':
-        ctxCurMoveRight(&buf->ctx);
+        ctxCurMoveRight(ctx);
         break;
     case 'L':
-        ctxCurMoveToNextWordEnd(&buf->ctx);
+        ctxCurMoveToNextWordEnd(ctx);
         break;
     case TermKey_CtrlL:
-        ctxCurMoveToNextWordStart(&buf->ctx);
+        ctxCurMoveToNextWordStart(ctx);
         break;
     case 'u':
-        ctxCurMoveToLineStart(&buf->ctx);
+        ctxCurMoveToLineStart(ctx);
         break;
     case 'U':
-        ctxCurMoveToTextStart(&buf->ctx);
+        ctxCurMoveToTextStart(ctx);
         break;
     case 'o':
-        ctxCurMoveToLineEnd(&buf->ctx);
+        ctxCurMoveToLineEnd(ctx);
         break;
     case 'O':
-        ctxCurMoveToTextEnd(&buf->ctx);
+        ctxCurMoveToTextEnd(ctx);
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
+static bool uiHandleArrowKeys_(UIBufPanel *panel, int32_t key) {
+    Ctx *ctx = &panel->buf->ctx;
+    switch (key) {
+    case TermKey_ArrowDown:
+        ctxCurMoveDown(ctx);
+        break;
+    case TermKey_ArrowUp:
+        ctxCurMoveUp(ctx);
+        break;
+    case TermKey_ArrowLeft:
+        ctxCurMoveBack(ctx);
+        break;
+    case TermKey_ArrowRight:
+        ctxCurMoveFwd(ctx);
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
+static bool uiBufHandleNormalMode_(UIBufPanel *panel, int32_t key) {
+    Ctx *ctx = &panel->buf->ctx;
+    if (uiHandleNormalMovement_(panel, key) || uiHandleArrowKeys_(panel, key)) {
+        return true;
+    }
+    switch (key) {
     case 'e':
         panel->mode = UIBufMode_Edit;
         break;
     case 'E':
-        ctxCurMoveToLineEnd(&buf->ctx);
+        ctxCurMoveToLineEnd(ctx);
         panel->mode = UIBufMode_Edit;
         break;
     case 'h':
-        ctxCurMoveToLineEnd(&buf->ctx);
-        ctxInsert(&buf->ctx, "\n", 1);
+        ctxInsertLineBelow(ctx);
         panel->mode = UIBufMode_Edit;
         break;
     case 'H':
-        ctxCurMoveToLineStart(&buf->ctx);
-        ctxInsert(&buf->ctx, "\n", 1);
-        ctxCurMoveBack(&buf->ctx);
+        ctxInsertLineAbove(ctx);
         panel->mode = UIBufMode_Edit;
+        break;
+    case 's':
+        ctxSelBegin(ctx);
+        panel->mode = UIBufMode_Selection;
+        break;
+    case 'Y':
+        ctxCurMoveToLineStart(ctx);
+        ctxSelBegin(ctx);
+        ctxCurMoveToLineEnd(ctx);
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
+        break;
+    case TermKey_CtrlY:
+        ctxSelBegin(ctx);
+        ctxCurMoveToLineEnd(ctx);
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
+        break;
+    case 'q':
+        ctxRemoveBack(ctx);
+        break;
+    case 'Q':
+        ctxRemoveFwd(ctx);
+        break;
+    case 'R':
+        ctxCurMoveToLineStart(ctx);
+        ctxSelBegin(ctx);
+        ctxCurMoveToLineEnd(ctx);
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
+        panel->mode = UIBufMode_Edit;
+        break;
+    case TermKey_CtrlR:
+        ctxSelBegin(ctx);
+        ctxCurMoveToLineEnd(ctx);
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
         break;
     default:
         return false;
@@ -135,64 +211,66 @@ static bool uiBufHandleNormalMode_(UIBufPanel *panel, int32_t key) {
 }
 
 static bool uiBufHandleEditMode_(UIBufPanel *panel, int32_t key) {
-    Buf *buf = panel->buf;
+    Ctx *ctx = &panel->buf->ctx;
+    if (uiHandleArrowKeys_(panel, key)) {
+        return true;
+    }
     switch (key) {
     case TermKey_CtrlA:
-        ctxCurMoveToLineStart(&buf->ctx);
+        ctxCurMoveToLineStart(ctx);
         break;
     case TermKey_CtrlE:
-        ctxCurMoveToLineEnd(&buf->ctx);
+        ctxCurMoveToLineEnd(ctx);
         break;
     case TermKey_CtrlF:
-        ctxCurMoveFwd(&buf->ctx);
+        ctxCurMoveFwd(ctx);
         break;
     case TermKey_CtrlB:
-        ctxCurMoveBack(&buf->ctx);
+        ctxCurMoveBack(ctx);
         break;
     case TermKey_CtrlP:
-        ctxCurMoveUp(&buf->ctx);
+        ctxCurMoveUp(ctx);
         break;
     case TermKey_CtrlN:
-        ctxCurMoveDown(&buf->ctx);
+        ctxCurMoveDown(ctx);
         break;
-    case TermKey_CtrlH:
-        ctxRemoveBack(&buf->ctx);
+    case TermKey_CtrlZ:
+    case TermKey_Backspace:
+        ctxRemoveBack(ctx);
         break;
-    case TermKey_CtrlK:
-        ctxRemoveFwd(&buf->ctx);
+    case TermKey_CtrlX:
+    case TermKey_Delete:
+        ctxRemoveFwd(ctx);
         break;
     case TermKey_CtrlW:
-        ctxSelBegin(&buf->ctx);
-        ctxCurMoveToPrevWordStart(&buf->ctx);
-        ctxSelEnd(&buf->ctx);
-        ctxRemoveBack(&buf->ctx);
+        ctxSelBegin(ctx);
+        ctxCurMoveToPrevWordStart(ctx);
+        ctxSelEnd(ctx);
+        ctxRemoveBack(ctx);
         break;
     case TermKey_CtrlR:
-        ctxSelBegin(&buf->ctx);
-        ctxCurMoveToNextWordEnd(&buf->ctx);
-        ctxSelEnd(&buf->ctx);
-        ctxRemoveBack(&buf->ctx);
+        ctxSelBegin(ctx);
+        ctxCurMoveToNextWordEnd(ctx);
+        ctxSelEnd(ctx);
+        ctxRemoveBack(ctx);
         break;
     case TermKey_CtrlO:
-        ctxCurMoveToLineStart(&buf->ctx);
-        ctxInsert(&buf->ctx, "\n", 1);
-        ctxCurMoveBack(&buf->ctx);
+        ctxInsertLineAbove(ctx);
         break;
     case TermKey_CtrlU:
-        ctxCurMoveToLineEnd(&buf->ctx);
-        ctxInsert(&buf->ctx, "\n", 1);
+        ctxInsertLineBelow(ctx);
         break;
-    case TermKey_CtrlJ:
-        ctxSelBegin(&buf->ctx);
-        ctxCurMoveToLineStart(&buf->ctx);
-        ctxSelEnd(&buf->ctx);
-        ctxRemoveBack(&buf->ctx);
+    case TermKey_CtrlT:
+        ctxSelBegin(ctx);
+        ctxCurMoveToLineStart(ctx);
+        ctxSelEnd(ctx);
+        ctxRemoveBack(ctx);
         break;
-    case TermKey_CtrlL:
-        ctxSelBegin(&buf->ctx);
-        ctxCurMoveToLineEnd(&buf->ctx);
-        ctxSelEnd(&buf->ctx);
-        ctxRemoveBack(&buf->ctx);
+    case TermKey_CtrlY:
+        ctxSelBegin(ctx);
+        ctxCurMoveToLineEnd(ctx);
+        ctxSelEnd(ctx);
+        ctxRemoveBack(ctx);
         break;
     case TermKey_CtrlQ:
     case TermKey_Escape:
@@ -202,12 +280,46 @@ static bool uiBufHandleEditMode_(UIBufPanel *panel, int32_t key) {
         key = '\n';
         // fallthrough
     default:
-        ctxInsertCP(&buf->ctx, (UcdCP)key);
+        ctxInsertCP(ctx, (UcdCP)key);
         break;
     }
     return true;
 }
 
 static bool uiBufHandleSelectionMode_(UIBufPanel *panel, int32_t key) {
-
+    Ctx *ctx = &panel->buf->ctx;
+    if (uiHandleNormalMovement_(panel, key) || uiHandleArrowKeys_(panel, key)) {
+        return true;
+    }
+    switch (key) {
+    case 'y':
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
+        panel->mode = UIBufMode_Normal;
+        break;
+    case 'r':
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
+        panel->mode = UIBufMode_Edit;
+        break;
+    case 'h':
+        if (ctxSelIsActive(ctx)) {
+            ctxSelEnd(ctx);
+        } else {
+            ctxSelBegin(ctx);
+        }
+        break;
+    case TermKey_CtrlQ:
+    case TermKey_Escape:
+        ctxSelCancel(ctx);
+        panel->mode = UIBufMode_Normal;
+        break;
+    default:
+        return false;
+    }
+    return true;
 }
