@@ -1186,8 +1186,8 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
 }
 
 static void ctxRemoveSelections_(Ctx *ctx) {
-    for (ptrdiff_t i = ctx->_sels.len - 1; i >= 0; i--) {
-        CtxSelection sel = ctx->_sels.items[i];
+    for (size_t i = ctx->_sels.len; i > 0; i--) {
+        CtxSelection sel = ctx->_sels.items[i - 1];
         ctxReplace_(ctx, sel.startIdx, sel.endIdx, NULL, 0);
     }
     arrClear(&ctx->_sels);
@@ -1223,13 +1223,13 @@ void ctxRemoveFwd(Ctx *ctx) {
 
 void ctxInsertLineAbove(Ctx *ctx) {
     ctxCurMoveToLineStart(ctx);
-    ctxInsert(ctx, "\n", 1);
+    ctxInsert(ctx, (const UcdCh8 *)"\n", 1);
     ctxCurMoveBack(ctx);
 }
 
 void ctxInsertLineBelow(Ctx *ctx) {
     ctxCurMoveToLineEnd(ctx);
-    ctxInsert(ctx, "\n", 1);
+    ctxInsert(ctx, (const UcdCh8 *)"\n", 1);
 }
 
 size_t ctxLineCount(const Ctx *ctx) {
