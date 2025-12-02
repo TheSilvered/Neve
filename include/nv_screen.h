@@ -57,16 +57,23 @@ typedef struct {
     } fg, bg;
     uint8_t fgMode : 2;
     uint8_t bgMode : 2;
-    uint8_t scope : 4;
+    uint8_t style : 4;
     ScreenTextFmt textFmt;
 } ScreenStyle;
+
+// NOTE: when changing ScreenRows check the alignment
+
+typedef struct ScreenRows {
+    StrBuf *sBufs;
+    UcdCh8 *buffer;
+} ScreenRows;
 
 // The painting surface.
 typedef struct {
     uint16_t w, h;
     Str buf;
-    Str *editRows;
-    Str *displayRows;
+    ScreenRows *editRows;
+    ScreenRows *displayRows;
     ScreenStyle *editStyles;
     ScreenStyle *displayStyles;
     bool resized;

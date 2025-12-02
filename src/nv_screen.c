@@ -24,10 +24,6 @@ void screenInit(Screen *screen) {
 
 void screenDestroy(Screen *screen) {
     strDestroy(&screen->buf);
-    for (uint16_t i = 0; i < screen->h; i++) {
-        strDestroy(&screen->editRows[i]);
-        strDestroy(&screen->displayRows[i]);
-    }
 
     memFree(screen->editRows);
     memFree(screen->displayRows);
@@ -50,27 +46,37 @@ ScreenStyle *resizeStyles_(ScreenStyle *styles, size_t oldLen, size_t newLen) {
     }
 }
 
-Str *resizeRows_(Str *rows, size_t oldLen, size_t newLen) {
-    if (oldLen == newLen) {
-        return rows;
+ScreenRows *resizeRows_(ScreenRows *rows, uint16_t w, uint16_t h) {
+    if (w == 0 || h == 0) {
+        return NULL; // not a failure just the value of screen->*Rows when empty
     }
-    if (oldLen > newLen) {
-        for (uint16_t i = newLen; i < oldLen; i++) {
-            strDestroy(&rows[i]);
-        }
-        return memShrink(rows, newLen, sizeof(*rows));
-    } else {
-        Str *newRows = memChange(rows, newLen, sizeof(*rows));
-        for (uint16_t i = oldLen; i < newLen; i++) {
-            strInit(&newRows[i], 0);
-        }
-        return newRows;
+    // Memory layout:
+    // [ rows struct | sBufs array | sBufs buffers ]
+    // Alignment is fine since ScreenRows contains pointers
+    size_t newSize = sizeof(*rows)
+                   + sizeof(*rows->sBufs) * h
+                   + w * 4 * h; // max of 4 bytes per column
+    ScreenRows *newRows = memChangeBytes(rows, newSize);
+
+    newRows->sBufs = (StrBuf *)(newRows + 1);
+    newRows->buffer = (UcdCh8 *)&newRows->sBufs[h];
+
+    for (uint16_t i = 0; i < h; i++) {
+        newRows->sBufs[i] = (StrBuf) {
+            .buf = newRows->buffer + (w * 4 * i),
+            .bufSize = w * 4,
+            .len = 0
+        };
     }
+    return newRows;
 }
 
 void screenResize(Screen *screen, uint16_t w, uint16_t h) {
-    // The terminal should not be resized too often, no need to have a buffered
-    // allocation, just reallocate each time
+    if (w == screen->w && h == screen->h) {
+        return;
+    }
+    screen->resized = true;
+
     screen->editRows = resizeRows_(screen->editRows, screen->h, h);
     screen->displayRows = resizeRows_(screen->displayRows, screen->h, h);
     screen->editStyles = resizeStyles_(
@@ -83,12 +89,6 @@ void screenResize(Screen *screen, uint16_t w, uint16_t h) {
         screen->w * screen->h,
         w * h
     );
-
-    if (w != screen->w || h != screen->h) {
-        screen->resized = true;
-    } else {
-        return;
-    }
 
     screen->w = w;
     screen->h = h;
@@ -128,7 +128,7 @@ void screenWrite(
 
     uint16_t w = 0;
     uint16_t screenW = screen->w;
-    Str *row = &screen->editRows[y];
+    StrBuf *row = &screen->editRows->sBufs[y];
 
     // Find the index in the string where the new string begins
     UcdCP cp = 0;
@@ -218,7 +218,7 @@ void screenClear(Screen *screen, int32_t line) {
     }
 
     if (line >= 0) {
-        strClear(&screen->editRows[line], screen->w);
+        strBufClear(&screen->editRows->sBufs[line]);
         memset(
             &screen->editStyles[screen->w * line],
             0,
@@ -227,7 +227,7 @@ void screenClear(Screen *screen, int32_t line) {
         return;
     }
     for (uint16_t y = 0; y < screen->h; y++) {
-        strClear(&screen->editRows[y], screen->w);
+        strBufClear(&screen->editRows->sBufs[y]);
     }
     memset(
         screen->editStyles,
@@ -237,8 +237,8 @@ void screenClear(Screen *screen, int32_t line) {
 }
 
 static bool rowChanged_(Screen *screen, uint16_t idx) {
-    Str *editRow = &screen->editRows[idx];
-    Str *displayRow = &screen->displayRows[idx];
+    StrBuf *editRow = &screen->editRows->sBufs[idx];
+    StrBuf *displayRow = &screen->displayRows->sBufs[idx];
 
     if (editRow->len != displayRow->len) {
         return true;
@@ -266,7 +266,7 @@ void screenSetFg(
         .fg.g = fg.col.g,
         .fg.b = fg.col.b,
         .bgMode = fg.mode,
-        .scope = screenStyleNoBg | screenStyleNoFmt,
+        .style = screenStyleNoBg | screenStyleNoFmt,
     };
     screenSetStyle(screen, style, x, y, width);
 }
@@ -283,7 +283,7 @@ void screenSetBg(
         .bg.g = bg.col.g,
         .bg.b = bg.col.b,
         .bgMode = bg.mode,
-        .scope = screenStyleNoFg | screenStyleNoFmt,
+        .style = screenStyleNoFg | screenStyleNoFmt,
     };
     screenSetStyle(screen, style, x, y, width);
 }
@@ -297,7 +297,7 @@ void screenSetTextFmt(
 ) {
     ScreenStyle style = {
         .textFmt = textFmt,
-        .scope = screenStyleNoFg | screenStyleNoBg,
+        .style = screenStyleNoFg | screenStyleNoBg,
     };
     screenSetStyle(screen, style, x, y, width);
 }
@@ -318,18 +318,18 @@ void screenSetStyle(
 
     ScreenStyle *styles = &screen->editStyles[y * screen->w + x];
     for (uint16_t i = 0; i < width; i++) {
-        if (!(style.scope & screenStyleNoFg)) {
+        if (!(style.style & screenStyleNoFg)) {
             styles[i].fg = style.fg;
             styles[i].fgMode = style.fgMode;
         }
-        if (!(style.scope & screenStyleNoBg)) {
+        if (!(style.style & screenStyleNoBg)) {
             styles[i].bg = style.bg;
             styles[i].bgMode = style.bgMode;
         }
-        if (!(style.scope & screenStyleNoFmt)) {
+        if (!(style.style & screenStyleNoFmt)) {
             styles[i].textFmt = style.textFmt;
         }
-        styles[i].scope = 0;
+        styles[i].style = 0;
     }
 }
 
@@ -377,7 +377,7 @@ static void screenChangeStyle_(Screen *screen, ScreenStyle st) {
 }
 
 static void writeLine_(Screen *screen, uint16_t idx) {
-    StrView *editRow = (StrView *)&screen->editRows[idx];
+    StrView *editRow = (StrView *)&screen->editRows->sBufs[idx];
     strAppendFmt(
         &screen->buf,
         escCursorSetPos("%u", "%u") escLineClear,
@@ -438,7 +438,7 @@ bool screenRefresh(Screen *screen) {
         writeLine_(screen, i);
     }
 
-    Str *tempRows = screen->editRows;
+    ScreenRows *tempRows = screen->editRows;
     screen->editRows = screen->displayRows;
     screen->displayRows = tempRows;
 
