@@ -58,6 +58,12 @@ void bufMapInit(BufMap *map) {
 }
 
 void bufMapDestroy(BufMap *map) {
+    for (uint32_t i = 0; i < map->cap; i++) {
+        if (map->buffers[i]._handle != bufInvalidHandle) {
+            strDestroy(&map->buffers[i].path);
+            ctxDestroy(&map->buffers[i].ctx);
+        }
+    }
     memFree(map->buffers);
     map->len = 0;
     map->cap = 0;
