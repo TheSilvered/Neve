@@ -137,9 +137,6 @@ void memFree(void *block) {
 #include <stdbool.h>
 #include <inttypes.h>
 
-#define sentinelLen_ 4
-#define garbageByte_ 0xc5
-
 #if __STDC_VERSION__ >= 201112L
     #if __STDC_VERSION__ < 202311L
         #define thread_local _Thread_local
@@ -150,6 +147,9 @@ void memFree(void *block) {
 #define thread_local __thread
 #endif // !thread_local
 
+#define sentinelLen_ 4
+#define garbageByte_ 0xc5
+
 // Keep the headers in an AVL tree sorted by memory address
 
 typedef struct MemHeader {
@@ -158,113 +158,138 @@ typedef struct MemHeader {
     uint32_t line;
     const char *file; // assume static storage for file names
     size_t blockSize;
-    uint64_t sentinels[sentinelLen_]; // pseudo-random sentinel pattern repeated
-                                      // at the end
+    uint64_t sentinels[sentinelLen_]; // ps. rand. pattern for bounds checking
 } MemHeader;
 
-thread_local MemHeader *memRoot = NULL;
+// Code for PRNG found at https://stackoverflow.com/a/53900430/16275142
 
-static uint32_t max_(uint32_t a, uint32_t b) {
-    return a > b ? a : b;
+typedef struct PrngState {
+    uint64_t state;
+} PrngState;
+
+static inline uint64_t prngNext_(PrngState *p) {
+    uint64_t state = p->state;
+    state ^= state >> 12;
+    state ^= state << 25;
+    state ^= state >> 27;
+    p->state = state;
+    return state * UINT64_C(2685821657736338717);
 }
 
-static uint32_t min_(uint32_t a, uint32_t b) {
-    return a < b ? a : b;
+thread_local MemHeader *t_memRoot = NULL;
+
+static inline void mhUpdateHeight_(MemHeader *mh);
+static inline int32_t mhBalanceFactor_(MemHeader *mh);
+static MemHeader *mhRotRight_(MemHeader *oldRoot);
+static MemHeader *mhRotLeft_(MemHeader *oldRoot);
+static MemHeader *mhRebalance_(MemHeader *root);
+static MemHeader *mhInsert_(MemHeader *root, MemHeader *mh);
+static bool mhContains_(MemHeader *root, MemHeader *header);
+static MemHeader *mhMin_(MemHeader *root);
+static MemHeader *mhRemove_(MemHeader *root, MemHeader *mh);
+static bool mhCheckBounds_(MemHeader *header);
+static void mhPrint_(MemHeader *header);
+static void mhPrintAll_(MemHeader *root);
+
+static inline uint32_t mhGetHeight_(MemHeader *mh) {
+    return mh ? mh->height : 0;
 }
 
-static uint32_t height_(MemHeader *header) {
-    return header ? header->height : 0;
+static inline void mhUpdateHeight_(MemHeader *mh) {
+    uint32_t leftHeight = mhGetHeight_(mh->left);
+    uint32_t rightHeight = mhGetHeight_(mh->right);
+    mh->height = 1 + (leftHeight > rightHeight ? leftHeight : rightHeight);
 }
 
-static MemHeader *rotRight_(MemHeader *oldRoot) {
+static inline int32_t mhBalanceFactor_(MemHeader *mh) {
+    return (int32_t)mhGetHeight_(mh->left) - (int32_t)mhGetHeight_(mh->right);
+}
+
+static MemHeader *mhRotRight_(MemHeader *oldRoot) {
     MemHeader *newRoot = oldRoot->left;
     MemHeader *tmp = newRoot->right;
 
     newRoot->right = oldRoot;
     oldRoot->left = tmp;
 
-    oldRoot->height = max_(height_(oldRoot->left), height_(oldRoot->right)) + 1;
-    newRoot->height = max_(height_(newRoot->left), height_(newRoot->right)) + 1;
+    mhUpdateHeight_(oldRoot);
+    mhUpdateHeight_(newRoot);
 
     return newRoot;
 }
 
-static MemHeader *rotLeft_(MemHeader *oldRoot) {
+static MemHeader *mhRotLeft_(MemHeader *oldRoot) {
     MemHeader *newRoot = oldRoot->right;
     MemHeader *tmp = newRoot->left;
 
     newRoot->left = oldRoot;
     oldRoot->right = tmp;
 
-    oldRoot->height = max_(height_(oldRoot->left), height_(oldRoot->right)) + 1;
-    newRoot->height = max_(height_(newRoot->left), height_(newRoot->right)) + 1;
+    mhUpdateHeight_(oldRoot);
+    mhUpdateHeight_(newRoot);
 
     return newRoot;
 }
 
-static MemHeader *rebalance_(MemHeader *root) {
-    int32_t balance = (int32_t)height_(root->left)
-                    - (int32_t)height_(root->right);
+static MemHeader *mhRebalance_(MemHeader *root) {
+    int32_t balance = mhBalanceFactor_(root);
 
     if (balance > 1) {
-        int32_t leftBalance = (int32_t)height_(root->left->left)
-                            - (int32_t)height_(root->left->right);
+        int32_t leftBalance = mhBalanceFactor_(root->left);
         if (leftBalance < 0) {
-            root->left = rotLeft_(root->left);
+            root->left = mhRotLeft_(root->left);
         }
-        return rotRight_(root);
+        return mhRotRight_(root);
     } else if (balance < -1) {
-        int32_t rightBalance = (int32_t)height_(root->right->left)
-                             - (int32_t)height_(root->right->right);
+        int32_t rightBalance = mhBalanceFactor_(root->right);
         if (rightBalance > 0) {
-            root->right = rotRight_(root->right);
+            root->right = mhRotRight_(root->right);
         }
-        return rotLeft_(root);
+        return mhRotLeft_(root);
     } else {
         return root;
     }
 }
 
-static MemHeader *insertHeader_(MemHeader *root, MemHeader *header) {
+static MemHeader *mhInsert_(MemHeader *root, MemHeader *mh) {
     if (root == NULL) {
-        return header;
+        return mh;
     }
 
-    assert(header != root);
-    if ((uintptr_t)header < (uintptr_t)root) {
-        root->left = insertHeader_(root->left, header);
+    assert(mh != root);
+    if ((uintptr_t)mh < (uintptr_t)root) {
+        root->left = mhInsert_(root->left, mh);
     } else {
-        root->right = insertHeader_(root->right, header);
+        root->right = mhInsert_(root->right, mh);
     }
-    root->height = 1 + max_(height_(root->left), height_(root->right));
-
-    return rebalance_(root);
+    mhUpdateHeight_(root);
+    return mhRebalance_(root);
 }
 
-static bool hasHeader_(MemHeader *root, MemHeader *header) {
+static bool mhContains_(MemHeader *root, MemHeader *header) {
     if (root == NULL) {
         return false;
     } else if ((uintptr_t)root == (uintptr_t)header) {
         return true;
     } else if ((uintptr_t)header < (uintptr_t)root) {
-        return hasHeader_(root->left, header);
+        return mhContains_(root->left, header);
     } else {
-        return hasHeader_(root->right, header);
+        return mhContains_(root->right, header);
     }
 }
 
-static MemHeader *minHeader_(MemHeader *root) {
+static MemHeader *mhMin_(MemHeader *root) {
     while (root->left) {
         root = root->left;
     }
     return root;
 }
 
-static MemHeader *removeHeader_(MemHeader *root, MemHeader *header) {
-    if ((uintptr_t)header < (uintptr_t)root) {
-        root->left = removeHeader_(root->left, header);
-    } else if ((uintptr_t)header > (uintptr_t)root) {
-        root->right = removeHeader_(root->right, header);
+static MemHeader *mhRemove_(MemHeader *root, MemHeader *mh) {
+    if ((uintptr_t)mh < (uintptr_t)root) {
+        root->left = mhRemove_(root->left, mh);
+    } else if ((uintptr_t)mh > (uintptr_t)root) {
+        root->right = mhRemove_(root->right, mh);
     } else {
         if (!root->left) {
             return root->right;
@@ -273,25 +298,24 @@ static MemHeader *removeHeader_(MemHeader *root, MemHeader *header) {
         }
 
         // Find smallest value of the right subtree and use it in place of root
-        MemHeader *newRoot = minHeader_(root->right);
-        newRoot->right = removeHeader_(root->right, newRoot);
+        MemHeader *newRoot = mhMin_(root->right);
+        newRoot->right = mhRemove_(root->right, newRoot);
         newRoot->left = root->left;
         root = newRoot;
     }
-    root->height = 1 + max_(height_(root->left), height_(root->right));
-
-    return rebalance_(root);
+    mhUpdateHeight_(root);
+    return mhRebalance_(root);
 }
 
-static bool checkSentinels_(MemHeader *header) {
-    return memcmp(
+static bool mhCheckBounds_(MemHeader *header) {
+    return 0 == memcmp(
         header->sentinels,
         (uint8_t *)(header + 1) + header->blockSize,
         sizeof(uint64_t) * sentinelLen_
-    ) == 0;
+    );
 }
 
-static void printHeaderInfo_(MemHeader *header) {
+static void mhPrint_(MemHeader *header) {
     fprintf(
         stderr,
         "%p - %s:%"PRIu32" - size=%zi\n",
@@ -302,28 +326,13 @@ static void printHeaderInfo_(MemHeader *header) {
     );
 }
 
-static void printAllocations_(MemHeader *root) {
+static void mhPrintAll_(MemHeader *root) {
     if (root == NULL) {
         return;
     }
-    printAllocations_(root->left);
-    printHeaderInfo_(root);
-    printAllocations_(root->right);
-}
-
-// Code found at https://stackoverflow.com/a/53900430/16275142
-
-typedef struct PrngState {
-    uint64_t state;
-} PrngState;
-
-static inline uint64_t prndSentinel_(PrngState *p) {
-    uint64_t state = p->state;
-    state ^= state >> 12;
-    state ^= state << 25;
-    state ^= state >> 27;
-    p->state = state;
-    return state * UINT64_C(2685821657736338717);
+    mhPrintAll_(root->left);
+    mhPrint_(root);
+    mhPrintAll_(root->right);
 }
 
 static void *memAllocFilled_(
@@ -339,7 +348,7 @@ static void *memAllocFilled_(
     );
 
     if (block == NULL) {
-        fprintf(stderr, "out of memory");
+        fprintf(stderr, "Out of memory.");
         abort();
     }
 
@@ -353,7 +362,7 @@ static void *memAllocFilled_(
     PrngState state = { (uintptr_t)block };
     void *tailSentinels = (uint8_t *)(block + 1) + byteCount;
     for (int i = 0; i < sentinelLen_; i++) {
-        uint64_t sentinel = prndSentinel_(&state);
+        uint64_t sentinel = prngNext_(&state);
         block->sentinels[i] = sentinel;
     }
     // cannot set tailSentinels[i] directly because the pointer might not be
@@ -362,7 +371,7 @@ static void *memAllocFilled_(
 
     memset((void *)(block + 1), val, byteCount);
 
-    memRoot = insertHeader_(memRoot, block);
+    t_memRoot = mhInsert_(t_memRoot, block);
     return (void *)(block + 1);
 }
 
@@ -410,7 +419,7 @@ void *memExpandBytes_(
 ) {
     assert(newByteCount != 0);
     MemHeader *header = (MemHeader *)block - 1;
-    if (block != NULL && !hasHeader_(memRoot, header)) {
+    if (block != NULL && !mhContains_(t_memRoot, header)) {
         fputs("memExpand: invalid pointer\n", stderr);
         fprintf(stderr, "   at %s:%x"PRIu32"\n", file, line);
         abort();
@@ -418,7 +427,7 @@ void *memExpandBytes_(
     if (block != NULL && header->blockSize > newByteCount) {
         fprintf(stderr, "memExpand: new size (%zi) is smaller\n", newByteCount);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
-        printHeaderInfo_(header);
+        mhPrint_(header);
         abort();
     }
     return memChangeBytes_(block, newByteCount, line, file);
@@ -442,7 +451,7 @@ void *memShrinkBytes_(
 ) {
     assert(newByteCount != 0);
     MemHeader *header = (MemHeader *)block - 1;
-    if (!hasHeader_(memRoot, header)) {
+    if (!mhContains_(t_memRoot, header)) {
         fputs("memShrink: invalid pointer\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         abort();
@@ -450,7 +459,7 @@ void *memShrinkBytes_(
     if (header->blockSize < newByteCount) {
         fprintf(stderr, "memShrink: new size (%zi) is bigger\n", newByteCount);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
-        printHeaderInfo_(header);
+        mhPrint_(header);
         abort();
     }
     return memChangeBytes_(block, newByteCount, line, file);
@@ -477,7 +486,7 @@ void *memChangeBytes_(
     }
 
     MemHeader *header = (MemHeader *)block - 1;
-    if (!hasHeader_(memRoot, header)) {
+    if (!mhContains_(t_memRoot, header)) {
         fputs("memChange: invalid pointer\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         abort();
@@ -488,10 +497,10 @@ void *memChangeBytes_(
         return NULL;
     }
 
-    if (!checkSentinels_(header)) {
+    if (!mhCheckBounds_(header)) {
         fputs("memChange: out of bounds write\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
-        printHeaderInfo_(header);
+        mhPrint_(header);
         abort();
     }
 
@@ -509,28 +518,52 @@ void memFree_(void *block, uint32_t line, const char *file) {
         return;
     }
     MemHeader *header = (MemHeader *)block - 1;
-    if (!hasHeader_(memRoot, header)) {
+    if (!mhContains_(t_memRoot, header)) {
         fputs("memFree: invalid pointer\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         abort();
     }
 
-    if (!checkSentinels_(header)) {
+    if (!mhCheckBounds_(header)) {
         fputs("memFree: out of bounds write\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
-        printHeaderInfo_(header);
+        mhPrint_(header);
         abort();
     }
-    memRoot = removeHeader_(memRoot, header);
+    t_memRoot = mhRemove_(t_memRoot, header);
     free(header);
 }
 
 bool memHasAllocs(void) {
-    return memRoot != NULL;
+    return t_memRoot != NULL;
 }
 
 void memPrintAllocs(void) {
-    printAllocations_(memRoot);
+    mhPrintAll_(t_memRoot);
+}
+
+void memCheckBounds_(void *block, uint32_t line, const char *file) {
+    if (block == NULL) {
+        return;
+    }
+    MemHeader *header = (MemHeader *)block - 1;
+    if (!mhContains_(t_memRoot, header)) {
+        fputs("memCheckBounds: invalid pointer\n", stderr);
+        abort();
+    }
+
+    if (!mhCheckBounds_(header)) {
+        fputs("memCheckBounds: out of bounds write\n", stderr);
+        fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
+        mhPrint_(header);
+        abort();
+    }
+}
+
+void memFreeAllAllocs(void) {
+    while (t_memRoot != NULL) {
+        memFree(t_memRoot + 1);
+    }
 }
 
 #endif // !NDEBUG

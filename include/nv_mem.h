@@ -141,8 +141,15 @@ void *memChangeBytes_(
 );
 void memFree_(void *block, uint32_t line, const char *file);
 
+// Check if there are any allocations
 bool memHasAllocs(void);
+// Print all allocations
 void memPrintAllocs(void);
+// Free all allocations
+void memFreeAllAllocs(void);
+// Check wether an out-of-bounds write happend to block
+#define memCheckBounds(block) memCheckBounds_(block, __LINE__, __FILE__)
+void memCheckBounds_(void *block, uint32_t line, const char *file);
 
 #endif // !NDEBUG
 
