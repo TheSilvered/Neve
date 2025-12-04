@@ -339,7 +339,7 @@ static void *memAllocFilled_(
     );
 
     if (block == NULL) {
-        fprintf(stderr, "Out of memory.");
+        fprintf(stderr, "out of memory");
         abort();
     }
 
@@ -419,6 +419,7 @@ void *memExpandBytes_(
         fprintf(stderr, "memExpand: new size (%zi) is smaller\n", newByteCount);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         printHeaderInfo_(header);
+        abort();
     }
     return memChangeBytes_(block, newByteCount, line, file);
 }
@@ -450,6 +451,7 @@ void *memShrinkBytes_(
         fprintf(stderr, "memShrink: new size (%zi) is bigger\n", newByteCount);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         printHeaderInfo_(header);
+        abort();
     }
     return memChangeBytes_(block, newByteCount, line, file);
 }
@@ -487,9 +489,10 @@ void *memChangeBytes_(
     }
 
     if (!checkSentinels_(header)) {
-        fputs("warning: out of bounds write\n", stderr);
+        fputs("memChange: out of bounds write\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         printHeaderInfo_(header);
+        abort();
     }
 
     void *newBlock = memAllocFilled_(byteCount, garbageByte_, line, file);
@@ -513,9 +516,10 @@ void memFree_(void *block, uint32_t line, const char *file) {
     }
 
     if (!checkSentinels_(header)) {
-        fputs("warning: out of bounds write\n", stderr);
+        fputs("memFree: out of bounds write\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         printHeaderInfo_(header);
+        abort();
     }
     memRoot = removeHeader_(memRoot, header);
     free(header);
