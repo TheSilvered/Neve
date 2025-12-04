@@ -12,11 +12,11 @@ static void bufMapShrink_(BufMap *map);
 static void bufMapResize_(BufMap *map, uint32_t newCap);
 
 static void bufMapInsert_(BufMap *map, Buf buf) {
-    if (map->len == map->cap) {
+    // If the map is full for more than 2 thirds
+    if (3*map->len >= 2*map->cap) {
         bufMapExpand_(map);
     }
-
-    uint32_t mask = (1 << map->cap) - 1;
+    uint32_t mask = map->cap - 1;
     uint32_t idx = buf._handle & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
         if (map->buffers[idx]._handle == bufInvalidHandle) {
@@ -25,6 +25,7 @@ static void bufMapInsert_(BufMap *map, Buf buf) {
         idx = (idx + 1) & mask;
     }
     map->buffers[idx] = buf;
+    map->len++;
 }
 
 static void bufMapExpand_(BufMap *map) {
@@ -127,7 +128,7 @@ Buf *bufRef(BufMap *map, BufHandle bufH) {
 }
 
 void bufClose(BufMap *map, BufHandle bufH) {
-    uint32_t mask = (1 << map->cap) - 1;
+    uint32_t mask = map->cap - 1;
     uint32_t idx = bufH & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
         if (map->buffers[idx]._handle == bufInvalidHandle) {
@@ -143,6 +144,7 @@ void bufClose(BufMap *map, BufHandle bufH) {
 
     ctxDestroy(&map->buffers[idx].ctx);
     strDestroy(&map->buffers[idx].path);
+    map->len--;
 
     idx = (idx + 1) & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
@@ -154,6 +156,7 @@ void bufClose(BufMap *map, BufHandle bufH) {
         bufMapInsert_(map, buf);
         idx = (idx + 1) & mask;
     }
+    bufMapShrink_(map);
 }
 
 FileIOResult bufWriteToDisk(Buf *buf) {
