@@ -2,6 +2,8 @@
 #include <string.h>
 #include "nv_test.h"
 
+#include "nv_mem.h"
+
 /* ----------------------------- Test Functions ----------------------------- */
 
 static bool g_failed = false;
@@ -63,6 +65,13 @@ int main(void) {
         fflush(stdout);
         tests[i].callback();
     }
+
+#ifndef NDEBUG
+    if (memHasAllocs()) {
+        memPrintAllocs();
+        return g_failed ? 2 : 1;
+    }
+#endif // !NDEBUG
 
     return g_failed ? 1 : 0;
 }

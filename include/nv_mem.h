@@ -84,6 +84,7 @@ void memFree(void *block);
 // Internal function for memory tracking
 
 #include <stdint.h>
+#include <stdbool.h>
 
 void *memAlloc_(
     size_t objectCount,
@@ -139,6 +140,9 @@ void *memChangeBytes_(
     const char *file
 );
 void memFree_(void *block, uint32_t line, const char *file);
+
+bool memHasAllocs(void);
+void memPrintAllocs(void);
 
 #endif // !NDEBUG
 

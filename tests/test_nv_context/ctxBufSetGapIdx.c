@@ -13,6 +13,8 @@ void test_ctxBufSetGapIdxZero(void) {
     testAssert(buf.bytes[buf.cap - 2] == 'c');
     testAssert(buf.bytes[buf.cap - 3] == 'b');
     testAssert(buf.bytes[buf.cap - 4] == 'a');
+
+    memFree(buf.bytes);
 }
 
 void test_ctxBufSetGapIdxEnd(void) {
@@ -28,6 +30,8 @@ void test_ctxBufSetGapIdxEnd(void) {
     testAssert(buf.bytes[1] == 'b');
     testAssert(buf.bytes[2] == 'c');
     testAssert(buf.bytes[3] == 'd');
+
+    memFree(buf.bytes);
 }
 
 testList(

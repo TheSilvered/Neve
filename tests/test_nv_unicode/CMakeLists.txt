@@ -1,6 +1,11 @@
 include_directories(BEFORE ../main)
 
-set(Sources ../main/nv_test.c ../../src/nv_udb.c ../../src/nv_unicode.c)
+set(Sources
+    ../main/nv_test.c
+    ../../src/nv_mem.c
+    ../../src/nv_udb.c
+    ../../src/nv_unicode.c
+)
 
 file(GLOB TestSources "*.c")
 

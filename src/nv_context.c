@@ -1151,6 +1151,7 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     } else {
         ctxInsertCursors_(ctx, data, len, &lines);
     }
+    arrClear(&lines);
 }
 
 static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, UcdCh8 *outBuf) {

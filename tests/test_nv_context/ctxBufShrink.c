@@ -42,6 +42,8 @@ void test_ctxShrkinkFull(void) {
     testAssert(*ctxBufGet_(&buf, 1) == s[1]);
     testAssert(*ctxBufGet_(&buf, 2) == s[2]);
     testAssert(*ctxBufGet_(&buf, 3) == s[3]);
+
+    memFree(buf.bytes);
 }
 
 testList(

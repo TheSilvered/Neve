@@ -8,6 +8,8 @@ void test_ctxBufInsertEmpty(void) {
     testAssert(buf.len == 0);
     testAssert(buf.cap == 0);
     testAssert(buf.bytes == NULL);
+
+    memFree(buf.bytes);
 }
 
 void test_ctxBufInsertFromEmpty(void) {
@@ -18,6 +20,8 @@ void test_ctxBufInsertFromEmpty(void) {
     testAssert(buf.len == chArrLen(s));
     testAssert(buf.cap >= chArrLen(s));
     testAssert(buf.gapIdx == chArrLen(s));
+
+    memFree(buf.bytes);
 }
 
 void test_ctxBufInsertFromEnd(void) {
@@ -30,6 +34,8 @@ void test_ctxBufInsertFromEnd(void) {
     testAssert(buf.len == chArrLen(s) * 2);
     testAssert(buf.cap >= chArrLen(s) * 2);
     testAssert(buf.gapIdx == chArrLen(s) * 2);
+
+    memFree(buf.bytes);
 }
 
 testList(

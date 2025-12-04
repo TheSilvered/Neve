@@ -8,6 +8,8 @@ void test_ctxBufRemoveEmpty(void) {
     ctxBufRemove_(&buf, 1);
     testAssert(buf.len == 0);
     testAssert(buf.gapIdx == 0);
+
+    memFree(buf.bytes);
 }
 
 void test_ctxBufRemoveFromEnd(void) {
@@ -20,6 +22,8 @@ void test_ctxBufRemoveFromEnd(void) {
     testAssert(buf.len == 2);
     testAssert(*ctxBufGet_(&buf, 0) == 'a');
     testAssert(*ctxBufGet_(&buf, 1) == 'b');
+
+    memFree(buf.bytes);
 }
 
 void test_ctxBufRemoveFromMiddle(void) {
@@ -32,6 +36,8 @@ void test_ctxBufRemoveFromMiddle(void) {
     testAssert(buf.len == 2);
     testAssert(*ctxBufGet_(&buf, 0) == 'c');
     testAssert(*ctxBufGet_(&buf, 1) == 'd');
+
+    memFree(buf.bytes);
 }
 
 testList(

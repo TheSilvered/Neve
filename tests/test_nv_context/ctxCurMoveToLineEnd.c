@@ -1,3 +1,4 @@
+#include "nv_context.h"
 #include "nv_test.h"
 #include "nv_context.c"
 
@@ -44,6 +45,8 @@ void test_ctxCurMoveLineEndMultiline(void) {
     testAssert(ctx.cursors.items[1].baseCol == 3);
     testAssert(ctx.cursors.items[2].idx == 9);
     testAssert(ctx.cursors.items[2].baseCol == 2);
+
+    ctxDestroy(&ctx);
 }
 
 testList(

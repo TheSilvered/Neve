@@ -46,6 +46,8 @@ void test_ctxIdxAtWithLineRef(void) {
     testAssert(ctxIdxAt_(&ctx, 1, 9) == 10);
     testAssert(ctxIdxAt_(&ctx, 1, 10) == 10);
     testAssert(ctxIdxAt_(&ctx, 1, 11) == 14);
+
+    ctxDestroy(&ctx);
 }
 
 testList(

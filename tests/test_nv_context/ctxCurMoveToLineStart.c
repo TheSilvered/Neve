@@ -44,6 +44,8 @@ void test_ctxCurMoveLineStartMultiline(void) {
     testAssert(ctx.cursors.items[1].baseCol == 0);
     testAssert(ctx.cursors.items[2].idx == 7);
     testAssert(ctx.cursors.items[2].baseCol == 0);
+
+    ctxDestroy(&ctx);
 }
 
 testList(

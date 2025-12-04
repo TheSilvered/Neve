@@ -302,13 +302,13 @@ static void printHeaderInfo_(MemHeader *header) {
     );
 }
 
-static void printAllocations(MemHeader *root) {
+static void printAllocations_(MemHeader *root) {
     if (root == NULL) {
         return;
     }
-    printAllocations(root->left);
+    printAllocations_(root->left);
     printHeaderInfo_(root);
-    printAllocations(root->right);
+    printAllocations_(root->right);
 }
 
 // Code found at https://stackoverflow.com/a/53900430/16275142
@@ -519,6 +519,14 @@ void memFree_(void *block, uint32_t line, const char *file) {
     }
     memRoot = removeHeader_(memRoot, header);
     free(header);
+}
+
+bool memHasAllocs(void) {
+    return memRoot != NULL;
+}
+
+void memPrintAllocs(void) {
+    printAllocations_(memRoot);
 }
 
 #endif // !NDEBUG
