@@ -13,7 +13,7 @@ bool termIsInit(void) {
 
 static UcdCP g_queuedKey = 0;
 
-static UcdCP getKey_(void) {
+static UcdCP _getKey(void) {
     if (g_queuedKey != 0) {
         UcdCP key = g_queuedKey;
         g_queuedKey = 0;
@@ -32,9 +32,9 @@ static UcdCP getKey_(void) {
 // First and last characters of the escape sequence. Any number in the mmiddle
 // Is an already parsed arguent (the numbers are already integers instead of
 // being strings of digit characters).
-static size_t readEscapeSeq_(int32_t *outBuf, size_t bufSize) {
+static size_t _readEscapeSeq(int32_t *outBuf, size_t bufSize) {
     assert(bufSize >= 3);
-    UcdCP key = getKey_();
+    UcdCP key = _getKey();
     if (key == TermKey_None) {
         return 0;
     }
@@ -44,7 +44,7 @@ static size_t readEscapeSeq_(int32_t *outBuf, size_t bufSize) {
         return 1;
     }
 
-    key = getKey_();
+    key = _getKey();
     if (key == TermKey_Escape) {
         // ESC ESC is the same as a single ESC
         outBuf[0] = key;
@@ -62,7 +62,7 @@ static size_t readEscapeSeq_(int32_t *outBuf, size_t bufSize) {
     size_t numIdx = 0;
     char numBuf[6] = { 0 };
     for (;;) {
-        key = getKey_();
+        key = _getKey();
 
         // Ignore any incomplete sequences
         if (key == TermKey_None) {
@@ -113,10 +113,10 @@ static size_t readEscapeSeq_(int32_t *outBuf, size_t bufSize) {
 }
 
 int32_t termGetKey(void) {
-#define SeqBufLen_ 32
-    int32_t seq[SeqBufLen_] = { 0 };
-    size_t seqLen = readEscapeSeq_(seq, SeqBufLen_);
-#undef SeqBufLen_
+#define _SeqBufLen 32
+    int32_t seq[_SeqBufLen] = { 0 };
+    size_t seqLen = _readEscapeSeq(seq, _SeqBufLen);
+#undef _SeqBufLen
 
     if (seqLen == 0) {
         return 0;

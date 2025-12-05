@@ -11,7 +11,7 @@
 // 24-bit RGB colors color mode
 #define screenColModeRGB 2
 
-#define screenColRGB(r_, g_, b_) { .r = (r_), .g = (g_), .b = (b_) }
+#define screenColRGB(_r, _g, _b) { .r = (_r), .g = (_g), .b = (_b) }
 #define screenColT16(col) { .r = (col) }
 #define screenColT256(col) { .r = (col) }
 

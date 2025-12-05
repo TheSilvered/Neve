@@ -5,8 +5,8 @@ void test_ctxBufSetGapIdxZero(void) {
     CtxBuf buf = { 0 };
     const char s[] = "abcd";
 
-    ctxBufInsert_(&buf, (UcdCh8 *)s, chArrLen(s));
-    ctxBufSetGapIdx_(&buf, 0);
+    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufSetGapIdx(&buf, 0);
 
     testAssert(buf.gapIdx == 0);
     testAssert(buf.bytes[buf.cap - 1] == 'd');
@@ -21,9 +21,9 @@ void test_ctxBufSetGapIdxEnd(void) {
     CtxBuf buf = { 0 };
     const char s[] = "abcd";
 
-    ctxBufInsert_(&buf, (UcdCh8 *)s, chArrLen(s));
-    ctxBufSetGapIdx_(&buf, 0);
-    ctxBufSetGapIdx_(&buf, buf.len);
+    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufSetGapIdx(&buf, 0);
+    _ctxBufSetGapIdx(&buf, buf.len);
 
     testAssert(buf.gapIdx == buf.len);
     testAssert(buf.bytes[0] == 'a');

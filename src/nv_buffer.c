@@ -2,19 +2,19 @@
 #include "nv_buffer.h"
 #include "nv_file.h"
 
-#define mapMinCap_ 4
+#define _mapMinCap 4
 
 static BufHandle g_handleCounter = 1;
 
-static void bufMapInsert_(BufMap *map, Buf buf);
-static void bufMapExpand_(BufMap *map);
-static void bufMapShrink_(BufMap *map);
-static void bufMapResize_(BufMap *map, uint32_t newCap);
+static void _bufMapInsert(BufMap *map, Buf buf);
+static void _bufMapExpand(BufMap *map);
+static void _bufMapShrink(BufMap *map);
+static void _bufMapResize(BufMap *map, uint32_t newCap);
 
-static void bufMapInsert_(BufMap *map, Buf buf) {
+static void _bufMapInsert(BufMap *map, Buf buf) {
     // If the map is full for more than 2 thirds
     if (3*map->len >= 2*map->cap) {
-        bufMapExpand_(map);
+        _bufMapExpand(map);
     }
     uint32_t mask = map->cap - 1;
     uint32_t idx = buf._handle & mask;
@@ -28,18 +28,18 @@ static void bufMapInsert_(BufMap *map, Buf buf) {
     map->len++;
 }
 
-static void bufMapExpand_(BufMap *map) {
-    bufMapResize_(map, NV_MAX(map->cap*2, mapMinCap_));
+static void _bufMapExpand(BufMap *map) {
+    _bufMapResize(map, NV_MAX(map->cap*2, _mapMinCap));
 }
 
-static void bufMapShrink_(BufMap *map) {
+static void _bufMapShrink(BufMap *map) {
     if (map->cap == 0 || map->cap < map->len * 4) {
         return;
     }
-    bufMapResize_(map, NV_MAX(map->cap / 2, mapMinCap_));
+    _bufMapResize(map, NV_MAX(map->cap / 2, _mapMinCap));
 }
 
-static void bufMapResize_(BufMap *map, uint32_t newCap) {
+static void _bufMapResize(BufMap *map, uint32_t newCap) {
     uint32_t oldCap = map->cap;
     Buf *oldBufs = map->buffers;
     map->buffers = memAllocZeroed(newCap, sizeof(*map->buffers));
@@ -48,7 +48,7 @@ static void bufMapResize_(BufMap *map, uint32_t newCap) {
     // re-insert the values
     for (uint32_t i = 0; i < oldCap; i++) {
         if (oldBufs[i]._handle != bufInvalidHandle) {
-            bufMapInsert_(map, oldBufs[i]);
+            _bufMapInsert(map, oldBufs[i]);
         }
     }
     memFree(oldBufs);
@@ -70,13 +70,13 @@ void bufMapDestroy(BufMap *map) {
     map->cap = 0;
 }
 
-BufHandle bufNewEmpty(BufMap *map) {
+BufHandle bufInitEmpty(BufMap *map) {
     BufHandle handle = g_handleCounter++;
     Buf buf = { 0 };
     ctxInit(&buf.ctx, true);
     strInit(&buf.path, 0);
     buf._handle = handle;
-    bufMapInsert_(map, buf);
+    _bufMapInsert(map, buf);
     return handle;
 }
 
@@ -108,7 +108,7 @@ FileIOResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
     buf.ctx = ctx;
     strInit(&buf.path, 0);
     buf._handle = handle;
-    bufMapInsert_(map, buf);
+    _bufMapInsert(map, buf);
     *outHandle = handle;
     return FileIOResult_Success;
 }
@@ -153,10 +153,10 @@ void bufClose(BufMap *map, BufHandle bufH) {
         }
         Buf buf = map->buffers[idx];
         map->buffers[idx]._handle = bufInvalidHandle;
-        bufMapInsert_(map, buf);
+        _bufMapInsert(map, buf);
         idx = (idx + 1) & mask;
     }
-    bufMapShrink_(map);
+    _bufMapShrink(map);
 }
 
 FileIOResult bufWriteToDisk(Buf *buf) {

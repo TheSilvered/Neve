@@ -5,14 +5,14 @@ void test_bufNewEmpty(void) {
     BufMap map;
     bufMapInit(&map);
 
-    BufHandle hd1 = bufNewEmpty(&map);
+    BufHandle hd1 = bufInitEmpty(&map);
     testAssert(hd1 != bufInvalidHandle);
-    BufHandle hd2 = bufNewEmpty(&map);
+    BufHandle hd2 = bufInitEmpty(&map);
     testAssert(hd2 != bufInvalidHandle);
     testAssert(hd1 != hd2);
 
     for (int i = 0; i < 100; i++) {
-        BufHandle hd = bufNewEmpty(&map);
+        BufHandle hd = bufInitEmpty(&map);
         testAssert(hd != bufInvalidHandle);
     }
 

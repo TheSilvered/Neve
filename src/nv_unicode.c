@@ -24,7 +24,7 @@
 #define DECODING_ERROR_CH 0xfffd
 
 bool ucdIsCPValid(UcdCP cp) {
-    return cp <= UcdCPMax
+    return cp <= ucdCPMax
         && cp >= 0
         && (cp < ucdHighSurrogateFirst || cp > ucdLowSurrogateLast);
 }
@@ -145,7 +145,7 @@ size_t ucdCh16StrToCh8Str(
             buf[bufIdx++] = 0xe0 | (UcdCh8)(ch >> 12);
             buf[bufIdx++] = 0x80 | (UcdCh8)(ch >> 6 & 0x3f);
             buf[bufIdx++] = 0x80 | (UcdCh8)(ch & 0x3f);
-        } else if (ch <= UcdCPMax && bufLen - bufIdx > 4) {
+        } else if (ch <= ucdCPMax && bufLen - bufIdx > 4) {
             buf[bufIdx++] = 0xf0 | (UcdCh8)(ch >> 18);
             buf[bufIdx++] = 0x80 | (UcdCh8)(ch >> 12 & 0x3f);
             buf[bufIdx++] = 0x80 | (UcdCh8)(ch >> 6 & 0x3f);
@@ -243,7 +243,7 @@ size_t ucdCh8StrToCh16Str(
             bufIdx += ucdCh16CPLen(ch);
         } else if (ch <= 0xffff && bufLen - bufIdx > 1) {
             buf[bufIdx++] = (UcdCh16)ch;
-        } else if (ch <= UcdCPMax && bufLen - bufIdx > 2) {
+        } else if (ch <= ucdCPMax && bufLen - bufIdx > 2) {
             ch -= 0x10000;
             buf[bufIdx++] = ucdHighSurrogateFirst | (UcdCh16)(ch >> 10);
             buf[bufIdx++] = ucdLowSurrogateFirst | (UcdCh16)(ch & 0x3ff);
@@ -272,7 +272,7 @@ uint8_t ucdCh8CPLen(UcdCP ch) {
          + 2*(!!(ch >= 0x80 && ch < 0x800))
          + 3*(!!(ch >= 0x800 && ch < ucdHighSurrogateFirst))
          + 3*(!!(ch > ucdLowSurrogateLast && ch < 0x10000))
-         + 4*(!!(ch >= 0x10000 && ch <= UcdCPMax));
+         + 4*(!!(ch >= 0x10000 && ch <= ucdCPMax));
 }
 
 UcdCP ucdCh8ToCP(const UcdCh8 *bytes) {
@@ -313,7 +313,7 @@ uint8_t ucdCh8FromCP(UcdCP cp, UcdCh8 *outBuf) {
         outBuf[1] = 0x80 | (UcdCh8)(cp >> 6 & 0x3f);
         outBuf[2] = 0x80 | (UcdCh8)(cp & 0x3f);
         return 3;
-    } else if (cp <= UcdCPMax) {
+    } else if (cp <= ucdCPMax) {
         outBuf[0] = 0xf0 | (UcdCh8)(cp >> 18);
         outBuf[1] = 0x80 | (UcdCh8)(cp >> 12 & 0x3f);
         outBuf[2] = 0x80 | (UcdCh8)(cp >> 6 & 0x3f);
@@ -369,7 +369,7 @@ uint8_t ucdCh16FromCP(UcdCP cp, UcdCh16 *outBuf) {
     if (cp <= 0xffff) {
         outBuf[0] = (UcdCh16)cp;
         return 1;
-    } else if (cp <= UcdCPMax) {
+    } else if (cp <= ucdCPMax) {
         cp -= 0x10000;
         outBuf[0] = ucdHighSurrogateFirst | (UcdCh16)(cp >> 10);
         outBuf[1] = ucdLowSurrogateFirst | (UcdCh16)(cp & 0x3ff);

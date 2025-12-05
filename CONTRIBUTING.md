@@ -3,16 +3,21 @@
 ```text
 .github/
     workflows/        # Github actions
-include/              # Header files for the editor
-src/                  # Source of the editor
+include/          # Header files for the editor
+src/              # Source of the editor
+    unix/			  # Unix-specific code
+    win32/			  # Windows-specific code
 tests/
-    main/             # Test "library"
+    main/             # Test support code
+    test_nv_array/    # `nv_array.h` tests
+    test_nv_buffer/   # `nv_buffer.h` tests
+    test_nv_context/  # `nv_context.h` tests
     test_nv_string/   # `nv_string.h` tests
     test_nv_unicode/  # `nv_unicode.h` tests
-tools/                # Miscellaneous scripts
+tools/            # Miscellaneous scripts
 ```
 
-# Coding style
+# Code style
 
 ## Types
 
@@ -35,7 +40,7 @@ only in static string literals.
 
 ### Constants
 
-If a function does not modify the contents of a pointer they should be marked
+If a function does not modify the contents of a pointer it should be marked
 as constant.
 
 ```c
@@ -73,11 +78,28 @@ int main(void) {
 }
 ```
 
-## Style
+## Naming conventions
+
+Use `PascalCase` for typedef'd types and `camelCase` for functions, variables
+and macros.
+
+Global variables are prefixed with `g_` and thread local variables with `t_`.
+
+Private functions in a module and struct members are prefixed with `_`.
+
+All symbols in a module have a common prefix. Casing may differ for different
+kinds of symbols.
+
+Functions containing `New` allocate the structure in memory and have a
+corresponding `Destroy` function. Though `Init` is preferred and the user of
+the data is responsable for the memory.
+
+## Spacing
 
 ### Indentation
 
-Use 4-space intentation.
+Use 4-space intentation. No limit is put to the number of indentation levels but
+a maximum of 3 is preferred.
 
 ### Line length
 

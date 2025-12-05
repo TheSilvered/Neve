@@ -8,7 +8,7 @@
 
 static bool g_failed = false;
 
-void testAssert_(bool expr, const char *exprStr, const char *file, int line) {
+void _testAssert(bool expr, const char *exprStr, const char *file, int line) {
     if (expr) {
         return;
     }
@@ -18,7 +18,7 @@ void testAssert_(bool expr, const char *exprStr, const char *file, int line) {
     fflush(stdout);
 }
 
-bool testAssertWith_(
+bool _testAssertWith(
     bool expr,
     const char *exprStr,
     const char *file,
@@ -34,7 +34,7 @@ bool testAssertWith_(
     return false;
 }
 
-bool testAssertRequire_(
+bool _testAssertRequire(
     bool expr,
     const char *exprStr,
     const char *file,
@@ -58,7 +58,7 @@ bool testAssertRequire_(
 
 int main(void) {
     size_t testCount;
-    Test *tests = testGetTests_(&testCount);
+    Test *tests = _testGetTests(&testCount);
 
     for (size_t i = 0; i < testCount; i++) {
         printf("running test %s...\n", tests[i].name);

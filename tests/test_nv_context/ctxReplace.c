@@ -1,5 +1,5 @@
 #include "nv_test.h"
-#define lineRefMaxGap_ 8
+#define _lineRefMaxGap 8
 #include "nv_context.c"
 
 bool eqStrViewCStr(StrView sv, const char *cStr) {
@@ -12,7 +12,7 @@ void test_ctxReplaceSameLen(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
     StrView content = ctxGetContent(&ctx);
     testAssert(eqStrViewCStr(content, "abrplfg"));
     testAssert(content.len == 7);
@@ -27,7 +27,7 @@ void test_ctxReplaceShorter(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
     StrView content = ctxGetContent(&ctx);
     testAssert(eqStrViewCStr(content, "abrpfg"));
     testAssert(content.len == 6);
@@ -42,7 +42,7 @@ void test_ctxReplaceEmpty(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 2, 5, NULL, 0);
+    _ctxReplace(&ctx, 2, 5, NULL, 0);
     StrView content = ctxGetContent(&ctx);
     testAssert(eqStrViewCStr(content, "abfg"));
     testAssert(content.len == 4);
@@ -57,7 +57,7 @@ void test_ctxReplaceLonger(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
     StrView content = ctxGetContent(&ctx);
     testAssert(eqStrViewCStr(content, "abrplxfg"));
     testAssert(content.len == 8);
@@ -72,7 +72,7 @@ void test_ctxReplaceAtBeginning(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 0, 3, (UcdCh8 *)"rplx", 4);
+    _ctxReplace(&ctx, 0, 3, (UcdCh8 *)"rplx", 4);
 
     StrView content = ctxGetContent(&ctx);
     testAssert(eqStrViewCStr(content, "rplxdefg"));
@@ -88,7 +88,7 @@ void test_ctxReplaceAtEnd(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 4, 7, (UcdCh8 *)"rplx", 4);
+    _ctxReplace(&ctx, 4, 7, (UcdCh8 *)"rplx", 4);
 
     StrView content = ctxGetContent(&ctx);
     testAssert(eqStrViewCStr(content, "abcdrplx"));
@@ -109,7 +109,7 @@ void test_ctxReplaceSameLenWCursors(void) {
     ctxCurAdd(&ctx, 5);
     ctxCurAdd(&ctx, 6);
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 2);
     testAssert(ctx.cursors.items[0].baseCol == 2);
@@ -132,7 +132,7 @@ void test_ctxReplaceShorterWCursors(void) {
     ctxCurAdd(&ctx, 5);
     ctxCurAdd(&ctx, 6);
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 2);
     testAssert(ctx.cursors.items[0].baseCol == 2);
@@ -155,7 +155,7 @@ void test_ctxReplaceEmptyWCursors(void) {
     ctxCurAdd(&ctx, 5);
     ctxCurAdd(&ctx, 6);
 
-    ctxReplace_(&ctx, 2, 5, NULL, 0);
+    _ctxReplace(&ctx, 2, 5, NULL, 0);
     testAssert(ctx.cursors.len == 2);
     testAssert(ctx.cursors.items[0].idx == 2);
     testAssert(ctx.cursors.items[0].baseCol == 2);
@@ -176,7 +176,7 @@ void test_ctxReplaceLongerWCursors(void) {
     ctxCurAdd(&ctx, 5);
     ctxCurAdd(&ctx, 6);
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 2);
     testAssert(ctx.cursors.items[0].baseCol == 2);
@@ -206,7 +206,7 @@ void test_ctxReplaceSameLenWSelCursors(void) {
     ctxCurMove(&ctx, 3, 0);
     ctxCurMove(&ctx, 4, 7);
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
     testAssert(ctx.cursors.len == 4);
     testAssert(ctx.cursors.items[0].idx == 0);
     testAssert(ctx.cursors.items[0]._selStart == 2);
@@ -238,7 +238,7 @@ void test_ctxReplaceShorterWSelCursors(void) {
     ctxCurMove(&ctx, 3, 0);
     ctxCurMove(&ctx, 4, 7);
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
     testAssert(ctx.cursors.len == 4);
     testAssert(ctx.cursors.items[0].idx == 0);
     testAssert(ctx.cursors.items[0]._selStart == 2);
@@ -270,7 +270,7 @@ void test_ctxReplaceEmptyWSelCursors(void) {
     ctxCurMove(&ctx, 3, 0);
     ctxCurMove(&ctx, 4, 7);
 
-    ctxReplace_(&ctx, 2, 5, NULL, 0);
+    _ctxReplace(&ctx, 2, 5, NULL, 0);
     testAssert(ctx.cursors.len == 4);
     testAssert(ctx.cursors.items[0].idx == 0);
     testAssert(ctx.cursors.items[0]._selStart == 2);
@@ -302,7 +302,7 @@ void test_ctxReplaceLongerWSelCursors(void) {
     ctxCurMove(&ctx, 3, 0);
     ctxCurMove(&ctx, 4, 7);
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
     testAssert(ctx.cursors.len == 4);
     testAssert(ctx.cursors.items[0].idx == 0);
     testAssert(ctx.cursors.items[0]._selStart == 2);
@@ -322,7 +322,7 @@ void test_ctxReplaceSameLenWSelections(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    // They are not normalized but ctxReplace_ does not care
+    // They are not normalized but _ctxReplace does not care
     arrAppend(&ctx._sels, (CtxSelection){ 0, 2 }); // fully before
     arrAppend(&ctx._sels, (CtxSelection){ 1, 3 }); // ends inside
     arrAppend(&ctx._sels, (CtxSelection){ 1, 6 }); // surrounds
@@ -331,7 +331,7 @@ void test_ctxReplaceSameLenWSelections(void) {
     arrAppend(&ctx._sels, (CtxSelection){ 4, 6 }); // starts inside
     arrAppend(&ctx._sels, (CtxSelection){ 5, 7 }); // fully after
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
     testAssert(ctx._sels.len == 5);
     testAssert(ctx._sels.items[0].startIdx == 0);
     testAssert(ctx._sels.items[0].endIdx == 2);
@@ -353,7 +353,7 @@ void test_ctxReplaceShorterWSelections(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    // They are not normalized but ctxReplace_ does not care
+    // They are not normalized but _ctxReplace does not care
     arrAppend(&ctx._sels, (CtxSelection){ 0, 2 }); // fully before
     arrAppend(&ctx._sels, (CtxSelection){ 1, 3 }); // ends inside
     arrAppend(&ctx._sels, (CtxSelection){ 1, 6 }); // surrounds
@@ -362,7 +362,7 @@ void test_ctxReplaceShorterWSelections(void) {
     arrAppend(&ctx._sels, (CtxSelection){ 4, 6 }); // starts inside
     arrAppend(&ctx._sels, (CtxSelection){ 5, 7 }); // fully after
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
     testAssert(ctx._sels.len == 5);
     testAssert(ctx._sels.items[0].startIdx == 0);
     testAssert(ctx._sels.items[0].endIdx == 2);
@@ -384,7 +384,7 @@ void test_ctxReplaceEmptyWSelections(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    // They are not normalized but ctxReplace_ does not care
+    // They are not normalized but _ctxReplace does not care
     arrAppend(&ctx._sels, (CtxSelection){ 0, 2 }); // fully before
     arrAppend(&ctx._sels, (CtxSelection){ 1, 3 }); // ends inside
     arrAppend(&ctx._sels, (CtxSelection){ 1, 6 }); // surrounds
@@ -393,7 +393,7 @@ void test_ctxReplaceEmptyWSelections(void) {
     arrAppend(&ctx._sels, (CtxSelection){ 4, 6 }); // starts inside
     arrAppend(&ctx._sels, (CtxSelection){ 5, 7 }); // fully after
 
-    ctxReplace_(&ctx, 2, 5, NULL, 0);
+    _ctxReplace(&ctx, 2, 5, NULL, 0);
     testAssert(ctx._sels.len == 5);
     testAssert(ctx._sels.items[0].startIdx == 0);
     testAssert(ctx._sels.items[0].endIdx == 2);
@@ -418,7 +418,7 @@ void test_ctxReplaceEmptyJoinSelections(void) {
     arrAppend(&ctx._sels, (CtxSelection){ 1, 3 });
     arrAppend(&ctx._sels, (CtxSelection){ 4, 6 });
 
-    ctxReplace_(&ctx, 2, 5, NULL, 0);
+    _ctxReplace(&ctx, 2, 5, NULL, 0);
     testAssert(ctx._sels.len == 1);
     testAssert(ctx._sels.items[0].startIdx == 1);
     testAssert(ctx._sels.items[0].endIdx == 3);
@@ -432,7 +432,7 @@ void test_ctxReplaceLongerWSelections(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    // They are not normalized but ctxReplace_ does not care
+    // They are not normalized but _ctxReplace does not care
     arrAppend(&ctx._sels, (CtxSelection){ 0, 2 }); // fully before
     arrAppend(&ctx._sels, (CtxSelection){ 1, 3 }); // ends inside
     arrAppend(&ctx._sels, (CtxSelection){ 1, 6 }); // surrounds
@@ -441,7 +441,7 @@ void test_ctxReplaceLongerWSelections(void) {
     arrAppend(&ctx._sels, (CtxSelection){ 4, 6 }); // starts inside
     arrAppend(&ctx._sels, (CtxSelection){ 5, 7 }); // fully after
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
     testAssert(ctx._sels.len == 5);
     testAssert(ctx._sels.items[0].startIdx == 0);
     testAssert(ctx._sels.items[0].endIdx == 2);
@@ -468,7 +468,7 @@ void test_ctxReplaceSameLenCacheUpdate(void) {
     testAssert(ctx._refs.items[0].line == 0);
     testAssert(ctx._refs.items[0].col == 8);
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rpl", 3);
 
     testAssert(ctx._refs.len == 1);
     testAssert(ctx._refs.items[0].idx == 8);
@@ -489,7 +489,7 @@ void test_ctxReplaceShorterCacheUpdate(void) {
     testAssert(ctx._refs.items[0].line == 0);
     testAssert(ctx._refs.items[0].col == 8);
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
 
     testAssert(ctx._refs.len == 1);
     testAssert(ctx._refs.items[0].idx == 7);
@@ -513,7 +513,7 @@ void test_ctxReplaceMuchShorterCacheUpdate(void) {
     testAssert(ctx._refs.items[1].line == 0);
     testAssert(ctx._refs.items[1].col == 16);
 
-    ctxReplace_(&ctx, 1, 6, NULL, 0);
+    _ctxReplace(&ctx, 1, 6, NULL, 0);
 
     testAssert(ctx._refs.len == 1);
     testAssert(ctx._refs.items[0].idx == 11);
@@ -534,7 +534,7 @@ void test_ctxReplaceEmptyCacheUpdate(void) {
     testAssert(ctx._refs.items[0].line == 0);
     testAssert(ctx._refs.items[0].col == 8);
 
-    ctxReplace_(&ctx, 2, 5, NULL, 0);
+    _ctxReplace(&ctx, 2, 5, NULL, 0);
 
     testAssert(ctx._refs.len == 1);
     testAssert(ctx._refs.items[0].idx == 5);
@@ -555,7 +555,7 @@ void test_ctxReplaceLongerCacheUpdate(void) {
     testAssert(ctx._refs.items[0].line == 0);
     testAssert(ctx._refs.items[0].col == 8);
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
 
     testAssert(ctx._refs.len == 1);
     testAssert(ctx._refs.items[0].idx == 9);
@@ -579,7 +579,7 @@ void test_ctxReplaceMuchLongerCacheUpdate(void) {
     testAssert(ctx._refs.items[1].line == 0);
     testAssert(ctx._refs.items[1].col == 16);
 
-    ctxReplace_(&ctx, 2, 2, (UcdCh8 *)"replace", 7);
+    _ctxReplace(&ctx, 2, 2, (UcdCh8 *)"replace", 7);
 
     testAssert(ctx._refs.len == 3);
     testAssert(ctx._refs.items[0].idx == 7);
@@ -601,7 +601,7 @@ void test_ctxReplaceCacheUpdateWithTabShorter(void) {
     const char s[] = "01234567abcdefgh123\t5678ijkl";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rp", 2);
 
     testAssert(ctx._refs.len == 3);
     testAssert(ctx._refs.items[0].idx == 7);
@@ -623,7 +623,7 @@ void test_ctxReplaceCacheUpdateWithTabMuchShorter(void) {
     const char s[] = "01234567abcdefgh123\t5678ijkl";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 1, 6, NULL, 0);
+    _ctxReplace(&ctx, 1, 6, NULL, 0);
 
     testAssert(ctx._refs.len == 2);
     testAssert(ctx._refs.items[0].idx == 11);
@@ -642,7 +642,7 @@ void test_ctxReplaceCacheUpdateWithTabLonger(void) {
     const char s[] = "01234567abcdefgh123\t5678ijkl";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"rplx", 4);
 
     testAssert(ctx._refs.len == 3);
     testAssert(ctx._refs.items[0].idx == 9);
@@ -664,7 +664,7 @@ void test_ctxReplaceCacheUpdateWithTabMuchLonger(void) {
     const char s[] = "01234567abcdefgh123\t5678ijkl";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 2, 2, (UcdCh8 *)"replace", 7);
+    _ctxReplace(&ctx, 2, 2, (UcdCh8 *)"replace", 7);
 
     testAssert(ctx._refs.len == 4);
     testAssert(ctx._refs.items[0].idx == 7);
@@ -689,7 +689,7 @@ void test_ctxReplaceCacheUpdateWithLineFeed(void) {
     const char s[] = "01234567abc\nefgh1234";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    ctxReplace_(&ctx, 2, 5, (UcdCh8 *)"r\np", 3);
+    _ctxReplace(&ctx, 2, 5, (UcdCh8 *)"r\np", 3);
 
     testAssert(ctx._refs.len == 2);
     testAssert(ctx._refs.items[0].idx == 8);

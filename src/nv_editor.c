@@ -70,7 +70,7 @@ static void exitFileSaveMode(void) {
     g_ed.savingFile = false;
 }
 
-static void renderCtxLine_(
+static void _renderCtxLine(
     const Ctx *ctx,
     size_t lineIdx,
     Str *outBuf,
@@ -146,7 +146,7 @@ static void renderCtxLine_(
     screenWrite(&g_ed.screen, lineX, lineY, outBuf->buf, outBuf->len);
 }
 
-static void renderFile_(Ctx *ctx) {
+static void _renderFile(Ctx *ctx) {
     Str lineBuf = { 0 };
     size_t lineCount = ctxLineCount(ctx);
     uint8_t linenoWidth = (uint8_t)(log10((double)lineCount) + 1);
@@ -165,7 +165,7 @@ static void renderFile_(Ctx *ctx) {
             (ScreenColor){ .col = screenColT16(7) },
             0, i, linenoWidth + 2
         );
-        renderCtxLine_(
+        _renderCtxLine(
             ctx,
             i + ctx->frame.y,
             &lineBuf,
@@ -186,7 +186,7 @@ static void renderFile_(Ctx *ctx) {
     );
 }
 
-static void renderStatusBar_(void) {
+static void _renderStatusBar(void) {
     Ctx *ctx = editorGetActiveCtx();
     const char *mode;
     switch (ctx->mode) {
@@ -237,7 +237,7 @@ static void renderStatusBar_(void) {
     );
 
     Str lineBuf = { 0 };
-    renderCtxLine_(
+    _renderCtxLine(
         &g_ed.saveDialogCtx,
         0,
         &lineBuf,
@@ -259,8 +259,8 @@ bool editorRefresh(void) {
     }
 
     screenClear(&g_ed.screen, -1);
-    renderFile_(&editorGetActiveBuf()->ctx);
-    renderStatusBar_();
+    _renderFile(&editorGetActiveBuf()->ctx);
+    _renderStatusBar();
 
     return screenRefresh(&g_ed.screen);
 }

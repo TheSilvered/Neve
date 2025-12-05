@@ -11,7 +11,7 @@
 #define ucdLowSurrogateFirst 0xDC00
 #define ucdLowSurrogateLast  0xDFFF
 
-#define UcdCPMax 0x10FFFF
+#define ucdCPMax 0x10FFFF
 
 // UTF8 encoded character, a single character may not be a full codepoint.
 typedef uint8_t  UcdCh8;

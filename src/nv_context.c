@@ -8,42 +8,42 @@
 #include "nv_unicode.h"
 #include "nv_udb.h"
 
-#ifndef lineRefMaxGap_
-#define lineRefMaxGap_ 4096
-#endif // !lineRefMaxGap_
+#ifndef _lineRefMaxGap
+#define _lineRefMaxGap 4096
+#endif // !_lineRefMaxGap
 
 // Get from the gap buffer
-static inline UcdCh8 *ctxBufGet_(const CtxBuf *buf, size_t idx);
+static inline UcdCh8 *_ctxBufGet(const CtxBuf *buf, size_t idx);
 // Reserve space in the gap buffer
-static void ctxBufReserve_(CtxBuf *buf, size_t amount);
+static void _ctxBufReserve(CtxBuf *buf, size_t amount);
 // Shrkin if too much space is empty
-static void ctxBufShrink_(CtxBuf *buf);
+static void _ctxBufShrink(CtxBuf *buf);
 // Insert at the gapIdx and move it
-static void ctxBufInsert_(CtxBuf *buf, const UcdCh8 *text, size_t len);
+static void _ctxBufInsert(CtxBuf *buf, const UcdCh8 *text, size_t len);
 // Remove before the gap index and move it
-static void ctxBufRemove_(CtxBuf *buf, size_t len);
+static void _ctxBufRemove(CtxBuf *buf, size_t len);
 // Change the gap index
-static void ctxBufSetGapIdx_(CtxBuf *buf, size_t gapIdx);
+static void _ctxBufSetGapIdx(CtxBuf *buf, size_t gapIdx);
 
 // Get the index of the first character of a line, it may be equal to the length
 // of the buffer
-static ptrdiff_t ctxLineStart_(const Ctx *ctx, size_t lineNo);
+static ptrdiff_t _ctxLineStart(const Ctx *ctx, size_t lineNo);
 // Get the index of the last characer of a line, it may be equal to the length
 // of the buffer
-static ptrdiff_t ctxLineEnd_(const Ctx *ctx, size_t lineNo);
+static ptrdiff_t _ctxLineEnd(const Ctx *ctx, size_t lineNo);
 
 // Get the unicode character after `idx`
-static UcdCP ctxGetChAfter_(const Ctx *ctx, size_t idx);
+static UcdCP _ctxGetChAfter(const Ctx *ctx, size_t idx);
 // Get the unicode character before `idx`
-static UcdCP ctxGetChBefore_(const Ctx *ctx, size_t idx);
+static UcdCP _ctxGetChBefore(const Ctx *ctx, size_t idx);
 
-static size_t ctxFindNextWordStart_(const Ctx *ctx, size_t idx);
-static size_t ctxFindNextWordEnd_(const Ctx *ctx, size_t idx);
-static size_t ctxFindPrevWordStart_(const Ctx *ctx, size_t idx);
-static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx);
+static size_t _ctxFindNextWordStart(const Ctx *ctx, size_t idx);
+static size_t _ctxFindNextWordEnd(const Ctx *ctx, size_t idx);
+static size_t _ctxFindPrevWordStart(const Ctx *ctx, size_t idx);
+static size_t _ctxFindPrevWordEnd(const Ctx *ctx, size_t idx);
 
 // Replace the text in [start, end) with the contents of buf
-static void ctxReplace_(
+static void _ctxReplace(
     Ctx *ctx,
     size_t start,
     size_t end,
@@ -53,18 +53,18 @@ static void ctxReplace_(
 
 // Get the index of the cursor at idx or of the cursor on where it should be
 // inserted
-static size_t ctxCurAt_(const Ctx *ctx, size_t idx);
-static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col);
+static size_t _ctxCurAt(const Ctx *ctx, size_t idx);
+static void _ctxCurAddEx(Ctx *ctx, size_t idx, size_t col);
 // Return `true` if the new cursor already exists
-static bool ctxCurMove_(Ctx *ctx, size_t old, size_t new);
-static bool ctxCurMoveEx_(Ctx *ctx, size_t old, size_t new, size_t newCol);
+static bool _ctxCurMove(Ctx *ctx, size_t old, size_t new);
+static bool _ctxCurMoveEx(Ctx *ctx, size_t old, size_t new, size_t newCol);
 
 // Find the index at position `line`, `col`.
 // The line must match exactly, the column is the closest to `col`.
-static ptrdiff_t ctxIdxAt_(const Ctx *ctx, size_t line, size_t col);
+static ptrdiff_t _ctxIdxAt(const Ctx *ctx, size_t line, size_t col);
 
 // Join cursor selections in the _sels array
-static void ctxSelJoin_(Ctx *ctx);
+static void _ctxSelJoin(Ctx *ctx);
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->_refs = (CtxRefs){ 0 };
@@ -95,7 +95,7 @@ void ctxDestroy(Ctx *ctx) {
     ctxInit(ctx, ctx->multiline);
 }
 
-static inline UcdCh8 *ctxBufGet_(const CtxBuf *buf, size_t idx) {
+static inline UcdCh8 *_ctxBufGet(const CtxBuf *buf, size_t idx) {
     assert(idx < buf->len);
     if (idx >= buf->gapIdx) {
         size_t gapSize = buf->cap - buf->len;
@@ -104,7 +104,7 @@ static inline UcdCh8 *ctxBufGet_(const CtxBuf *buf, size_t idx) {
     return &buf->bytes[idx];
 }
 
-static void ctxBufReserve_(CtxBuf *buf, size_t amount) {
+static void _ctxBufReserve(CtxBuf *buf, size_t amount) {
     size_t requiredLen = buf->len + amount;
     if (requiredLen <= buf->cap) {
         return;
@@ -128,7 +128,7 @@ static void ctxBufReserve_(CtxBuf *buf, size_t amount) {
     buf->cap = newCap;
 }
 
-static void ctxBufShrink_(CtxBuf *buf) {
+static void _ctxBufShrink(CtxBuf *buf) {
     if (buf->len >= buf->cap / 4) {
         return;
     }
@@ -150,14 +150,14 @@ static void ctxBufShrink_(CtxBuf *buf) {
     buf->cap = newCap;
 }
 
-static void ctxBufInsert_(CtxBuf *buf, const UcdCh8 *text, size_t len) {
-    ctxBufReserve_(buf, len);
+static void _ctxBufInsert(CtxBuf *buf, const UcdCh8 *text, size_t len) {
+    _ctxBufReserve(buf, len);
     memcpy(buf->bytes + buf->gapIdx, text, len * sizeof(*text));
     buf->gapIdx += len;
     buf->len += len;
 }
 
-static void ctxBufRemove_(CtxBuf *buf, size_t len) {
+static void _ctxBufRemove(CtxBuf *buf, size_t len) {
     if (len > buf->gapIdx) {
         len = buf->gapIdx;
     }
@@ -167,17 +167,17 @@ static void ctxBufRemove_(CtxBuf *buf, size_t len) {
 
     assert(
         buf->gapIdx == buf->len
-        || ucdCh8IsStart(*ctxBufGet_(buf, buf->gapIdx))
+        || ucdCh8IsStart(*_ctxBufGet(buf, buf->gapIdx))
     );
 
-    ctxBufShrink_(buf);
+    _ctxBufShrink(buf);
 }
 
-static void ctxBufSetGapIdx_(CtxBuf *buf, size_t gapIdx) {
+static void _ctxBufSetGapIdx(CtxBuf *buf, size_t gapIdx) {
     assert(gapIdx <= buf->len);
     assert(
         gapIdx == buf->len
-        || ucdCh8IsStart(*ctxBufGet_(buf, gapIdx))
+        || ucdCh8IsStart(*_ctxBufGet(buf, gapIdx))
     );
     if (buf->gapIdx == gapIdx) {
         return;
@@ -204,7 +204,7 @@ static void ctxBufSetGapIdx_(CtxBuf *buf, size_t gapIdx) {
 }
 
 // Get the block where line lineNo starts, -1 means the beginning of the file
-static ptrdiff_t ctxGetLineRefBlock_(const Ctx *ctx, size_t lineNo) {
+static ptrdiff_t _ctxGetLineRefBlock(const Ctx *ctx, size_t lineNo) {
     size_t refsLen = ctx->_refs.len;
     CtxRef *refs = ctx->_refs.items;
 
@@ -229,7 +229,7 @@ static ptrdiff_t ctxGetLineRefBlock_(const Ctx *ctx, size_t lineNo) {
 }
 
 // Get the block that contains idx
-static ptrdiff_t ctxGetIdxRefBlock_(const Ctx *ctx, size_t idx) {
+static ptrdiff_t _ctxGetIdxRefBlock(const Ctx *ctx, size_t idx) {
     size_t refsLen = ctx->_refs.len;
     CtxRef *refs = ctx->_refs.items;
 
@@ -255,12 +255,12 @@ static ptrdiff_t ctxGetIdxRefBlock_(const Ctx *ctx, size_t idx) {
     return lo - 1;
 }
 
-static ptrdiff_t ctxLineStart_(const Ctx *ctx, size_t lineNo) {
+static ptrdiff_t _ctxLineStart(const Ctx *ctx, size_t lineNo) {
     if (lineNo == 0) {
         return 0;
     }
 
-    ptrdiff_t refsIdx = ctxGetLineRefBlock_(ctx, lineNo);
+    ptrdiff_t refsIdx = _ctxGetLineRefBlock(ctx, lineNo);
     size_t i;
     size_t lineCount;
 
@@ -278,7 +278,7 @@ static ptrdiff_t ctxLineStart_(const Ctx *ctx, size_t lineNo) {
 
     // Get the precise index
     for (; i < endIdx; i++) {
-        if (*ctxBufGet_(&ctx->_buf, i) != '\n') {
+        if (*_ctxBufGet(&ctx->_buf, i) != '\n') {
             continue;
         }
         lineCount++;
@@ -291,8 +291,8 @@ static ptrdiff_t ctxLineStart_(const Ctx *ctx, size_t lineNo) {
     return -1;
 }
 
-static ptrdiff_t ctxLineEnd_(const Ctx *ctx, size_t lineNo) {
-    ptrdiff_t refsIdx = ctxGetLineRefBlock_(ctx, lineNo + 1);
+static ptrdiff_t _ctxLineEnd(const Ctx *ctx, size_t lineNo) {
+    ptrdiff_t refsIdx = _ctxGetLineRefBlock(ctx, lineNo + 1);
     size_t i;
     size_t lineCount;
 
@@ -309,7 +309,7 @@ static ptrdiff_t ctxLineEnd_(const Ctx *ctx, size_t lineNo) {
         : ctx->_buf.len;
 
     for (; i < endIdx; i++) {
-        if (*ctxBufGet_(&ctx->_buf, i) != '\n') {
+        if (*_ctxBufGet(&ctx->_buf, i) != '\n') {
             continue;
         }
         lineCount++;
@@ -335,7 +335,7 @@ void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol) {
     size_t startIdx = 0;
     size_t col = 0;
 
-    ptrdiff_t refIdx = ctxGetIdxRefBlock_(ctx, idx);
+    ptrdiff_t refIdx = _ctxGetIdxRefBlock(ctx, idx);
     if (refIdx >= 0) {
         startIdx = refs[refIdx].idx;
         line = refs[refIdx].line;
@@ -343,7 +343,7 @@ void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol) {
     }
 
     for (size_t i = startIdx; i < idx; i++) {
-        if (*ctxBufGet_(&ctx->_buf, i) == '\n') {
+        if (*_ctxBufGet(&ctx->_buf, i) == '\n') {
             line++;
             startIdx = i + 1;
             col = 0;
@@ -372,8 +372,8 @@ void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol) {
     *outCol = col;
 }
 
-static ptrdiff_t ctxIdxAt_(const Ctx *ctx, size_t line, size_t col) {
-    ptrdiff_t refsIdx = ctxGetLineRefBlock_(ctx, line);
+static ptrdiff_t _ctxIdxAt(const Ctx *ctx, size_t line, size_t col) {
+    ptrdiff_t refsIdx = _ctxGetLineRefBlock(ctx, line);
     size_t i;
     size_t refLine;
     size_t refCol;
@@ -404,7 +404,7 @@ static ptrdiff_t ctxIdxAt_(const Ctx *ctx, size_t line, size_t col) {
 
     // Get the precise index
     for (; refLine < line && i < endIdx; i++) {
-        if (*ctxBufGet_(&ctx->_buf, i) != '\n') {
+        if (*_ctxBufGet(&ctx->_buf, i) != '\n') {
             continue;
         }
         refLine++;
@@ -443,13 +443,13 @@ ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     if (idx < 0) {
         idx = 0;
     } else if ((size_t)idx < ctx->_buf.len) {
-        uint8_t offset = ucdCh8RunLen(*ctxBufGet_(&ctx->_buf, idx));
+        uint8_t offset = ucdCh8RunLen(*_ctxBufGet(&ctx->_buf, idx));
         // If idx is not on a character boundary find the next one
         if (offset == 0) {
             idx++;
             while (
                 idx < ctx->_buf.len
-                && !ucdCh8IsStart(*ctxBufGet_(&ctx->_buf, idx))
+                && !ucdCh8IsStart(*_ctxBufGet(&ctx->_buf, idx))
             ) {
                 idx++;
             }
@@ -466,7 +466,7 @@ ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     }
 
     if (outCP != NULL) {
-        *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->_buf, idx));
+        *outCP = ucdCh8ToCP(_ctxBufGet(&ctx->_buf, idx));
     }
     return idx;
 }
@@ -478,7 +478,7 @@ ptrdiff_t ctxPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
         idx = ctx->_buf.len;
     }
     idx--;
-    UcdCh8 *chPtr = ctxBufGet_(&ctx->_buf, idx);
+    UcdCh8 *chPtr = _ctxBufGet(&ctx->_buf, idx);
     while (idx >= 0 && !ucdCh8IsStart(*chPtr)) {
         idx--;
         chPtr--;
@@ -500,15 +500,15 @@ endReached:
 }
 
 ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    ptrdiff_t i = ctxLineStart_(ctx, lineIdx);
+    ptrdiff_t i = _ctxLineStart(ctx, lineIdx);
     if (i == ctx->_buf.len || i < 0) {
         goto noLine;
     }
-    if (*ctxBufGet_(&ctx->_buf, i) == '\n') {
+    if (*_ctxBufGet(&ctx->_buf, i) == '\n') {
         goto noLine;
     }
     if (outCP) {
-        *outCP = ucdCh8ToCP(ctxBufGet_(&ctx->_buf, i));
+        *outCP = ucdCh8ToCP(_ctxBufGet(&ctx->_buf, i));
     }
     return i;
 
@@ -520,12 +520,12 @@ noLine:
 }
 
 ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    ptrdiff_t i = ctxLineEnd_(ctx, lineIdx);
+    ptrdiff_t i = _ctxLineEnd(ctx, lineIdx);
     if (i <= 0) {
         goto noLine;
     }
     i--;
-    UcdCh8 *chPtr = ctxBufGet_(&ctx->_buf, i);
+    UcdCh8 *chPtr = _ctxBufGet(&ctx->_buf, i);
     if (*chPtr == '\n') {
         goto noLine;
     }
@@ -551,14 +551,14 @@ ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     }
 
     if ((size_t)idx < ctx->_buf.len) {
-        idx += ucdCh8RunLen(*ctxBufGet_(&ctx->_buf, idx));
+        idx += ucdCh8RunLen(*_ctxBufGet(&ctx->_buf, idx));
     }
 
     if ((size_t)idx >= ctx->_buf.len) {
         goto endReached;
     }
 
-    UcdCh8 *chPtr = ctxBufGet_(&ctx->_buf, idx);
+    UcdCh8 *chPtr = _ctxBufGet(&ctx->_buf, idx);
 
     if (*chPtr == '\n') {
         goto endReached;
@@ -584,10 +584,10 @@ ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
         goto endReached;
     }
     idx--;
-    UcdCh8 *chPtr = ctxBufGet_(&ctx->_buf, idx);
+    UcdCh8 *chPtr = _ctxBufGet(&ctx->_buf, idx);
     while (idx >= 0 && !ucdCh8IsStart(*chPtr)) {
         idx--;
-        chPtr = ctxBufGet_(&ctx->_buf, idx);
+        chPtr = _ctxBufGet(&ctx->_buf, idx);
     }
     if (idx < 0 || *chPtr == '\n') {
         goto endReached;
@@ -605,30 +605,30 @@ endReached:
     return -1;
 }
 
-static UcdCP ctxGetChAfter_(const Ctx *ctx, size_t idx) {
+static UcdCP _ctxGetChAfter(const Ctx *ctx, size_t idx) {
     if (idx >= ctx->_buf.len) {
         return -1;
     }
-    return ucdCh8ToCP(ctxBufGet_(&ctx->_buf, idx));
+    return ucdCh8ToCP(_ctxBufGet(&ctx->_buf, idx));
 }
 
-static UcdCP ctxGetChBefore_(const Ctx *ctx, size_t idx) {
+static UcdCP _ctxGetChBefore(const Ctx *ctx, size_t idx) {
     UcdCP cp;
     (void)ctxPrev(ctx, idx, &cp);
     return cp;
 }
 
 StrView ctxGetContent(Ctx *ctx) {
-    ctxBufSetGapIdx_(&ctx->_buf, ctx->_buf.len);
+    _ctxBufSetGapIdx(&ctx->_buf, ctx->_buf.len);
     return (StrView) { .buf = ctx->_buf.bytes, .len = ctx->_buf.len };
 }
 
-static size_t ctxFindNextWordStart_(const Ctx *ctx, size_t idx) {
+static size_t _ctxFindNextWordStart(const Ctx *ctx, size_t idx) {
     if (idx >= ctx->_buf.len) {
         return ctx->_buf.len;
     }
     ptrdiff_t i = idx;
-    UcdCP cp = ctxGetChAfter_(ctx, idx);
+    UcdCP cp = _ctxGetChAfter(ctx, idx);
 
     if (ucdIsCPAlphanumeric(cp)) {
         for (
@@ -653,12 +653,12 @@ static size_t ctxFindNextWordStart_(const Ctx *ctx, size_t idx) {
     return (size_t)i;
 }
 
-static size_t ctxFindNextWordEnd_(const Ctx *ctx, size_t idx) {
+static size_t _ctxFindNextWordEnd(const Ctx *ctx, size_t idx) {
     if (idx >= ctx->_buf.len) {
         return ctx->_buf.len;
     }
     ptrdiff_t i = idx;
-    UcdCP cp = ctxGetChAfter_(ctx, idx);
+    UcdCP cp = _ctxGetChAfter(ctx, idx);
 
     // Skip white space
     for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxNext(ctx, i, &cp)) { }
@@ -683,12 +683,12 @@ static size_t ctxFindNextWordEnd_(const Ctx *ctx, size_t idx) {
     return (size_t)i;
 }
 
-static size_t ctxFindPrevWordStart_(const Ctx *ctx, size_t idx) {
+static size_t _ctxFindPrevWordStart(const Ctx *ctx, size_t idx) {
     if (idx == 0) {
         return 0;
     }
     ptrdiff_t i = idx;
-    UcdCP cp = ctxGetChBefore_(ctx, idx);
+    UcdCP cp = _ctxGetChBefore(ctx, idx);
 
     // Skip white space
     for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxPrev(ctx, i, &cp)) { }
@@ -714,12 +714,12 @@ static size_t ctxFindPrevWordStart_(const Ctx *ctx, size_t idx) {
     return i;
 }
 
-static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx) {
+static size_t _ctxFindPrevWordEnd(const Ctx *ctx, size_t idx) {
     if (idx == 0) {
         return 0;
     }
     ptrdiff_t i = idx;
-    UcdCP cp = ctxGetChBefore_(ctx, idx);
+    UcdCP cp = _ctxGetChBefore(ctx, idx);
 
     if (ucdIsCPAlphanumeric(cp) && i != -1) {
         for (
@@ -746,7 +746,7 @@ static size_t ctxFindPrevWordEnd_(const Ctx *ctx, size_t idx) {
     return i;
 }
 
-static void ctxReplaceUpdateCursors_(
+static void _ctxReplaceUpdateCursors(
     Ctx *ctx,
     size_t start,
     size_t end,
@@ -756,7 +756,7 @@ static void ctxReplaceUpdateCursors_(
     CtxCursor *cursors = ctx->cursors.items;
     size_t changedLine;
     ctxPosAt(ctx, end + lenDiff, &changedLine, NULL);
-    size_t lastBaseIdxCalc = ctxLineEnd_(ctx, changedLine);
+    size_t lastBaseIdxCalc = _ctxLineEnd(ctx, changedLine);
 
     // Move the active selections, if selecting
     // When not selecting the value of _selStart is assumed to be invalid
@@ -787,7 +787,7 @@ static void ctxReplaceUpdateCursors_(
     }
 }
 
-static void ctxReplaceUpdateSelections_(
+static void _ctxReplaceUpdateSelections(
     Ctx *ctx,
     size_t start,
     size_t end,
@@ -826,9 +826,9 @@ static void ctxReplaceUpdateSelections_(
 }
 
 // Make the span of the block from [refBlock - 1, refBlock] reasonable
-void ctxReplaceBalanceRefBlocks_(Ctx *ctx, size_t refBlock) {
-    const size_t minWidth = lineRefMaxGap_ / 2;
-    const size_t maxWidth = lineRefMaxGap_ + minWidth;
+void _ctxReplaceBalanceRefBlocks(Ctx *ctx, size_t refBlock) {
+    const size_t minWidth = _lineRefMaxGap / 2;
+    const size_t maxWidth = _lineRefMaxGap + minWidth;
 
     size_t blockStart = refBlock > 0 ? ctx->_refs.items[refBlock - 1].idx : 0;
     size_t blockEnd = refBlock < ctx->_refs.len
@@ -848,7 +848,7 @@ void ctxReplaceBalanceRefBlocks_(Ctx *ctx, size_t refBlock) {
 
     if (
         width > maxWidth
-        && (isLastBlock || fullWidth > 2 * lineRefMaxGap_)
+        && (isLastBlock || fullWidth > 2 * _lineRefMaxGap)
     ) {
         // Divide both to avoid overflow
         size_t newIdx = blockStart / 2 + blockEnd / 2;
@@ -871,7 +871,7 @@ void ctxReplaceBalanceRefBlocks_(Ctx *ctx, size_t refBlock) {
     }
 }
 
-static void ctxReplace_(
+static void _ctxReplace(
     Ctx *ctx,
     size_t start,
     size_t end,
@@ -884,7 +884,7 @@ static void ctxReplace_(
     ctx->edited = true;
 
     // Move all cursors inside the span to the end
-    size_t curIdx = ctxCurAt_(ctx, start) + 1;
+    size_t curIdx = _ctxCurAt(ctx, start) + 1;
     if (curIdx < ctx->cursors.len) {
         while (ctx->cursors.items[curIdx].idx < end) {
             ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
@@ -900,20 +900,20 @@ static void ctxReplace_(
     CtxBuf *buf = &ctx->_buf;
     CtxRefs *refs = &ctx->_refs;
     ptrdiff_t lenDiff = (ptrdiff_t)len - (ptrdiff_t)(end - start);
-    ptrdiff_t refBlock = ctxGetIdxRefBlock_(ctx, start);
+    ptrdiff_t refBlock = _ctxGetIdxRefBlock(ctx, start);
     size_t lastBlockIdx = refBlock < 0 ? 0 : refs->items[refBlock].idx;
     refBlock++; // Ensures that refBlock is positive
 
     // Keep track of line and column while iterating because the ref cache is
-    // not valid after ctxBufRemove_
+    // not valid after _ctxBufRemove
     size_t line, col;
     ctxPosAt(ctx, start, &line, &col);
     size_t prevLine, prevCol;
     ctxPosAt(ctx, end, &prevLine, &prevCol);
 
-    ctxBufSetGapIdx_(buf, end);
-    ctxBufRemove_(buf, end - start);
-    ctxBufReserve_(buf, len);
+    _ctxBufSetGapIdx(buf, end);
+    _ctxBufRemove(buf, end - start);
+    _ctxBufReserve(buf, len);
 
     StrView sv = {
         .buf = data,
@@ -928,7 +928,7 @@ static void ctxReplace_(
         idx = strViewNext(&sv, idx, &cp)
     ) {
         if (cp == '\r' || (cp == '\n' && ignoreNL)) {
-            ctxBufInsert_(buf, &data[spanStart], idx - spanStart);
+            _ctxBufInsert(buf, &data[spanStart], idx - spanStart);
             spanStart = idx + 1;
             lenDiff--;
             continue;
@@ -939,11 +939,11 @@ static void ctxReplace_(
             col += ucdCPWidth(cp, tabStop, col);
         }
 
-        if (idx - lastBlockIdx < lineRefMaxGap_) {
+        if (idx - lastBlockIdx < _lineRefMaxGap) {
             continue;
         }
 
-        ctxBufInsert_(buf, &data[spanStart], idx - spanStart + 1);
+        _ctxBufInsert(buf, &data[spanStart], idx - spanStart + 1);
         spanStart = idx + 1;
         lastBlockIdx = idx;
         arrInsert(
@@ -955,7 +955,7 @@ static void ctxReplace_(
     }
 
     if (spanStart < len) {
-        ctxBufInsert_(buf, &data[spanStart], len - spanStart);
+        _ctxBufInsert(buf, &data[spanStart], len - spanStart);
     }
 
     // Remove all blocks that were inside the modified span
@@ -974,10 +974,10 @@ static void ctxReplace_(
 
     ptrdiff_t colDiff = col - prevCol;
     size_t tabIdx = buf->len;
-    ptrdiff_t lineEnd = ctxLineEnd_(ctx, line);
+    ptrdiff_t lineEnd = _ctxLineEnd(ctx, line);
     assert(lineEnd >= 0);
     if (tabStop != 0 && colDiff % tabStop != 0 && end + lenDiff < buf->len) {
-        UcdCh8 *s = ctxBufGet_(buf, end + lenDiff);
+        UcdCh8 *s = _ctxBufGet(buf, end + lenDiff);
         UcdCh8 *p = memchr(s, '\t', lineEnd - end - lenDiff);
         if (p != NULL) {
             tabIdx = p - s + end + lenDiff;
@@ -999,9 +999,9 @@ static void ctxReplace_(
         tabIdx = buf->len;
     }
 
-    ctxReplaceBalanceRefBlocks_(ctx, refBlock);
-    ctxReplaceUpdateSelections_(ctx, start, end, lenDiff);
-    ctxReplaceUpdateCursors_(ctx, start, end, lenDiff);
+    _ctxReplaceBalanceRefBlocks(ctx, refBlock);
+    _ctxReplaceUpdateSelections(ctx, start, end, lenDiff);
+    _ctxReplaceUpdateCursors(ctx, start, end, lenDiff);
 }
 
 void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
@@ -1018,24 +1018,24 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
         ? buf->len
         : buf->len - ctx->_refs.items[ctx->_refs.len - 1].idx;
 
-    ctxBufSetGapIdx_(buf, buf->len);
+    _ctxBufSetGapIdx(buf, buf->len);
 
     for (size_t i = 0; i < len; i++) {
         if (data[i] == '\r' || (data[i] == '\n' && ignoreNL)) {
-            ctxBufInsert_(buf, &data[spanStart], i - spanStart);
+            _ctxBufInsert(buf, &data[spanStart], i - spanStart);
             spanStart = i + 1;
             continue;
         }
 
         // Do not insert blocks in the middle of a UTF8 sequence
         if (
-            ++lastBlockSize < lineRefMaxGap_
+            ++lastBlockSize < _lineRefMaxGap
             || (i + 1 < len && !ucdCh8IsStart(data[i + 1]))
         ) {
             continue;
         }
 
-        ctxBufInsert_(buf, &data[spanStart], i - spanStart + 1);
+        _ctxBufInsert(buf, &data[spanStart], i - spanStart + 1);
         spanStart = i + 1;
         size_t line, col;
         ctxPosAt(ctx, ctx->_buf.len, &line, &col);
@@ -1047,13 +1047,13 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     }
 
     if (spanStart < len) {
-        ctxBufInsert_(buf, &data[spanStart], len - spanStart);
+        _ctxBufInsert(buf, &data[spanStart], len - spanStart);
     }
 }
 
 typedef Arr(const UcdCh8 *) InsertLines;
 
-static void ctxInsertRepSels_(
+static void _ctxInsertRepSels(
     Ctx *ctx,
     const UcdCh8 *data,
     size_t len,
@@ -1071,7 +1071,7 @@ static void ctxInsertRepSels_(
         CtxSelection sel = sels->items[idx];
         arrRemove(sels, idx);
         if (useLines) {
-            ctxReplace_(
+            _ctxReplace(
                 ctx,
                 sel.startIdx,
                 sel.endIdx,
@@ -1079,12 +1079,12 @@ static void ctxInsertRepSels_(
                 lines->items[idx + 1] - lines->items[idx] - 1
             );
         } else {
-            ctxReplace_(ctx, sel.startIdx, sel.endIdx, data, len);
+            _ctxReplace(ctx, sel.startIdx, sel.endIdx, data, len);
         }
     }
 }
 
-static void ctxInsertCursors_(
+static void _ctxInsertCursors(
     Ctx *ctx,
     const UcdCh8 *data,
     size_t len,
@@ -1104,7 +1104,7 @@ static void ctxInsertCursors_(
     for (size_t i = 0; i < cursorsLen; i++) {
         CtxCursor *cur = &cursors->items[i];
         if (useLines) {
-            ctxReplace_(
+            _ctxReplace(
                 ctx,
                 cur->idx,
                 cur->idx,
@@ -1112,7 +1112,7 @@ static void ctxInsertCursors_(
                 lines->items[i + 1] - lines->items[i] - 1
             );
         } else {
-            ctxReplace_(ctx, cur->idx, cur->idx, data, len);
+            _ctxReplace(ctx, cur->idx, cur->idx, data, len);
         }
     }
 }
@@ -1127,10 +1127,10 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     }
 
     if (ctx->_sels.len == 1) {
-        ctxInsertRepSels_(ctx, data, len, NULL);
+        _ctxInsertRepSels(ctx, data, len, NULL);
         return;
     } else if (ctx->cursors.len == 1 && !wasSelecting) {
-        ctxInsertCursors_(ctx, data, len, NULL);
+        _ctxInsertCursors(ctx, data, len, NULL);
         return;
     }
 
@@ -1147,15 +1147,15 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
         arrAppend(&lines, end + 1);
     }
     if (ctx->_sels.len != 0 || wasSelecting) {
-        ctxInsertRepSels_(ctx, data, len, &lines);
+        _ctxInsertRepSels(ctx, data, len, &lines);
     } else {
-        ctxInsertCursors_(ctx, data, len, &lines);
+        _ctxInsertCursors(ctx, data, len, &lines);
     }
     arrClear(&lines);
 }
 
 static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, UcdCh8 *outBuf) {
-    if (cp < 0 || cp > UcdCPMax) {
+    if (cp < 0 || cp > ucdCPMax) {
         return 0;
     }
 
@@ -1186,10 +1186,10 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
     ctxInsert(ctx, buf, len);
 }
 
-static void ctxRemoveSelections_(Ctx *ctx) {
+static void _ctxRemoveSelections(Ctx *ctx) {
     for (size_t i = ctx->_sels.len; i > 0; i--) {
         CtxSelection sel = ctx->_sels.items[i - 1];
-        ctxReplace_(ctx, sel.startIdx, sel.endIdx, NULL, 0);
+        _ctxReplace(ctx, sel.startIdx, sel.endIdx, NULL, 0);
     }
     arrClear(&ctx->_sels);
 }
@@ -1205,7 +1205,7 @@ void ctxRemoveBack(Ctx *ctx) {
         ctxSelEnd(ctx);
     }
 
-    ctxRemoveSelections_(ctx);
+    _ctxRemoveSelections(ctx);
 }
 
 void ctxRemoveFwd(Ctx *ctx) {
@@ -1219,7 +1219,7 @@ void ctxRemoveFwd(Ctx *ctx) {
         ctxSelEnd(ctx);
     }
 
-    ctxRemoveSelections_(ctx);
+    _ctxRemoveSelections(ctx);
 }
 
 void ctxInsertLineAbove(Ctx *ctx) {
@@ -1239,7 +1239,7 @@ size_t ctxLineCount(const Ctx *ctx) {
     return line + 1;
 }
 
-static size_t ctxCurAt_(const Ctx *ctx, size_t idx) {
+static size_t _ctxCurAt(const Ctx *ctx, size_t idx) {
     size_t hi = ctx->cursors.len;
     size_t lo = 0;
     CtxCursor *cursors = ctx->cursors.items;
@@ -1259,8 +1259,8 @@ static size_t ctxCurAt_(const Ctx *ctx, size_t idx) {
     return lo;
 }
 
-static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col) {
-    size_t curIdx = ctxCurAt_(ctx, idx);
+static void _ctxCurAddEx(Ctx *ctx, size_t idx, size_t col) {
+    size_t curIdx = _ctxCurAt(ctx, idx);
     CtxCursor cursor = { .idx = idx, .baseCol = col, ._selStart = idx };
 
     if (curIdx >= ctx->cursors.len) {
@@ -1274,30 +1274,30 @@ static void ctxCurAddEx_(Ctx *ctx, size_t idx, size_t col) {
 void ctxCurAdd(Ctx *ctx, size_t idx) {
     size_t col;
     ctxPosAt(ctx, idx, NULL, &col);
-    ctxCurAddEx_(ctx, idx, col);
+    _ctxCurAddEx(ctx, idx, col);
 }
 
 void ctxCurRemove(Ctx *ctx, size_t idx) {
-    size_t curIdx = ctxCurAt_(ctx, idx);
+    size_t curIdx = _ctxCurAt(ctx, idx);
     if (curIdx < ctx->cursors.len && ctx->cursors.items[curIdx].idx == idx) {
         arrRemove(&ctx->cursors, curIdx);
     }
 }
 
-static bool ctxCurMove_(Ctx *ctx, size_t old, size_t new) {
+static bool _ctxCurMove(Ctx *ctx, size_t old, size_t new) {
     size_t newCol;
     ctxPosAt(ctx, new, NULL, &newCol);
-    return ctxCurMoveEx_(ctx, old, new, newCol);
+    return _ctxCurMoveEx(ctx, old, new, newCol);
 }
 
-static bool ctxCurMoveEx_(
+static bool _ctxCurMoveEx(
     Ctx *ctx,
     size_t old,
     size_t new,
     size_t newCol
 ) {
-    size_t oldIdx = ctxCurAt_(ctx, old);
-    size_t newIdx = ctxCurAt_(ctx, new);
+    size_t oldIdx = _ctxCurAt(ctx, old);
+    size_t newIdx = _ctxCurAt(ctx, new);
     CtxCursor *cursors = ctx->cursors.items;
 
     // If `old` does not exist
@@ -1353,7 +1353,7 @@ static bool ctxCurMoveEx_(
 }
 
 void ctxCurMove(Ctx *ctx, size_t old, size_t new) {
-    (void)ctxCurMove_(ctx, old, new);
+    (void)_ctxCurMove(ctx, old, new);
 }
 
 void ctxCurMoveLeft(Ctx *ctx) {
@@ -1363,7 +1363,7 @@ void ctxCurMoveLeft(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
+        if (_ctxCurMove(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -1374,7 +1374,7 @@ void ctxCurMoveRight(Ctx *ctx) {
         // Move from the last cursor to avoid incorrect merging of cursors
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
         if (oldCur == ctx->_buf.len
-            || *ctxBufGet_(&ctx->_buf, oldCur) == '\n'
+            || *_ctxBufGet(&ctx->_buf, oldCur) == '\n'
         ) {
             continue;
         }
@@ -1382,7 +1382,7 @@ void ctxCurMoveRight(Ctx *ctx) {
         if (newCur < 0) {
             newCur = ctx->_buf.len;
         }
-        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
+        if (_ctxCurMove(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -1393,11 +1393,11 @@ void ctxCurMoveUp(Ctx *ctx) {
         CtxCursor oldCur = ctx->cursors.items[i];
         size_t oldLine;
         ctxPosAt(ctx, oldCur.idx, &oldLine, NULL);
-        ptrdiff_t newCur = ctxIdxAt_(ctx, oldLine - 1, oldCur.baseCol);
+        ptrdiff_t newCur = _ctxIdxAt(ctx, oldLine - 1, oldCur.baseCol);
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurMoveEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
+        if (_ctxCurMoveEx(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
             i--;
         }
     }
@@ -1409,11 +1409,11 @@ void ctxCurMoveDown(Ctx *ctx) {
         CtxCursor oldCur = ctx->cursors.items[ctx->cursors.len - i - 1];
         size_t oldLine;
         ctxPosAt(ctx, oldCur.idx, &oldLine, NULL);
-        ptrdiff_t newCur = ctxIdxAt_(ctx, oldLine + 1, oldCur.baseCol);
+        ptrdiff_t newCur = _ctxIdxAt(ctx, oldLine + 1, oldCur.baseCol);
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurMoveEx_(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
+        if (_ctxCurMoveEx(ctx, oldCur.idx, (size_t)newCur, oldCur.baseCol)) {
             i--;
         }
     }
@@ -1427,7 +1427,7 @@ void ctxCurMoveFwd(Ctx *ctx) {
         if (newCur < 0) {
             newCur = ctx->_buf.len;
         }
-        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
+        if (_ctxCurMove(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -1440,7 +1440,7 @@ void ctxCurMoveBack(Ctx *ctx) {
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
+        if (_ctxCurMove(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -1451,11 +1451,11 @@ void ctxCurMoveToLineStart(Ctx *ctx) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t lineNo;
         ctxPosAt(ctx, oldCur, &lineNo, NULL);
-        ptrdiff_t newCur = ctxLineStart_(ctx, lineNo);
+        ptrdiff_t newCur = _ctxLineStart(ctx, lineNo);
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurMove_(ctx, oldCur, newCur)) {
+        if (_ctxCurMove(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1466,11 +1466,11 @@ void ctxCurMoveToLineEnd(Ctx *ctx) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t lineNo;
         ctxPosAt(ctx, oldCur, &lineNo, NULL);
-        ptrdiff_t newCur = ctxLineEnd_(ctx, lineNo);
+        ptrdiff_t newCur = _ctxLineEnd(ctx, lineNo);
         if (newCur < 0) {
             continue;
         }
-        if (ctxCurMove_(ctx, oldCur, newCur)) {
+        if (_ctxCurMove(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1479,7 +1479,7 @@ void ctxCurMoveToLineEnd(Ctx *ctx) {
 void ctxCurMoveToTextStart(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
-        if (ctxCurMove_(ctx, oldCur, 0)) {
+        if (_ctxCurMove(ctx, oldCur, 0)) {
             i--;
         }
     }
@@ -1491,7 +1491,7 @@ void ctxCurMoveToTextEnd(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last to reduce copying
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
-        if (ctxCurMoveEx_(ctx, oldCur, ctx->_buf.len, newBaseCol)) {
+        if (_ctxCurMoveEx(ctx, oldCur, ctx->_buf.len, newBaseCol)) {
             i--;
         }
     }
@@ -1501,8 +1501,8 @@ void ctxCurMoveToNextWordStart(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last cursor to avoid incorrect merging of cursors
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
-        size_t newCur = ctxFindNextWordStart_(ctx, oldCur);
-        if (ctxCurMove_(ctx, oldCur, newCur)) {
+        size_t newCur = _ctxFindNextWordStart(ctx, oldCur);
+        if (_ctxCurMove(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1512,8 +1512,8 @@ void ctxCurMoveToNextWordEnd(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         // Move from the last cursor to avoid incorrect merging of cursors
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
-        size_t newCur = ctxFindNextWordEnd_(ctx, oldCur);
-        if (ctxCurMove_(ctx, oldCur, newCur)) {
+        size_t newCur = _ctxFindNextWordEnd(ctx, oldCur);
+        if (_ctxCurMove(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1522,8 +1522,8 @@ void ctxCurMoveToNextWordEnd(Ctx *ctx) {
 void ctxCurMoveToPrevWordStart(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
-        size_t newCur = ctxFindPrevWordStart_(ctx, oldCur);
-        if (ctxCurMove_(ctx, oldCur, newCur)) {
+        size_t newCur = _ctxFindPrevWordStart(ctx, oldCur);
+        if (_ctxCurMove(ctx, oldCur, newCur)) {
             i--;
         }
     }
@@ -1532,14 +1532,14 @@ void ctxCurMoveToPrevWordStart(Ctx *ctx) {
 void ctxCurMoveToPrevWordEnd(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[i].idx;
-        size_t newCur = ctxFindPrevWordEnd_(ctx, oldCur);
-        if (ctxCurMove_(ctx, oldCur, newCur)) {
+        size_t newCur = _ctxFindPrevWordEnd(ctx, oldCur);
+        if (_ctxCurMove(ctx, oldCur, newCur)) {
             i--;
         }
     }
 }
 
-static size_t lineCountUpperBound_(const Ctx *ctx) {
+static size_t _lineCountUpperBound(const Ctx *ctx) {
     if (ctx->_refs.len == 0) {
         return ctx->_buf.len;
     } else {
@@ -1549,7 +1549,7 @@ static size_t lineCountUpperBound_(const Ctx *ctx) {
 }
 
 void ctxCurMoveToNextParagraph(Ctx *ctx) {
-    size_t maxLineNo = lineCountUpperBound_(ctx);
+    size_t maxLineNo = _lineCountUpperBound(ctx);
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t oldCur = ctx->cursors.items[ctx->cursors.len - i - 1].idx;
         size_t lineNo;
@@ -1557,11 +1557,11 @@ void ctxCurMoveToNextParagraph(Ctx *ctx) {
         ptrdiff_t newCur = -1;
         bool skippedBlankLines = false;
         for (;;) {
-            ptrdiff_t lineStart = ctxLineStart_(ctx, lineNo);
+            ptrdiff_t lineStart = _ctxLineStart(ctx, lineNo);
             if (lineStart < 0) {
                 break;
             }
-            newCur = ctxLineEnd_(ctx, lineNo);
+            newCur = _ctxLineEnd(ctx, lineNo);
             assert(newCur >= 0);
             if (newCur - lineStart != 0) {
                 skippedBlankLines = true;
@@ -1576,7 +1576,7 @@ void ctxCurMoveToNextParagraph(Ctx *ctx) {
         }
 
         assert(newCur >= 0);
-        if (ctxCurMove_(ctx, oldCur, (size_t)newCur)) {
+        if (_ctxCurMove(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
     }
@@ -1590,11 +1590,11 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx) {
         ptrdiff_t newCur = -1;
         bool skippedBlankLines = false;
         for (;;) {
-            ptrdiff_t lineEnd = ctxLineEnd_(ctx, lineNo);
+            ptrdiff_t lineEnd = _ctxLineEnd(ctx, lineNo);
             if (lineEnd < 0) {
                 break;
             }
-            newCur = ctxLineStart_(ctx, lineNo);
+            newCur = _ctxLineStart(ctx, lineNo);
             assert(newCur >= 0);
             if (lineEnd - newCur != 0) {
                 skippedBlankLines = true;
@@ -1608,13 +1608,13 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx) {
         }
 
         assert(newCur >= 0);
-        if (ctxCurMove_(ctx, oldCur, newCur)) {
+        if (_ctxCurMove(ctx, oldCur, newCur)) {
             i--;
         }
     }
 }
 
-static int selCmp_(const void *a, const void *b) {
+static int _selCmp(const void *a, const void *b) {
     const CtxSelection *selA = a;
     const CtxSelection *selB = b;
     ptrdiff_t diff = (ptrdiff_t)selA->startIdx - (ptrdiff_t)selB->startIdx;
@@ -1627,7 +1627,7 @@ static int selCmp_(const void *a, const void *b) {
     }
 }
 
-static void ctxSelJoin_(Ctx *ctx) {
+static void _ctxSelJoin(Ctx *ctx) {
     // Append non-empty selections
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor *cursor = &ctx->cursors.items[i];
@@ -1645,7 +1645,7 @@ static void ctxSelJoin_(Ctx *ctx) {
     }
 
     // Sort the selection based on the starting index
-    qsort(ctx->_sels.items, ctx->_sels.len, sizeof(*ctx->_sels.items), selCmp_);
+    qsort(ctx->_sels.items, ctx->_sels.len, sizeof(*ctx->_sels.items), _selCmp);
 
     // Join all overlapping or adjacent selections
     for (size_t i = 1; i < ctx->_sels.len; i++) {
@@ -1669,7 +1669,7 @@ void ctxSelBegin(Ctx *ctx) {
 
 void ctxSelEnd(Ctx *ctx) {
     ctx->_selecting = false;
-    ctxSelJoin_(ctx);
+    _ctxSelJoin(ctx);
 }
 
 void ctxSelCancel(Ctx *ctx) {
@@ -1685,7 +1685,7 @@ bool ctxSelHas(const Ctx *ctx) {
     return ctx->_selecting || ctx->_sels.len > 0;
 }
 
-static void strAppendBufSpan_(
+static void _strAppendBufSpan(
     const CtxBuf *buf,
     Str *str,
     size_t start,
@@ -1694,12 +1694,12 @@ static void strAppendBufSpan_(
     size_t gapIdx = buf->gapIdx;
 
     if (gapIdx <= start || gapIdx >= end) {
-        strAppendRaw(str, ctxBufGet_(buf, start), end - start);
+        strAppendRaw(str, _ctxBufGet(buf, start), end - start);
         return;
     }
 
-    strAppendRaw(str, ctxBufGet_(buf, start), gapIdx - start);
-    strAppendRaw(str, ctxBufGet_(buf, gapIdx), end - gapIdx);
+    strAppendRaw(str, _ctxBufGet(buf, start), gapIdx - start);
+    strAppendRaw(str, _ctxBufGet(buf, gapIdx), end - gapIdx);
 }
 
 Str *ctxSelText(Ctx *ctx) {
@@ -1710,7 +1710,7 @@ Str *ctxSelText(Ctx *ctx) {
     Str *ret = strNew(0);
     for (size_t i = 0; i < ctx->_sels.len; i++) {
         CtxSelection sel = ctx->_sels.items[i];
-        strAppendBufSpan_(&ctx->_buf, ret, sel.startIdx, sel.endIdx);
+        _strAppendBufSpan(&ctx->_buf, ret, sel.startIdx, sel.endIdx);
         if (i + 1 != ctx->_sels.len) {
             strAppendC(ret, "\n");
         }

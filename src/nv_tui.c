@@ -1,23 +1,23 @@
 #include "nv_tui.h"
 
-static void uiBufPanelUpdater_(UIBufPanel *panel);
-static bool uiBufPanelKeyHandler_(UIBufPanel *panel, int32_t key);
-static bool uiBufHandleNormalMode_(UIBufPanel *panel, int32_t key);
-static bool uiBufHandleEditMode_(UIBufPanel *panel, int32_t key);
-static bool uiBufHandleSelectionMode_(UIBufPanel *panel, int32_t key);
-static bool uiHandleNormalMovement_(UIBufPanel *panel, int32_t key);
-static bool uiHandleArrowKeys_(UIBufPanel *panel, int32_t key);
+static void _uiBufPanelUpdater(UIBufPanel *panel);
+static bool _uiBufPanelKeyHandler(UIBufPanel *panel, int32_t key);
+static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key);
+static bool _uiBufHandleEditMode(UIBufPanel *panel, int32_t key);
+static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key);
+static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key);
+static bool _uiHandleArrowKeys(UIBufPanel *panel, int32_t key);
 
 void uiBufPanelInit(UIBufPanel *panel, Buf *buf) {
 panel->buf = buf;
 panel->w = 0;
     panel->h = 0;
 
-    panel->keyHandler = uiBufPanelKeyHandler_;
-    panel->updater = uiBufPanelUpdater_;
+    panel->keyHandler = _uiBufPanelKeyHandler;
+    panel->updater = _uiBufPanelUpdater;
 }
 
-static void uiBufPanelUpdater_(UIBufPanel *panel) {
+static void _uiBufPanelUpdater(UIBufPanel *panel) {
     Ctx *ctx = &panel->buf->ctx;
     size_t lines = ctxLineCount(ctx);
 
@@ -43,20 +43,20 @@ static void uiBufPanelUpdater_(UIBufPanel *panel) {
     }
 }
 
-static bool uiBufPanelKeyHandler_(UIBufPanel *panel, int32_t key) {
+static bool _uiBufPanelKeyHandler(UIBufPanel *panel, int32_t key) {
     switch (panel->mode) {
     case UIBufMode_Normal:
-        return uiBufHandleNormalMode_(panel, key);
+        return _uiBufHandleNormalMode(panel, key);
     case UIBufMode_Edit:
-        return uiBufHandleEditMode_(panel, key);
+        return _uiBufHandleEditMode(panel, key);
     case UIBufMode_Selection:
-        return uiBufHandleSelectionMode_(panel, key);
+        return _uiBufHandleSelectionMode(panel, key);
     default:
         return false;
     }
 }
 
-static bool uiHandleNormalMovement_(UIBufPanel *panel, int32_t key) {
+static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key) {
     Ctx *ctx = &panel->buf->ctx;
     switch (key) {
     case 'i':
@@ -117,7 +117,7 @@ static bool uiHandleNormalMovement_(UIBufPanel *panel, int32_t key) {
     return true;
 }
 
-static bool uiHandleArrowKeys_(UIBufPanel *panel, int32_t key) {
+static bool _uiHandleArrowKeys(UIBufPanel *panel, int32_t key) {
     Ctx *ctx = &panel->buf->ctx;
     switch (key) {
     case TermKey_ArrowDown:
@@ -138,9 +138,9 @@ static bool uiHandleArrowKeys_(UIBufPanel *panel, int32_t key) {
     return true;
 }
 
-static bool uiBufHandleNormalMode_(UIBufPanel *panel, int32_t key) {
+static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
     Ctx *ctx = &panel->buf->ctx;
-    if (uiHandleNormalMovement_(panel, key) || uiHandleArrowKeys_(panel, key)) {
+    if (_uiHandleNormalMovement(panel, key) || _uiHandleArrowKeys(panel, key)) {
         return true;
     }
     switch (key) {
@@ -210,9 +210,9 @@ static bool uiBufHandleNormalMode_(UIBufPanel *panel, int32_t key) {
     return true;
 }
 
-static bool uiBufHandleEditMode_(UIBufPanel *panel, int32_t key) {
+static bool _uiBufHandleEditMode(UIBufPanel *panel, int32_t key) {
     Ctx *ctx = &panel->buf->ctx;
-    if (uiHandleArrowKeys_(panel, key)) {
+    if (_uiHandleArrowKeys(panel, key)) {
         return true;
     }
     switch (key) {
@@ -286,9 +286,9 @@ static bool uiBufHandleEditMode_(UIBufPanel *panel, int32_t key) {
     return true;
 }
 
-static bool uiBufHandleSelectionMode_(UIBufPanel *panel, int32_t key) {
+static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key) {
     Ctx *ctx = &panel->buf->ctx;
-    if (uiHandleNormalMovement_(panel, key) || uiHandleArrowKeys_(panel, key)) {
+    if (_uiHandleNormalMovement(panel, key) || _uiHandleArrowKeys(panel, key)) {
         return true;
     }
     switch (key) {

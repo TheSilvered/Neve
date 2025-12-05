@@ -1,5 +1,5 @@
 #include "nv_test.h"
-#define lineRefMaxGap_ 4
+#define _lineRefMaxGap 4
 #include "nv_context.c"
 
 void test_ctxLineEndNoLineRef(void) {
@@ -8,10 +8,10 @@ void test_ctxLineEndNoLineRef(void) {
     const char s[] = "ab\ncd\ne";
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    testAssert(ctxLineEnd_(&ctx, 0) == 2);
-    testAssert(ctxLineEnd_(&ctx, 1) == 5);
-    testAssert(ctxLineEnd_(&ctx, 2) == 7);
-    testAssert(ctxLineEnd_(&ctx, 3) == -1);
+    testAssert(_ctxLineEnd(&ctx, 0) == 2);
+    testAssert(_ctxLineEnd(&ctx, 1) == 5);
+    testAssert(_ctxLineEnd(&ctx, 2) == 7);
+    testAssert(_ctxLineEnd(&ctx, 3) == -1);
 
     ctxDestroy(&ctx);
 }
@@ -23,12 +23,12 @@ void test_ctxLineEndWithLineRef(void) {
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
     ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
 
-    testAssert(ctxLineEnd_(&ctx, 0) == 2);
-    testAssert(ctxLineEnd_(&ctx, 1) == 5);
-    testAssert(ctxLineEnd_(&ctx, 2) == 9);
-    testAssert(ctxLineEnd_(&ctx, 3) == 12);
-    testAssert(ctxLineEnd_(&ctx, 4) == 14);
-    testAssert(ctxLineEnd_(&ctx, 5) == -1);
+    testAssert(_ctxLineEnd(&ctx, 0) == 2);
+    testAssert(_ctxLineEnd(&ctx, 1) == 5);
+    testAssert(_ctxLineEnd(&ctx, 2) == 9);
+    testAssert(_ctxLineEnd(&ctx, 3) == 12);
+    testAssert(_ctxLineEnd(&ctx, 4) == 14);
+    testAssert(_ctxLineEnd(&ctx, 5) == -1);
 
     ctxDestroy(&ctx);
 }

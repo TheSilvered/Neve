@@ -4,7 +4,7 @@
 
 ## Building
 
-Build using CMake and Ninja:
+Build using CMake, Ninja is the preferred generator:
 
 ```sh
 cmake -G Ninja -S . -B build/

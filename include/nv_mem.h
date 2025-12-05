@@ -52,94 +52,94 @@ void memFree(void *block);
 #else
 
 #define memAlloc(objectCount, objectSize)                                      \
-    memAlloc_(objectCount, objectSize, __LINE__, __FILE__)
+    _memAlloc(objectCount, objectSize, __LINE__, __FILE__)
 
 #define memAllocBytes(byteCount)                                               \
-    memAllocBytes_(byteCount, __LINE__, __FILE__)
+    _memAllocBytes(byteCount, __LINE__, __FILE__)
 
 #define memAllocZeroed(objectCount, objectSize)                                \
-    memAllocZeroed_(objectCount, objectSize, __LINE__, __FILE__)
+    _memAllocZeroed(objectCount, objectSize, __LINE__, __FILE__)
 
 #define memExpand(block, newObjectCount, objectSize)                           \
-    memExpand_(block, newObjectCount, objectSize, __LINE__, __FILE__)
+    _memExpand(block, newObjectCount, objectSize, __LINE__, __FILE__)
 
 #define memExpandBytes(block, newByteCount)                                    \
-    memExpandBytes_(block, newByteCount, __LINE__, __FILE__)
+    _memExpandBytes(block, newByteCount, __LINE__, __FILE__)
 
 #define memShrink(block, newObjectCount, objectSize)                           \
-    memShrink_(block, newObjectCount, objectSize, __LINE__, __FILE__)
+    _memShrink(block, newObjectCount, objectSize, __LINE__, __FILE__)
 
 #define memShrinkBytes(block, newByteCount)                                    \
-    memShrinkBytes_(block, newByteCount, __LINE__, __FILE__)
+    _memShrinkBytes(block, newByteCount, __LINE__, __FILE__)
 
 #define memChange(block, objectCount, objectSize)                              \
-    memChange_(block, objectCount, objectSize, __LINE__, __FILE__)
+    _memChange(block, objectCount, objectSize, __LINE__, __FILE__)
 
 #define memChangeBytes(block, byteCount)                                       \
-    memChangeBytes_(block, byteCount, __LINE__, __FILE__)
+    _memChangeBytes(block, byteCount, __LINE__, __FILE__)
 
 #define memFree(block)                                                         \
-    memFree_(block, __LINE__, __FILE__)
+    _memFree(block, __LINE__, __FILE__)
 
 // Internal function for memory tracking
 
 #include <stdint.h>
 #include <stdbool.h>
 
-void *memAlloc_(
+void *_memAlloc(
     size_t objectCount,
     size_t objectSize,
     uint32_t line,
     const char *file
 );
-void *memAllocBytes_(size_t byteCount, uint32_t line, const char *file);
-void *memAllocZeroed_(
+void *_memAllocBytes(size_t byteCount, uint32_t line, const char *file);
+void *_memAllocZeroed(
     size_t objectCount,
     size_t objectSize,
     uint32_t line,
     const char *file
 );
-void *memAllocZeroedBytes_(size_t byteCount, uint32_t line, const char *file);
-void *memExpand_(
+void *_memAllocZeroedBytes(size_t byteCount, uint32_t line, const char *file);
+void *_memExpand(
     void *block,
     size_t newObjectCount,
     size_t objectSize,
     uint32_t line,
     const char *file
 );
-void *memExpandBytes_(
+void *_memExpandBytes(
     void *block,
     size_t newByteCount,
     uint32_t line,
     const char *file
 );
-void *memShrink_(
+void *_memShrink(
     void *block,
     size_t newObjectCount,
     size_t objectSize,
     uint32_t line,
     const char *file
 );
-void *memShrinkBytes_(
+void *_memShrinkBytes(
     void *block,
     size_t newByteCount,
     uint32_t line,
     const char *file
 );
-void *memChange_(
+void *_memChange(
     void *block,
     size_t objectCount,
     size_t objectSize,
     uint32_t line,
     const char *file
 );
-void *memChangeBytes_(
+void *_memChangeBytes(
     void *block,
     size_t byteCount,
     uint32_t line,
     const char *file
 );
-void memFree_(void *block, uint32_t line, const char *file);
+void _memFree(void *block, uint32_t line, const char *file);
 
 // Check if there are any allocations
 bool memHasAllocs(void);
@@ -148,8 +148,8 @@ void memPrintAllocs(void);
 // Free all allocations
 void memFreeAllAllocs(void);
 // Check wether an out-of-bounds write happend to block
-#define memCheckBounds(block) memCheckBounds_(block, __LINE__, __FILE__)
-void memCheckBounds_(void *block, uint32_t line, const char *file);
+#define memCheckBounds(block) _memCheckBounds(block, __LINE__, __FILE__)
+void _memCheckBounds(void *block, uint32_t line, const char *file);
 
 #endif // !NDEBUG
 

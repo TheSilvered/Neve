@@ -16,7 +16,6 @@ typedef struct Buf {
 } Buf;
 
 typedef struct BufMap {
-    // Not guaranteed to be continuous
     Buf *buffers;
     uint32_t len;
     uint32_t cap;
@@ -28,7 +27,7 @@ void bufMapInit(BufMap *map);
 void bufMapDestroy(BufMap *map);
 
 // Initialize an empty buffer.
-BufHandle bufNewEmpty(BufMap *map);
+BufHandle bufInitEmpty(BufMap *map);
 // Create a new buffer from an existing file.
 FileIOResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle);
 // Get a reference to a buffer

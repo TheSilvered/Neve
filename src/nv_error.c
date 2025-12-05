@@ -17,7 +17,7 @@ Err *errGet(void) {
     return &g_err;
 }
 
-static void printErrMsg_(const char *msg, char *desc) {
+static void _printErrMsg(const char *msg, char *desc) {
     if (msg == NULL || *msg == '\0') {
         (void)fprintf(stderr, "%s\r\n", desc);
     } else {
@@ -27,7 +27,7 @@ static void printErrMsg_(const char *msg, char *desc) {
 
 #ifdef _WIN32
 
-static void printWindowsError_(const char *msg) {
+static void _printWindowsError(const char *msg) {
     static char msgBuf[512];
     static wchar_t wMsgBuf[512];
     DWORD formatFlags = FORMAT_MESSAGE_FROM_SYSTEM
@@ -49,13 +49,13 @@ static void printWindowsError_(const char *msg) {
             NV_ARRLEN(msgBuf),
             "failed to format message, error 0x%04lX", errId
         );
-        printErrMsg_(msg, msgBuf);
+        _printErrMsg(msg, msgBuf);
     } else {
         ucdCh16StrToCh8Str(
             wMsgBuf, wcslen(wMsgBuf),
             (UcdCh8 *)msgBuf, NV_ARRLEN(msgBuf)
         );
-        printErrMsg_(msg, msgBuf);
+        _printErrMsg(msg, msgBuf);
     }
 }
 
@@ -64,13 +64,13 @@ static void printWindowsError_(const char *msg) {
 void errLog(const char *msg) {
     switch (g_err.type) {
     case ErrType_None:
-        printErrMsg_(msg, (char *)"no error occurred");
+        _printErrMsg(msg, (char *)"no error occurred");
         break;
     case ErrType_Errno:
 #ifdef _WIN32
-        printWindowsError_(msg);
+        _printWindowsError(msg);
 #else
-        printErrMsg_(msg, strerror(errno));
+        _printErrMsg(msg, strerror(errno));
 #endif // !_WIN32
         break;
     default:

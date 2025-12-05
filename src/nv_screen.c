@@ -33,7 +33,7 @@ void screenDestroy(Screen *screen) {
     screen->displayRows = NULL;
 }
 
-ScreenStyle *resizeStyles_(ScreenStyle *styles, size_t oldLen, size_t newLen) {
+ScreenStyle *_resizeStyles(ScreenStyle *styles, size_t oldLen, size_t newLen) {
     if (oldLen == newLen) {
         return styles;
     }
@@ -46,7 +46,7 @@ ScreenStyle *resizeStyles_(ScreenStyle *styles, size_t oldLen, size_t newLen) {
     }
 }
 
-ScreenRows *resizeRows_(ScreenRows *rows, uint16_t w, uint16_t h) {
+ScreenRows *_resizeRows(ScreenRows *rows, uint16_t w, uint16_t h) {
     if (w == 0 || h == 0) {
         return NULL; // not a failure just the value of screen->*Rows when empty
     }
@@ -77,14 +77,14 @@ void screenResize(Screen *screen, uint16_t w, uint16_t h) {
     }
     screen->resized = true;
 
-    screen->editRows = resizeRows_(screen->editRows, screen->h, h);
-    screen->displayRows = resizeRows_(screen->displayRows, screen->h, h);
-    screen->editStyles = resizeStyles_(
+    screen->editRows = _resizeRows(screen->editRows, screen->h, h);
+    screen->displayRows = _resizeRows(screen->displayRows, screen->h, h);
+    screen->editStyles = _resizeStyles(
         screen->editStyles,
         screen->w * screen->h,
         w * h
     );
-    screen->displayStyles = resizeStyles_(
+    screen->displayStyles = _resizeStyles(
         screen->displayStyles,
         screen->w * screen->h,
         w * h
@@ -236,7 +236,7 @@ void screenClear(Screen *screen, int32_t line) {
     );
 }
 
-static bool rowChanged_(Screen *screen, uint16_t idx) {
+static bool _rowChanged(Screen *screen, uint16_t idx) {
     StrBuf *editRow = &screen->editRows->sBufs[idx];
     StrBuf *displayRow = &screen->displayRows->sBufs[idx];
 
@@ -333,11 +333,11 @@ void screenSetStyle(
     }
 }
 
-static bool screenStyleEq_(ScreenStyle st1, ScreenStyle st2) {
+static bool _screenStyleEq(ScreenStyle st1, ScreenStyle st2) {
     return memcmp(&st1, &st2, sizeof(st1)) == 0;
 }
 
-static void screenChangeStyle_(Screen *screen, ScreenStyle st) {
+static void _screenChangeStyle(Screen *screen, ScreenStyle st) {
     strAppendC(&screen->buf, "\x1b[0");
     if (st.textFmt & screenFmtBold) {
         strAppendC(&screen->buf, ";1");
@@ -376,7 +376,7 @@ static void screenChangeStyle_(Screen *screen, ScreenStyle st) {
     strAppendC(&screen->buf, "m");
 }
 
-static void writeLine_(Screen *screen, uint16_t idx) {
+static void _writeLine(Screen *screen, uint16_t idx) {
     StrView *editRow = (StrView *)&screen->editRows->sBufs[idx];
     strAppendFmt(
         &screen->buf,
@@ -398,13 +398,13 @@ static void writeLine_(Screen *screen, uint16_t idx) {
     ) {
         ScreenStyle cellSt = screen->editStyles[idx * screen->w + width];
         width += ucdCPWidth(cp, 0, 0);
-        if (!screenStyleEq_(cellSt, currSt)) {
+        if (!_screenStyleEq(cellSt, currSt)) {
             span.len = i - (span.buf - editRow->buf);
             strAppend(&screen->buf, &span);
             span.buf = editRow->buf + i;
             span.len = 0;
             currSt = cellSt;
-            screenChangeStyle_(screen, cellSt);
+            _screenChangeStyle(screen, cellSt);
         }
     }
 
@@ -414,7 +414,7 @@ static void writeLine_(Screen *screen, uint16_t idx) {
         strRepeat(&screen->buf, ' ', screen->w - width);
     }
 
-    screenChangeStyle_(screen, (ScreenStyle) { 0 });
+    _screenChangeStyle(screen, (ScreenStyle) { 0 });
 }
 
 bool screenRefresh(Screen *screen) {
@@ -432,10 +432,10 @@ bool screenRefresh(Screen *screen) {
     }
 
     for (uint16_t i = 0; i < screen->h; i++) {
-        if (!resized && !rowChanged_(screen, i)) {
+        if (!resized && !_rowChanged(screen, i)) {
             continue;
         }
-        writeLine_(screen, i);
+        _writeLine(screen, i);
     }
 
     ScreenRows *tempRows = screen->editRows;

@@ -1,5 +1,5 @@
 #include "nv_test.h"
-#define lineRefMaxGap_ 4
+#define _lineRefMaxGap 4
 #include "nv_context.c"
 
 void test_ctxPosAtNoLineRef(void) {
