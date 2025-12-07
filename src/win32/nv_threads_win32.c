@@ -37,3 +37,22 @@ void threadExit(ThreadRet status) {
     ExitThread(status);
 }
 
+bool threadMutexInit(ThreadMutex *mutex) {
+    return false;
+}
+
+void threadMutexDestroy(ThreadMutex *mutex) {
+
+}
+
+bool threadMutexLock(ThreadMutex *mutex) {
+    return false;
+}
+
+ThreadLockResult threadMutexTryLock(ThreadMutex *mutex) {
+    return ThreadLockResult_busy;
+}
+
+bool threadMutexUnlock(ThreadMutex *mutex) {
+    return false;
+}

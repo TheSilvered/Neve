@@ -10,8 +10,9 @@
 #endif // !_WIN32
 
 #include "nv_error.h"
+#include "nv_threads.h"
 
-static Err g_err = { 0 };
+static ThreadLocal Err g_err = { 0 };
 
 Err *errGet(void) {
     return &g_err;

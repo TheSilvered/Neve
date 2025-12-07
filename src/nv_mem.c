@@ -136,16 +136,7 @@ void memFree(void *block) {
 #include <string.h>
 #include <stdbool.h>
 #include <inttypes.h>
-
-#if __STDC_VERSION__ >= 201112L
-    #if __STDC_VERSION__ < 202311L
-        #define thread_local _Thread_local
-    #endif
-#elif defined(_MSC_VER) && !defined(__clang__)
-#define thread_local __declspec( thread )
-#else
-#define thread_local __thread
-#endif // !thread_local
+#include "nv_threads.h"
 
 #define _sentinelLen 4
 #define _garbageByte 0xc5
@@ -176,7 +167,7 @@ static inline uint64_t _prngNext(PrngState *p) {
     return state * UINT64_C(2685821657736338717);
 }
 
-thread_local MemHeader *t_memRoot = NULL;
+static ThreadLocal MemHeader *t_memRoot = NULL;
 
 static inline void _mhUpdateHeight(MemHeader *mh);
 static inline int32_t _mhBalanceFactor(MemHeader *mh);

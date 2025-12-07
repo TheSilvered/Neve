@@ -10,6 +10,10 @@
 
 typedef HANDLE Thread;
 typedef DWORD ThreadRet;
+typedef struct ThreadMutex_ {
+    HANDLE handle;
+    DWORD threadID;
+} ThreadMutex;
 
 #else
 
@@ -18,10 +22,29 @@ typedef DWORD ThreadRet;
 
 typedef pthread_t Thread;
 typedef void *ThreadRet;
+typedef pthread_mutex_t ThreadMutex;
 
 #endif
 
+#if __STDC_VERSION__ >= 201112L
+    #if __STDC_VERSION__ < 202311L
+        #define ThreadLocal _Thread_local
+    #else
+        #define ThreadLocal thread_local
+    #endif
+#elif defined(_MSC_VER) && !defined(__clang__)
+#define ThreadLocal __declspec( thread )
+#else
+#define ThreadLocal __thread
+#endif // !thread_local
+
 typedef ThreadRet (*ThreadRoutine)(void *arg);
+
+typedef enum ThreadLockResult {
+    ThreadLockResult_success,
+    ThreadLockResult_busy,
+    ThreadLockResult_error
+} ThreadLockResult;
 
 // Create a thread
 bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg);
@@ -29,5 +52,17 @@ bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg);
 bool threadJoin(Thread thread, ThreadRet *status);
 // Exit the current thread
 NV_NORETURN void threadExit(ThreadRet status);
+
+// Initialize a mutex
+bool threadMutexInit(ThreadMutex *mutex);
+// Deinitialize a mutex
+void threadMutexDestroy(ThreadMutex *mutex);
+// Wait for the mutex to unlock and then lock it
+// Locking from the same thread again result in an error
+bool threadMutexLock(ThreadMutex *mutex);
+// Try locking a mutex, return `busy` immediately if it is already locked.
+ThreadLockResult threadMutexTryLock(ThreadMutex *mutex);
+// Unlock a mutex
+bool threadMutexUnlock(ThreadMutex *mutex);
 
 #endif // !NV_THREADS_H_
