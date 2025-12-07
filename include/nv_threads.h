@@ -8,11 +8,12 @@
 
 #include <windows.h>
 
-typedef DWORD Thread;
+typedef HANDLE Thread;
 typedef DWORD ThreadRet;
+typedef DWORD ThreadID;
 typedef struct ThreadMutex_ {
-    HANDLE handle;
-    DWORD threadID;
+    HANDLE _handle;
+    ThreadID _id;
 } ThreadMutex;
 
 #else
@@ -21,6 +22,7 @@ typedef struct ThreadMutex_ {
 #include <pthread.h>
 
 typedef pthread_t Thread;
+typedef pthread_t ThreadID;
 typedef void *ThreadRet;
 typedef pthread_mutex_t ThreadMutex;
 
@@ -48,8 +50,8 @@ typedef enum ThreadLockResult {
 
 // Create a thread
 bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg);
-// Get the calling thread
-Thread threadGetSelf(void);
+// Get a unique identifier for the current thread
+ThreadID threadGetCurrID(void);
 // Wait until the thread exits
 bool threadJoin(Thread thread, ThreadRet *status);
 // Exit the current thread

@@ -10,7 +10,7 @@ bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg) {
     return res == 0;
 }
 
-Thread threadGetSelf(void) {
+ThreadID threadGetCurrID(void) {
     return pthread_self();
 }
 
