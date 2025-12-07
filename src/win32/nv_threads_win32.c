@@ -2,23 +2,23 @@
 #include "nv_error.h"
 
 bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg) {
-    HANDLE newThread = CreateThread(NULL, 0, routine, arg, 0, NULL);
-
-    if (newThread == NULL) {
+    if (CreateThread(NULL, 0, routine, arg, 0, thread) == NULL) {
         errSetErrno();
         return false;
-    }
-    if (thread != NULL) {
-        *thread = newThread;
     }
     return true;
 }
 
+Thread threadGetSelf(void) {
+    return GetCurrentThreadId();
+}
+
 bool threadJoin(Thread thread, ThreadRet *status) {
+    HANDLE threadHandle = OpenThread(NULL, false, thread);
     // The only possible return values are WAIT_FAILED and WAIT_OBJECT_0,
     // WAIT_ABANDONED is impossible because it is not a mutex and
     // WAIT_TIMEOUT is impossible because an infinite time is allowed
-    if (WaitForSingleObject(thread, INFINITE) == WAIT_FAILED) {
+    if (WaitForSingleObject(threadHandle, INFINITE) == WAIT_FAILED) {
         errSetErrno();
         return false;
     }
@@ -26,7 +26,7 @@ bool threadJoin(Thread thread, ThreadRet *status) {
         return true;
     }
 
-    if (GetExitCodeThread(thread, status) == 0) {
+    if (GetExitCodeThread(threadHandle, status) == 0) {
         errSetErrno();
         return false;
     }

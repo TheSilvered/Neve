@@ -10,6 +10,10 @@ bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg) {
     return res == 0;
 }
 
+Thread threadGetSelf(void) {
+    return pthread_self();
+}
+
 bool threadJoin(Thread thread, ThreadRet *status) {
     int res = pthread_join(thread, status);
     if (res != 0) {
