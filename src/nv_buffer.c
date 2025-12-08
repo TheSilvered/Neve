@@ -29,14 +29,14 @@ static void _bufMapInsert(BufMap *map, Buf buf) {
 }
 
 static void _bufMapExpand(BufMap *map) {
-    _bufMapResize(map, NV_MAX(map->cap*2, _mapMinCap));
+    _bufMapResize(map, nvMax(map->cap*2, _mapMinCap));
 }
 
 static void _bufMapShrink(BufMap *map) {
     if (map->cap == 0 || map->cap < map->len * 4) {
         return;
     }
-    _bufMapResize(map, NV_MAX(map->cap / 2, _mapMinCap));
+    _bufMapResize(map, nvMax(map->cap / 2, _mapMinCap));
 }
 
 static void _bufMapResize(BufMap *map, uint32_t newCap) {

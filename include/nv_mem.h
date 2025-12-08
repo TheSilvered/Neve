@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#ifdef NDEBUG
+#ifndef NV_DEBUG
 
 // Allocate a new chunck of memory.
 // On failure the program is aborted.
@@ -49,6 +49,19 @@ void *memChangeBytes(void *block, size_t byteCount);
 // Free a block of memory. Do nothing if `block == NULL`
 void memFree(void *block);
 
+// Debug-mode only
+#define memInit() true
+// Debug-mode only
+#define memQuit()
+// Debug-mode only
+#define memHasAllocs() false
+// Debug-mode only
+#define memPrintAllocs()
+// Debug-mode only
+#define memFreeAllAllocs()
+// Debug-mode only
+#define memCheckBounds()
+
 #else
 
 #define memAlloc(objectCount, objectSize)                                      \
@@ -85,6 +98,9 @@ void memFree(void *block);
 
 #include <stdint.h>
 #include <stdbool.h>
+
+bool memInit(void);
+void memQuit(void);
 
 void *_memAlloc(
     size_t objectCount,
@@ -147,10 +163,10 @@ bool memHasAllocs(void);
 void memPrintAllocs(void);
 // Free all allocations
 void memFreeAllAllocs(void);
-// Check wether an out-of-bounds write happend to block
+// Check wether an out-of-bounds write happend to a block
 #define memCheckBounds(block) _memCheckBounds(block, __LINE__, __FILE__)
 void _memCheckBounds(void *block, uint32_t line, const char *file);
 
-#endif // !NDEBUG
+#endif // !NV_DEBUG
 
 #endif // !NV_MEM_H_

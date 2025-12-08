@@ -145,14 +145,14 @@ static int getCh(UcdCh16 *outCh) {
     case WAIT_OBJECT_0:
         break;
     default:
-        NV_UNREACHABLE;
+        nvUnreachable;
     }
 
     DWORD eventsRead;
 
     BOOL result = ReadConsoleInputW(
         g_consoleInput,
-        g_inputEvents, NV_ARRLEN(g_inputEvents),
+        g_inputEvents, nvArrlen(g_inputEvents),
         &eventsRead
     );
     g_eventsSize = eventsRead;
@@ -198,7 +198,7 @@ UcdCP termGetInput(void) {
 
 int64_t termRead(UcdCh8 *buf, size_t bufSize) {
     wchar_t readBuf[4096] = { 0 };
-    size_t toRead = NV_MIN(bufSize, NV_ARRLEN(readBuf));
+    size_t toRead = nvMin(bufSize, nvArrlen(readBuf));
     size_t idx = 0;
     uint8_t offsetOutBuf = 0;
 
@@ -239,7 +239,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
         if (charsRead < toRead) {
             toRead = 0;
         } else {
-            toRead = NV_MIN(bufSize - idx, NV_ARRLEN(readBuf) - offsetOutBuf);
+            toRead = nvMin(bufSize - idx, nvArrlen(readBuf) - offsetOutBuf);
         }
     }
 

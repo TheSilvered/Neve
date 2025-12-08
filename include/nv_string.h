@@ -50,7 +50,7 @@ void strAppendC(Str *str, const char *cStr);
 // Append a string view to a string.
 void strAppend(Str *str, const StrView *sv);
 // Format a string and append it
-NV_UNIX_FMT(2, 3) void strAppendFmt(Str *str, NV_WIN_FMT const char *fmt, ...);
+nvUnixFmt(2, 3) void strAppendFmt(Str *str, nvWinFmt const char *fmt, ...);
 // Append a buffer to a string
 void strAppendRaw(Str *str, const UcdCh8 *buf, size_t len);
 // Append `ch` to the end of the string `count` times.

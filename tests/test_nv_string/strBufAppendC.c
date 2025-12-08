@@ -5,7 +5,7 @@
 
 void test_strBufAppendCEmpty(void) {
     char buf[10];
-    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
+    StrBuf sb = strBufMake(buf, nvArrlen(buf));
 
     testAssert(strBufAppendC(&sb, ""));
     testAssert(sb.len == 0);
@@ -17,7 +17,7 @@ void test_strBufAppendCEmptyToExisting(void) {
     StrBuf sb = {
         .buf = buf,
         .len = 1,
-        .bufSize = NV_ARRLEN(buf)
+        .bufSize = nvArrlen(buf)
     };
     testAssert(strBufAppendC(&sb, ""));
     testAssert(sb.len == 1);
@@ -26,7 +26,7 @@ void test_strBufAppendCEmptyToExisting(void) {
 
 void test_strBufAppendCFull(void) {
     char buf[10];
-    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
+    StrBuf sb = strBufMake(buf, nvArrlen(buf));
 
     testAssert(strBufAppendC(&sb, "a"));
     testAssert(sb.len == 1);
@@ -38,7 +38,7 @@ void test_strBufAppendCFullToExisting(void) {
     StrBuf sb = {
         .buf = buf,
         .len = 1,
-        .bufSize = NV_ARRLEN(buf)
+        .bufSize = nvArrlen(buf)
     };
 
     testAssert(strBufAppendC(&sb, "b"));
@@ -48,7 +48,7 @@ void test_strBufAppendCFullToExisting(void) {
 
 void test_strBufAppendCTooBig(void) {
     char buf[1];
-    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
+    StrBuf sb = strBufMake(buf, nvArrlen(buf));
 
     testAssert(!strBufAppendC(&sb, "ab"));
     testAssert(sb.len == 0);

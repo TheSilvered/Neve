@@ -7,6 +7,6 @@
 bool logInit(const char *filePath);
 void logQuit(void);
 
-NV_UNIX_FMT(1, 2) void logFmt(NV_WIN_FMT const char *fmt, ...);
+nvUnixFmt(1, 2) void logFmt(nvWinFmt const char *fmt, ...);
 
 #endif // !NV_LOGGING_H_

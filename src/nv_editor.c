@@ -153,7 +153,7 @@ static void _renderFile(Ctx *ctx) {
     ctxSetFrameSize(ctx, g_ed.screen.w - linenoWidth - 2, g_ed.screen.h - 2);
     ctx->frame.termX = linenoWidth + 2;
 
-    size_t totLines = NV_MIN(lineCount - ctx->frame.y, ctx->frame.h);
+    size_t totLines = nvMin(lineCount - ctx->frame.y, ctx->frame.h);
     for (size_t i = 0; i < totLines; i++) {
         screenWriteFmt(
             &g_ed.screen,

@@ -203,7 +203,7 @@ NV_UNIX_FMT(4, 5) void screenWriteFmt(
     char buf[2048] = { 0 };
     va_list args;
     va_start(args, fmt);
-    int len = vsnprintf(buf, NV_ARRLEN(buf), fmt, args);
+    int len = vsnprintf(buf, nvArrlen(buf), fmt, args);
     va_end(args);
     if (len < 0) {
         return;
@@ -314,7 +314,7 @@ void screenSetStyle(
         return;
     }
 
-    width = NV_MIN(width, screen->w - x);
+    width = nvMin(width, screen->w - x);
 
     ScreenStyle *styles = &screen->editStyles[y * screen->w + x];
     for (uint16_t i = 0; i < width; i++) {

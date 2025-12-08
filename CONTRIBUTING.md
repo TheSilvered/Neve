@@ -5,8 +5,8 @@
     workflows/        # Github actions
 include/          # Header files for the editor
 src/              # Source of the editor
-    unix/			  # Unix-specific code
-    win32/			  # Windows-specific code
+    unix/              # Unix-specific code
+    win32/              # Windows-specific code
 tests/
     main/             # Test support code
     test_nv_array/    # `nv_array.h` tests

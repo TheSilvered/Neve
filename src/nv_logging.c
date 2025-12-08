@@ -28,7 +28,7 @@ bool logInit(const char *filePath) {
     }
 
     char buf[1024];
-    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
+    StrBuf sb = strBufMake(buf, nvArrlen(buf));
     const char *dest = getenv(DEST_ENV);
     if (dest == NULL) {
         return false;
@@ -51,7 +51,7 @@ void logQuit(void) {
     fileClose(&logFile);
 }
 
-NV_UNIX_FMT(1, 2) void logFmt(NV_WIN_FMT const char *fmt, ...) {
+nvUnixFmt(1, 2) void logFmt(nvWinFmt const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     (void)vfprintf(logFile.fp, fmt, args);

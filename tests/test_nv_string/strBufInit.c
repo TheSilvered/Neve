@@ -6,11 +6,11 @@
 void test_strBufInit(void) {
     char buf[10];
     StrBuf sb;
-    strBufInit(&sb, buf, NV_ARRLEN(buf));
+    strBufInit(&sb, buf, nvArrlen(buf));
 
     testAssert(sb.buf == buf);
     testAssert(sb.len == 0);
-    testAssert(sb.bufSize == NV_ARRLEN(buf));
+    testAssert(sb.bufSize == nvArrlen(buf));
 }
 
 testList(

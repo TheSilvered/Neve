@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -143,10 +142,10 @@ bool termCursorGetPos(uint16_t *outX, uint16_t *outY) {
     }
 
     // In buf there will be <y>;<x>
-    for (size_t i = 0; i < NV_ARRLEN(buf); i++) {
+    for (size_t i = 0; i < nvArrlen(buf); i++) {
         // Going over the buffer size should not be possible considering a max
         // position of 16 bits (like the struct winsize fields).
-        if (i == NV_ARRLEN(buf) - 1) {
+        if (i == nvArrlen(buf) - 1) {
             goto failure_msg;
         }
 
@@ -211,7 +210,7 @@ bool termCursorSetPos(uint16_t x, uint16_t y) {
     }
 
     size_t bufLen = snprintf(
-        buf, NV_ARRLEN(buf),
+        buf, nvArrlen(buf),
         escCursorSetPos("%u", "%u"), y, x
     );
 

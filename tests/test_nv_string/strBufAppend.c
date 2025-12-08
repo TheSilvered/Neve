@@ -5,7 +5,7 @@
 
 void test_strBufAppendEmpty(void) {
     char buf[10];
-    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
+    StrBuf sb = strBufMake(buf, nvArrlen(buf));
     StrView emptyView = strViewMakeFromC("");
 
     testAssert(strBufAppend(&sb, &emptyView));
@@ -18,7 +18,7 @@ void test_strBufAppendEmptyToExisting(void) {
     StrBuf sb = {
         .buf = buf,
         .len = 1,
-        .bufSize = NV_ARRLEN(buf)
+        .bufSize = nvArrlen(buf)
     };
     StrView emptyView = strViewMakeFromC("");
 
@@ -29,7 +29,7 @@ void test_strBufAppendEmptyToExisting(void) {
 
 void test_strBufAppendFull(void) {
     char buf[10];
-    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
+    StrBuf sb = strBufMake(buf, nvArrlen(buf));
     StrView fullView = strViewMakeFromC("a");
 
     testAssert(strBufAppend(&sb, &fullView));
@@ -42,7 +42,7 @@ void test_strBufAppendFullToExisting(void) {
     StrBuf sb = {
         .buf = buf,
         .len = 1,
-        .bufSize = NV_ARRLEN(buf)
+        .bufSize = nvArrlen(buf)
     };
     StrView fullView = strViewMakeFromC("b");
 
@@ -53,7 +53,7 @@ void test_strBufAppendFullToExisting(void) {
 
 void test_strBufAppendTooBig(void) {
     char buf[1];
-    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
+    StrBuf sb = strBufMake(buf, nvArrlen(buf));
     StrView fullView = strViewMakeFromC("ab");
 
     testAssert(!strBufAppend(&sb, &fullView));

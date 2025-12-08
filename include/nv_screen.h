@@ -95,10 +95,10 @@ void screenWrite(
 );
 
 // Write a string to the screen using printf-style formatting.
-NV_UNIX_FMT(4, 5) void screenWriteFmt(
+nvUnixFmt(4, 5) void screenWriteFmt(
     Screen *screen,
     uint16_t x, uint16_t y,
-    NV_WIN_FMT const char *fmt, ...
+    nvWinFmt const char *fmt, ...
 );
 
 // Set the foreground color.

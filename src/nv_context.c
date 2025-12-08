@@ -1313,12 +1313,12 @@ static bool _ctxCurMoveEx(
     // If `new` is already a cursor
     if (newIdx < ctx->cursors.len && cursors[newIdx].idx == new) {
         if (new < old) {
-            cursors[newIdx]._selStart = NV_MAX(
+            cursors[newIdx]._selStart = nvMax(
                 cursors[newIdx]._selStart,
                 cursors[oldIdx]._selStart
             );
         } else {
-            cursors[newIdx]._selStart = NV_MIN(
+            cursors[newIdx]._selStart = nvMin(
                 cursors[newIdx]._selStart,
                 cursors[oldIdx]._selStart
             );

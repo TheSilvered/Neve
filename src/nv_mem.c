@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "nv_mem.h"
 
-#ifdef NDEBUG
+#ifndef NV_DEBUG
 
 void *memAlloc(size_t objectSize, size_t objectCount) {
     void *block = malloc(objectSize * objectCount);
@@ -167,7 +167,9 @@ static inline uint64_t _prngNext(PrngState *p) {
     return state * UINT64_C(2685821657736338717);
 }
 
-static ThreadLocal MemHeader *t_memRoot = NULL;
+static MemHeader *g_memRoot = NULL;
+static ThreadMutex g_memMutex;
+static bool g_memInitialized = false;
 
 static inline void _mhUpdateHeight(MemHeader *mh);
 static inline int32_t _mhBalanceFactor(MemHeader *mh);
@@ -181,6 +183,20 @@ static MemHeader *_mhRemove(MemHeader *root, MemHeader *mh);
 static bool _mhCheckBounds(MemHeader *header);
 static void _mhPrint(MemHeader *header);
 static void _mhPrintAll(MemHeader *root);
+
+static void *_memAllocFilled(
+    size_t byteCount,
+    uint8_t val,
+    uint32_t line,
+    const char *file
+);
+static void *_memChangeBytesUnchecked(
+    void *block,
+    size_t newByteCount,
+    uint32_t line,
+    const char *file
+);
+static void _memFreeUnchecked(void *block);
 
 static inline uint32_t _mhGetHeight(MemHeader *mh) {
     return mh ? mh->height : 0;
@@ -333,9 +349,7 @@ static void *_memAllocFilled(
     const char *file
 ) {
     MemHeader *block = malloc(
-        sizeof(MemHeader)
-        + byteCount
-        + sizeof(uint64_t)*_sentinelLen
+        sizeof(MemHeader) + byteCount + sizeof(uint64_t)*_sentinelLen
     );
 
     if (block == NULL) {
@@ -362,8 +376,24 @@ static void *_memAllocFilled(
 
     memset((void *)(block + 1), val, byteCount);
 
-    t_memRoot = _mhInsert(t_memRoot, block);
+    g_memRoot = _mhInsert(g_memRoot, block);
     return (void *)(block + 1);
+}
+
+bool memInit(void) {
+    if (!threadMutexInit(&g_memMutex)) {
+        return false;
+    }
+    g_memInitialized = true;
+    return true;
+}
+
+void memQuit(void) {
+    if (!g_memInitialized) {
+        return;
+    }
+    g_memInitialized = false;
+    threadMutexDestroy(&g_memMutex);
 }
 
 void *_memAlloc(
@@ -372,11 +402,27 @@ void *_memAlloc(
     uint32_t line,
     const char *file
 ) {
-    return _memAllocFilled(objectCount * objectSize, _garbageByte, line, file);
+    assert(threadMutexLock(&g_memMutex));
+    void *block = _memAllocFilled(
+        objectCount * objectSize,
+        _garbageByte,
+        line,
+        file
+    );
+    assert(threadMutexUnlock(&g_memMutex));
+    return block;
 }
 
 void *_memAllocBytes(size_t byteCount, uint32_t line, const char *file) {
-    return _memAllocFilled(byteCount, _garbageByte, line, file);
+    assert(threadMutexLock(&g_memMutex));
+    void *block = _memAllocFilled(
+        byteCount,
+        _garbageByte,
+        line,
+        file
+    );
+    assert(threadMutexUnlock(&g_memMutex));
+    return block;
 }
 
 void *_memAllocZeroed(
@@ -385,11 +431,50 @@ void *_memAllocZeroed(
     uint32_t line,
     const char *file
 ) {
-    return _memAllocFilled(objectCount * objectSize, 0, line, file);
+    assert(threadMutexLock(&g_memMutex));
+    void *block = _memAllocFilled(
+        objectCount * objectSize,
+        0,
+        line,
+        file
+    );
+    assert(threadMutexUnlock(&g_memMutex));
+    return block;
 }
 
 void *_memAllocZeroedBytes(size_t byteCount, uint32_t line, const char *file) {
-    return _memAllocFilled(byteCount, 0, line, file);
+    assert(threadMutexLock(&g_memMutex));
+    void *block = _memAllocFilled(
+        byteCount,
+        0,
+        line,
+        file
+    );
+    assert(threadMutexUnlock(&g_memMutex));
+    return block;
+}
+
+static void *_memChangeBytesUnchecked(
+    void *block,
+    size_t byteCount,
+    uint32_t line,
+    const char *file
+) {
+    if (byteCount == 0) {
+        _memFreeUnchecked(block);
+        return NULL;
+    }
+    void *newBlock = _memAllocFilled(byteCount, _garbageByte, line, file);
+    if (block == NULL) {
+        return newBlock;
+    }
+    MemHeader *header = (MemHeader *)block - 1;
+    size_t minSize = byteCount < header->blockSize
+        ? byteCount
+        : header->blockSize;
+    memcpy(newBlock, block, minSize);
+    _memFreeUnchecked(block);
+    return newBlock;
 }
 
 void *_memExpand(
@@ -409,8 +494,9 @@ void *_memExpandBytes(
     const char *file
 ) {
     assert(newByteCount != 0);
+    assert(threadMutexLock(&g_memMutex));
     MemHeader *header = (MemHeader *)block - 1;
-    if (block != NULL && !_mhContains(t_memRoot, header)) {
+    if (block != NULL && !_mhContains(g_memRoot, header)) {
         fputs("memExpand: invalid pointer\n", stderr);
         fprintf(stderr, "   at %s:%x"PRIu32"\n", file, line);
         abort();
@@ -421,7 +507,9 @@ void *_memExpandBytes(
         _mhPrint(header);
         abort();
     }
-    return _memChangeBytes(block, newByteCount, line, file);
+    void *newBlock = _memChangeBytesUnchecked(block, newByteCount, line, file);
+    assert(threadMutexUnlock(&g_memMutex));
+    return newBlock;
 }
 
 void *_memShrink(
@@ -441,8 +529,10 @@ void *_memShrinkBytes(
     const char *file
 ) {
     assert(newByteCount != 0);
+    assert(block != NULL);
+    assert(threadMutexLock(&g_memMutex));
     MemHeader *header = (MemHeader *)block - 1;
-    if (!_mhContains(t_memRoot, header)) {
+    if (!_mhContains(g_memRoot, header)) {
         fputs("memShrink: invalid pointer\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         abort();
@@ -453,7 +543,9 @@ void *_memShrinkBytes(
         _mhPrint(header);
         abort();
     }
-    return _memChangeBytes(block, newByteCount, line, file);
+    void *newBlock = _memChangeBytesUnchecked(block, newByteCount, line, file);
+    assert(threadMutexUnlock(&g_memMutex));
+    return newBlock;
 }
 
 void *_memChange(
@@ -476,16 +568,12 @@ void *_memChangeBytes(
         return byteCount == 0 ? NULL : _memAllocBytes(byteCount, line, file);
     }
 
+    assert(threadMutexLock(&g_memMutex));
     MemHeader *header = (MemHeader *)block - 1;
-    if (!_mhContains(t_memRoot, header)) {
+    if (!_mhContains(g_memRoot, header)) {
         fputs("memChange: invalid pointer\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         abort();
-    }
-
-    if (byteCount == 0) {
-        _memFree(block, line, file);
-        return NULL;
     }
 
     if (!_mhCheckBounds(header)) {
@@ -495,21 +583,26 @@ void *_memChangeBytes(
         abort();
     }
 
-    void *newBlock = _memAllocFilled(byteCount, _garbageByte, line, file);
-    size_t minSize = byteCount < header->blockSize
-        ? byteCount
-        : header->blockSize;
-    memcpy(newBlock, block, minSize);
-    memFree(block);
+    void *newBlock = _memChangeBytesUnchecked(block, byteCount, line, file);
+    assert(threadMutexUnlock(&g_memMutex));
     return newBlock;
+}
+
+static void _memFreeUnchecked(void *block) {
+    if (block != NULL) {
+        MemHeader *header = (MemHeader *)block - 1;
+        g_memRoot = _mhRemove(g_memRoot, header);
+        free(header);
+    }
 }
 
 void _memFree(void *block, uint32_t line, const char *file) {
     if (block == NULL) {
         return;
     }
+    assert(threadMutexLock(&g_memMutex));
     MemHeader *header = (MemHeader *)block - 1;
-    if (!_mhContains(t_memRoot, header)) {
+    if (!_mhContains(g_memRoot, header)) {
         fputs("memFree: invalid pointer\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         abort();
@@ -521,24 +614,27 @@ void _memFree(void *block, uint32_t line, const char *file) {
         _mhPrint(header);
         abort();
     }
-    t_memRoot = _mhRemove(t_memRoot, header);
-    free(header);
+    _memFreeUnchecked(block);
+    assert(threadMutexUnlock(&g_memMutex));
 }
 
 bool memHasAllocs(void) {
-    return t_memRoot != NULL;
+    return g_memRoot != NULL;
 }
 
 void memPrintAllocs(void) {
-    _mhPrintAll(t_memRoot);
+    assert(threadMutexLock(&g_memMutex));
+    _mhPrintAll(g_memRoot);
+    assert(threadMutexUnlock(&g_memMutex));
 }
 
 void _memCheckBounds(void *block, uint32_t line, const char *file) {
     if (block == NULL) {
         return;
     }
+    assert(threadMutexLock(&g_memMutex));
     MemHeader *header = (MemHeader *)block - 1;
-    if (!_mhContains(t_memRoot, header)) {
+    if (!_mhContains(g_memRoot, header)) {
         fputs("memCheckBounds: invalid pointer\n", stderr);
         abort();
     }
@@ -549,12 +645,15 @@ void _memCheckBounds(void *block, uint32_t line, const char *file) {
         _mhPrint(header);
         abort();
     }
+    assert(threadMutexUnlock(&g_memMutex));
 }
 
 void memFreeAllAllocs(void) {
-    while (t_memRoot != NULL) {
-        memFree(t_memRoot + 1);
+    assert(threadMutexLock(&g_memMutex));
+    while (g_memRoot != NULL) {
+        _memFreeUnchecked(g_memRoot + 1);
     }
+    assert(threadMutexUnlock(&g_memMutex));
 }
 
 #endif // !NDEBUG

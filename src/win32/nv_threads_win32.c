@@ -1,5 +1,11 @@
+#include <assert.h>
 #include "nv_threads.h"
+
+#ifdef NV_THREADS_NO_ERROR
+#define errSetErrno()
+#else
 #include "nv_error.h"
+#endif
 
 bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg) {
     HANDLE handle = CreateThread(NULL, 0, routine, arg, 0, NULL);
@@ -41,21 +47,53 @@ void threadExit(ThreadRet status) {
 }
 
 bool threadMutexInit(ThreadMutex *mutex) {
-
+    InitializeSRWLock(&mutex->_lock);
+    mutex->_owner = 0;
+    return true;
 }
 
-void threadMutexDestroy(ThreadMutex *mutex) {
-
+bool threadMutexDestroy(ThreadMutex *mutex) {
+    if (mutex->_owner != 0) {
+        SetLastError(ERROR_BUSY);
+        errSetErrno();
+        return false;
+    }
+    return true; // no destructor for SRWLOCK
 }
 
 bool threadMutexLock(ThreadMutex *mutex) {
-    return false;
+    DWORD id = threadGetCurrID();
+    if (mutex->_owner == id) {
+        SetLastError(ERROR_POSSIBLE_DEADLOCK);
+        errSetErrno();
+        return false;
+    }
+    AcquireSRWLockExclusive(&mutex->_lock);
+    mutex->_owner = id;
+    return true;
 }
 
 ThreadLockResult threadMutexTryLock(ThreadMutex *mutex) {
-    return ThreadLockResult_busy;
+    DWORD id = threadGetCurrID();
+    if (mutex->_owner == id) {
+        SetLastError(ERROR_POSSIBLE_DEADLOCK);
+        errSetErrno();
+        return ThreadLockResult_error;
+    } else if (TryAcquireSRWLockExclusive(&mutex->_lock) == TRUE) {
+        mutex->_owner = id;
+        return ThreadLockResult_success;
+    } else {
+        return ThreadLockResult_busy;
+    }
 }
 
 bool threadMutexUnlock(ThreadMutex *mutex) {
-    return false;
+    if (mutex->_owner != threadGetCurrID()) {
+        SetLastError(ERROR_NOT_OWNER);
+        errSetErrno();
+        return false;
+    }
+    mutex->_owner = 0;
+    ReleaseSRWLockExclusive(&mutex->_lock);
+    return true;
 }

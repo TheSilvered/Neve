@@ -6,14 +6,15 @@
 
 #ifdef _WIN32
 
+#define WINDOWS_LEAN_AND_MEAN
 #include <windows.h>
 
 typedef HANDLE Thread;
 typedef DWORD ThreadRet;
 typedef DWORD ThreadID;
-typedef struct ThreadMutex_ {
-    HANDLE _handle;
-    ThreadID _id;
+typedef struct ThreadMutex {
+    SRWLOCK _lock;
+    ThreadID _owner;
 } ThreadMutex;
 
 #else
@@ -55,12 +56,12 @@ ThreadID threadGetCurrID(void);
 // Wait until the thread exits
 bool threadJoin(Thread thread, ThreadRet *status);
 // Exit the current thread
-NV_NORETURN void threadExit(ThreadRet status);
+NvNoreturn void threadExit(ThreadRet status);
 
 // Initialize a mutex
 bool threadMutexInit(ThreadMutex *mutex);
 // Deinitialize a mutex
-void threadMutexDestroy(ThreadMutex *mutex);
+bool threadMutexDestroy(ThreadMutex *mutex);
 // Wait for the mutex to unlock and then lock it
 // Locking from the same thread again result in an error
 bool threadMutexLock(ThreadMutex *mutex);

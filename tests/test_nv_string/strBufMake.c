@@ -5,11 +5,11 @@
 
 void test_strBufMake(void) {
     char buf[10];
-    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
+    StrBuf sb = strBufMake(buf, nvArrlen(buf));
 
     testAssert(sb.buf == buf);
     testAssert(sb.len == 0);
-    testAssert(sb.bufSize == NV_ARRLEN(buf));
+    testAssert(sb.bufSize == nvArrlen(buf));
 }
 
 testList(

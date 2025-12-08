@@ -6,13 +6,14 @@ message("CMake Config: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED true)
-set(CMAKE_C_EXTENSIONS off)
 
 if (${CMAKE_GENERATOR} MATCHES ".*(Make|Ninja).*")
     set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 endif()
 
-add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DNV_DEBUG)
+endif()
 
 include_directories(neve include)
 

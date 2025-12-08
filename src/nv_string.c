@@ -86,12 +86,12 @@ void strAppend(Str *str, const StrView *sv) {
     strAppendRaw(str, sv->buf, sv->len);
 }
 
-NV_UNIX_FMT(2, 3) void strAppendFmt(Str *str, NV_WIN_FMT const char *fmt, ...) {
+nvUnixFmt(2, 3) void strAppendFmt(Str *str, nvWinFmt const char *fmt, ...) {
     char buf[128];
     va_list args;
     va_start(args, fmt);
 
-    size_t len = vsnprintf(buf, NV_ARRLEN(buf), fmt, args);
+    size_t len = vsnprintf(buf, nvArrlen(buf), fmt, args);
     strAppendRaw(str, (const UcdCh8 *)buf, len);
 }
 
@@ -320,7 +320,7 @@ const wchar_t *tempWStr(const char *str) {
         (const UcdCh8 *)str,
         strlen(str),
         (UcdCh16 *)g_wchBuf,
-        NV_ARRLEN(g_wchBuf)
+        nvArrlen(g_wchBuf)
     );
     return g_wchBuf;
 }
@@ -330,7 +330,7 @@ const char *tempStr(const wchar_t *str) {
         (const UcdCh16 *)str,
         wcslen(str),
         (UcdCh8 *)g_chBuf,
-        NV_ARRLEN(g_chBuf)
+        nvArrlen(g_chBuf)
     );
     return g_chBuf;
 }

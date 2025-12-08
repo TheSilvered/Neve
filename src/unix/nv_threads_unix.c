@@ -1,6 +1,11 @@
 #include <errno.h>
 #include "nv_threads.h"
+
+#ifdef NV_THREADS_NO_ERROR
+#define errSetErrno()
+#else
 #include "nv_error.h"
+#endif
 
 bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg) {
     int res = pthread_create(thread, NULL, routine, arg);
@@ -41,8 +46,12 @@ bool threadMutexInit(ThreadMutex *mutex) {
     return true;
 }
 
-void threadMutexDestroy(ThreadMutex *mutex) {
-    (void)pthread_mutex_destroy(mutex);
+bool threadMutexDestroy(ThreadMutex *mutex) {
+    if (pthread_mutex_destroy(mutex) != 0) {
+        errSetErrno();
+        return false;
+    }
+    return true;
 }
 
 bool threadMutexLock(ThreadMutex *mutex) {

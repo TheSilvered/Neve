@@ -57,6 +57,8 @@ bool _testAssertRequire(
 /* ----------------------------- Program Entry ------------------------------ */
 
 int main(void) {
+    memInit();
+
     size_t testCount;
     Test *tests = _testGetTests(&testCount);
 
@@ -64,14 +66,16 @@ int main(void) {
         printf("running test %s...\n", tests[i].name);
         fflush(stdout);
         tests[i].callback();
+
+#ifdef NV_DEBUG
+        if (memHasAllocs()) {
+            memPrintAllocs();
+            memFreeAllAllocs();
+            g_failed = true;
+        }
+#endif
     }
 
-#ifndef NDEBUG
-    if (memHasAllocs()) {
-        memPrintAllocs();
-        return g_failed ? 2 : 1;
-    }
-#endif // !NDEBUG
-
+    memQuit();
     return g_failed ? 1 : 0;
 }

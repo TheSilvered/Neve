@@ -40,21 +40,21 @@ static void _printWindowsError(const char *msg) {
         NULL,
         errId,
         0,
-        wMsgBuf, NV_ARRLEN(wMsgBuf),
+        wMsgBuf, nvArrlen(wMsgBuf),
         NULL
     );
 
     if (fmtResult == FALSE) {
         snprintf(
             msgBuf,
-            NV_ARRLEN(msgBuf),
+            nvArrlen(msgBuf),
             "failed to format message, error 0x%04lX", errId
         );
         _printErrMsg(msg, msgBuf);
     } else {
         ucdCh16StrToCh8Str(
             wMsgBuf, wcslen(wMsgBuf),
-            (UcdCh8 *)msgBuf, NV_ARRLEN(msgBuf)
+            (UcdCh8 *)msgBuf, nvArrlen(msgBuf)
         );
         _printErrMsg(msg, msgBuf);
     }

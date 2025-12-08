@@ -5,7 +5,7 @@
 
 void test_strBufClearEmpty(void) {
     char buf[10];
-    StrBuf sb = strBufMake(buf, NV_ARRLEN(buf));
+    StrBuf sb = strBufMake(buf, nvArrlen(buf));
 
     strBufClear(&sb);
     testAssert(strcmp(sb.buf, "") == 0);
@@ -17,7 +17,7 @@ void test_strBufClearFull(void) {
     StrBuf sb = {
         .buf = buf,
         .len = 1,
-        .bufSize = NV_ARRLEN(buf)
+        .bufSize = nvArrlen(buf)
     };
 
     strBufClear(&sb);
