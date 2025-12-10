@@ -60,7 +60,7 @@ void memFree(void *block);
 // Debug-mode only
 #define memFreeAllAllocs()
 // Debug-mode only
-#define memCheckBounds()
+#define memCheckBounds(...)
 
 #else
 

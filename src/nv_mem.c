@@ -139,7 +139,7 @@ void memFree(void *block) {
 #include "nv_threads.h"
 
 #define _sentinelLen 4
-#define _garbageByte 0xc5
+#define _garbageByte 0xcd
 
 // Keep the headers in an AVL tree sorted by memory address
 
