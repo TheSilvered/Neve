@@ -6,25 +6,28 @@
 
 static BufHandle g_handleCounter = 1;
 
-static void _bufMapInsert(BufMap *map, Buf buf);
+static void _bufFree(Buf *buf);
+
+static void _bufMapInsert(BufMap *map, Buf *buf, BufHandle handle);
 static void _bufMapExpand(BufMap *map);
 static void _bufMapShrink(BufMap *map);
 static void _bufMapResize(BufMap *map, uint32_t newCap);
 
-static void _bufMapInsert(BufMap *map, Buf buf) {
+static void _bufMapInsert(BufMap *map, Buf *buf, BufHandle handle) {
     // If the map is full for more than 2 thirds
     if (3*map->len >= 2*map->cap) {
         _bufMapExpand(map);
     }
     uint32_t mask = map->cap - 1;
-    uint32_t idx = buf._handle & mask;
+    uint32_t idx = handle & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
-        if (map->buffers[idx]._handle == bufInvalidHandle) {
+        if (map->_buckets[idx].handle == bufInvalidHandle) {
             break;
         }
         idx = (idx + 1) & mask;
     }
-    map->buffers[idx] = buf;
+    map->_buckets[idx].buf = buf;
+    map->_buckets[idx].handle = handle;
     map->len++;
 }
 
@@ -41,14 +44,14 @@ static void _bufMapShrink(BufMap *map) {
 
 static void _bufMapResize(BufMap *map, uint32_t newCap) {
     uint32_t oldCap = map->cap;
-    Buf *oldBufs = map->buffers;
-    map->buffers = memAllocZeroed(newCap, sizeof(*map->buffers));
+    BufMapBucket *oldBufs = map->_buckets;
+    map->_buckets = memAllocZeroed(newCap, sizeof(*map->_buckets));
     map->cap = newCap;
 
     // re-insert the values
     for (uint32_t i = 0; i < oldCap; i++) {
-        if (oldBufs[i]._handle != bufInvalidHandle) {
-            _bufMapInsert(map, oldBufs[i]);
+        if (oldBufs[i].handle != bufInvalidHandle) {
+            _bufMapInsert(map, oldBufs[i].buf, oldBufs[i].handle);
         }
     }
     memFree(oldBufs);
@@ -60,23 +63,19 @@ void bufMapInit(BufMap *map) {
 
 void bufMapDestroy(BufMap *map) {
     for (uint32_t i = 0; i < map->cap; i++) {
-        if (map->buffers[i]._handle != bufInvalidHandle) {
-            strDestroy(&map->buffers[i].path);
-            ctxDestroy(&map->buffers[i].ctx);
-        }
+        _bufFree(map->_buckets[i].buf);
     }
-    memFree(map->buffers);
+    memFree(map->_buckets);
     map->len = 0;
     map->cap = 0;
 }
 
 BufHandle bufInitEmpty(BufMap *map) {
     BufHandle handle = g_handleCounter++;
-    Buf buf = { 0 };
-    ctxInit(&buf.ctx, true);
-    strInit(&buf.path, 0);
-    buf._handle = handle;
-    _bufMapInsert(map, buf);
+    Buf *buf = memAlloc(1, sizeof(Buf));
+    ctxInit(&buf->ctx, true);
+    strInit(&buf->path, 0);
+    _bufMapInsert(map, buf, handle);
     return handle;
 }
 
@@ -104,23 +103,31 @@ FileIOResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
     memFree(readBuf);
 
     BufHandle handle = g_handleCounter++;
-    Buf buf = { 0 };
-    buf.ctx = ctx;
-    strInit(&buf.path, 0);
-    buf._handle = handle;
-    _bufMapInsert(map, buf);
+    Buf *buf = memAlloc(1, sizeof(Buf));
+    buf->ctx = ctx;
+    strInit(&buf->path, 0);
+    _bufMapInsert(map, buf, handle);
     *outHandle = handle;
     return FileIOResult_Success;
+}
+
+static void _bufFree(Buf *buf) {
+    if (buf == NULL) {
+        return;
+    }
+    ctxDestroy(&buf->ctx);
+    strDestroy(&buf->path);
+    memFree(buf);
 }
 
 Buf *bufRef(BufMap *map, BufHandle bufH) {
     uint32_t mask = (1 << map->cap) - 1;
     uint32_t idx = bufH & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
-        if (map->buffers[idx]._handle == bufInvalidHandle) {
+        if (map->_buckets[idx].handle == bufInvalidHandle) {
             return NULL;
-        } else if (map->buffers[idx]._handle == bufH) {
-            return &map->buffers[idx];
+        } else if (map->_buckets[idx].handle == bufH) {
+            return map->_buckets[idx].buf;
         }
         idx = (idx + 1) & mask;
     }
@@ -131,29 +138,31 @@ void bufClose(BufMap *map, BufHandle bufH) {
     uint32_t mask = map->cap - 1;
     uint32_t idx = bufH & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
-        if (map->buffers[idx]._handle == bufInvalidHandle) {
+        if (map->_buckets[idx].handle == bufInvalidHandle) {
             return; // buffer not in the map
-        } else if (map->buffers[idx]._handle == bufH) {
+        } else if (map->_buckets[idx].handle == bufH) {
             break;
         }
         idx = (idx + 1) & mask;
     }
-    if (map->buffers[idx]._handle != bufH) {
+    if (map->_buckets[idx].handle != bufH) {
         return;
     }
 
-    ctxDestroy(&map->buffers[idx].ctx);
-    strDestroy(&map->buffers[idx].path);
+    _bufFree(map->_buckets[idx].buf);
+    map->_buckets[idx].handle = bufInvalidHandle;
+    map->_buckets[idx].buf = NULL;
     map->len--;
 
     idx = (idx + 1) & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
-        if (map->buffers[idx]._handle == bufInvalidHandle) {
+        if (map->_buckets[idx].handle == bufInvalidHandle) {
             break;
         }
-        Buf buf = map->buffers[idx];
-        map->buffers[idx]._handle = bufInvalidHandle;
-        _bufMapInsert(map, buf);
+        BufMapBucket bucket = map->_buckets[idx];
+        map->_buckets[idx].handle = bufInvalidHandle;
+        map->_buckets[idx].buf = NULL;
+        _bufMapInsert(map, bucket.buf, bucket.handle);
         idx = (idx + 1) & mask;
     }
     _bufMapShrink(map);

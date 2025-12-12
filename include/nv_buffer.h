@@ -12,11 +12,15 @@ typedef uint32_t BufHandle;
 typedef struct Buf {
     Ctx ctx;
     Str path;
-    BufHandle _handle;
 } Buf;
 
+typedef struct BufMapBucket {
+    Buf *buf;
+    BufHandle handle;
+} BufMapBucket;
+
 typedef struct BufMap {
-    Buf *buffers;
+    BufMapBucket *_buckets;
     uint32_t len;
     uint32_t cap;
 } BufMap;
