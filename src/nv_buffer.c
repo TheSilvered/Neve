@@ -93,6 +93,7 @@ FileIOResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
         if (result != FileIOResult_Success) {
             ctxDestroy(&ctx);
             *outHandle = bufInvalidHandle;
+            memFree(readBuf);
             return result;
         } else if (bytesRead != 0) {
             ctxAppend(&ctx, readBuf, bytesRead);
@@ -120,8 +121,8 @@ static void _bufFree(Buf *buf) {
     memFree(buf);
 }
 
-Buf *bufRef(BufMap *map, BufHandle bufH) {
-    uint32_t mask = (1 << map->cap) - 1;
+Buf *bufRef(const BufMap *map, BufHandle bufH) {
+    uint32_t mask = map->cap - 1;
     uint32_t idx = bufH & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
         if (map->_buckets[idx].handle == bufInvalidHandle) {

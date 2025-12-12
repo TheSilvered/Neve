@@ -648,6 +648,18 @@ void _memCheckBounds(void *block, uint32_t line, const char *file) {
     assert(threadMutexUnlock(&g_memMutex));
 }
 
+bool memIsAlloc(void *block) {
+    if (block == NULL) {
+        return false;
+    }
+
+    MemHeader *header = (MemHeader *)block - 1;
+    assert(threadMutexLock(&g_memMutex));
+    bool result = _mhContains(g_memRoot, header);
+    assert(threadMutexUnlock(&g_memMutex));
+    return result;
+}
+
 void memFreeAllAllocs(void) {
     assert(threadMutexLock(&g_memMutex));
     while (g_memRoot != NULL) {

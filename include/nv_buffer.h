@@ -25,18 +25,18 @@ typedef struct BufMap {
     uint32_t cap;
 } BufMap;
 
-// Initialize a buf map
+// Initialize a buf map.
 void bufMapInit(BufMap *map);
-// Destroy a buf map
+// Destroy a buf map.
 void bufMapDestroy(BufMap *map);
 
 // Initialize an empty buffer.
 BufHandle bufInitEmpty(BufMap *map);
 // Create a new buffer from an existing file.
 FileIOResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle);
-// Get a reference to a buffer
-Buf *bufRef(BufMap *map, BufHandle bufH);
-// Close a buffer
+// Get a reference to a buffer.
+Buf *bufRef(const BufMap *map, BufHandle bufH);
+// Close a buffer.
 void bufClose(BufMap *map, BufHandle bufH);
 
 // Save the buffer if the path is valid.

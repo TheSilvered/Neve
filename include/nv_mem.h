@@ -2,6 +2,7 @@
 #define NV_MEM_H_
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #ifndef NV_DEBUG
 
@@ -61,6 +62,8 @@ void memFree(void *block);
 #define memFreeAllAllocs()
 // Debug-mode only
 #define memCheckBounds(...)
+// Debug-mode only
+#define memIsAlloc(...) true
 
 #else
 
@@ -97,7 +100,6 @@ void memFree(void *block);
 // Internal function for memory tracking
 
 #include <stdint.h>
-#include <stdbool.h>
 
 bool memInit(void);
 void memQuit(void);
@@ -166,6 +168,8 @@ void memFreeAllAllocs(void);
 // Check wether an out-of-bounds write happend to a block
 #define memCheckBounds(block) _memCheckBounds(block, __LINE__, __FILE__)
 void _memCheckBounds(void *block, uint32_t line, const char *file);
+// Chcek if a pointer points to a heap-allocated memory block
+bool memIsAlloc(void *block);
 
 #endif // !NV_DEBUG
 
