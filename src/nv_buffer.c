@@ -79,27 +79,65 @@ BufHandle bufInitEmpty(BufMap *map) {
     return handle;
 }
 
-FileIOResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
+size_t _bufGetUTF8Part(UcdCh8 *buf, size_t len) {
+    if (len == 0) {
+        return 0;
+    }
+    // Find the last start byte and check if it is complete
+    size_t idx = len - 1;
+    while (idx > 0 && !ucdCh8IsStart(buf[idx])) {
+        idx--;
+    }
+    uint8_t runLen = ucdCh8RunLen(buf[idx]);
+    // If there was no valid start byte or there were extra invalid bytes at
+    // the end
+    if (runLen == 0 || idx + runLen < len) {
+        return 0;
+    } else if (idx + runLen == len) {
+        return ucdCh8Check(buf, len) ? len : 0;
+    } else {
+        return ucdCh8Check(buf, idx) ? idx : 0;
+    }
+}
+
+BufResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
     assert(outHandle != NULL);
 
     Ctx ctx;
     ctxInit(&ctx, true);
 
     const size_t readBufSize = 4 * 1024 * 1024;
-    UcdCh8 *readBuf = memAllocBytes(readBufSize);
+    uint8_t *readBuf = memAllocBytes(readBufSize);
+    size_t leftover = 0;
+
+    BufResult ret = {
+        .kind = BufResult_Success,
+        .ioResult = FileIOResult_Success
+    };
+
     while (true) {
         size_t bytesRead;
-        FileIOResult result = fileRead(file, readBuf, readBufSize, &bytesRead);
+        FileIOResult result = fileRead(
+            file,
+            readBuf + leftover,
+            readBufSize - leftover,
+            &bytesRead
+        );
         if (result != FileIOResult_Success) {
-            ctxDestroy(&ctx);
-            *outHandle = bufInvalidHandle;
-            memFree(readBuf);
-            return result;
-        } else if (bytesRead != 0) {
-            ctxAppend(&ctx, readBuf, bytesRead);
-        } else {
+            ret.kind = BufResult_IOError;
+            ret.ioResult = result;
+            goto failure;
+        } else if (bytesRead == 0 && leftover == 0) {
             break;
         }
+        bytesRead += leftover;
+        size_t validLen = _bufGetUTF8Part(readBuf, bytesRead);
+        if (validLen == 0) {
+            ret.kind = BufResult_EncodingError;
+            goto failure;
+        }
+        leftover = bytesRead - validLen;
+
     }
     memFree(readBuf);
 
@@ -109,7 +147,13 @@ FileIOResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
     strInit(&buf->path, 0);
     _bufMapInsert(map, buf, handle);
     *outHandle = handle;
-    return FileIOResult_Success;
+    return ret;
+
+failure:
+    memFree(readBuf);
+    ctxDestroy(&ctx);
+    *outHandle = bufInvalidHandle;
+    return ret;
 }
 
 static void _bufFree(Buf *buf) {

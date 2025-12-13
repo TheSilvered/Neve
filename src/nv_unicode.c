@@ -21,7 +21,96 @@
 // Mask for the data of following bytes in a character sequence
 #define UTF8_ByteMaskX 0x3f // 0b00111111
 
-#define DECODING_ERROR_CH 0xfffd
+#define _decodingErrorCh 0xfffd
+
+typedef struct UcdCh8CheckResult {
+    UcdCP cp;
+    uint8_t advance;
+    bool isValid;
+} UcdCh8CheckResult;
+
+static UcdCh8CheckResult _ucdCh8CheckSingle(
+    const UcdCh8 *str,
+    size_t len,
+    size_t idx
+) {
+    UcdCh8 ch8 = str[idx++];
+    UcdCP ch = 0;
+    uint8_t advance = 1;
+    UcdCP cp = _decodingErrorCh;
+    bool isValid = false;
+
+    switch (ucdCh8RunLen(ch8)) {
+    case 0:
+        break;
+    case 1:
+        cp = ch8;
+        isValid = true;
+        break;
+    case 2:
+        if (idx == len || (str[idx] & (~UTF8_ByteMaskX)) != 0x80) {
+            break;
+        }
+        advance = 2;
+
+        ch = ((ch8        & UTF8_ByteMask2) << 6);
+        ch |= (str[idx++] & UTF8_ByteMaskX);
+        if (ch >= 0x80) {
+            cp = ch;
+            isValid = true;
+        }
+        break;
+    case 3:
+        if (
+            idx >= len - 1
+            || (str[idx] & (~UTF8_ByteMaskX)) != 0x80
+            || (str[idx + 1] & (~UTF8_ByteMaskX)) != 0x80
+        ) {
+            break;
+        }
+        advance = 3;
+
+        ch  = ((ch8        & UTF8_ByteMask3) << 12);
+        ch |= ((str[idx++] & UTF8_ByteMaskX) << 6);
+        ch |=  (str[idx++] & UTF8_ByteMaskX);
+        if (ch >= 0x800
+            && (ch < ucdHighSurrogateFirst || ch > ucdLowSurrogateLast)
+        ) {
+            cp = ch;
+            isValid = true;
+        }
+        break;
+    case 4:
+        if (
+            idx >= len - 2
+            || (str[idx] & (~UTF8_ByteMaskX)) != 0x80
+            || (str[idx + 1] & (~UTF8_ByteMaskX)) != 0x80
+            || (str[idx + 2] & (~UTF8_ByteMaskX)) != 0x80
+        ) {
+            break;
+        }
+        advance = 4;
+
+        ch  = ((ch8        & UTF8_ByteMask4) << 18);
+        ch |= ((str[idx++] & UTF8_ByteMaskX) << 12);
+        ch |= ((str[idx++] & UTF8_ByteMaskX) << 6);
+        ch |=  (str[idx++] & UTF8_ByteMaskX);
+        if (ch >= 0x10000 && ch <= ucdCPMax) {
+            cp = ch;
+            isValid = true;
+        }
+        break;
+    default:
+        assert(false);
+        break;
+    }
+
+    return (UcdCh8CheckResult) {
+        .advance = advance,
+        .cp = cp,
+        .isValid = isValid
+    };
+}
 
 bool ucdIsCPValid(UcdCP cp) {
     return cp <= ucdCPMax
@@ -37,9 +126,7 @@ uint8_t ucdCPWidth(UcdCP cp, uint8_t tabStop, size_t currWidth) {
     // Short path for ASCII printable characters
     if (cp >= ' ' && cp <= '~') {
         return 1;
-    }
-
-    {
+    } else {
         UdbCPInfo info = udbGetCPInfo(cp);
         switch (info.width) {
         case UdbWidth_Fullwidth:
@@ -121,14 +208,14 @@ size_t ucdCh16StrToCh8Str(
             || str[strIdx] < ucdLowSurrogateFirst
             || str[strIdx] > ucdLowSurrogateLast
         ) {
-            ch = DECODING_ERROR_CH;
+            ch = _decodingErrorCh;
         } else {
             ch = ((wch & 0x3ff) << 10) + (str[strIdx++] & 0x3ff) + 0x10000;
         }
 
         // replace invalid characters with U+FFFD
         if (!ucdIsCPValid(ch)) {
-            ch = DECODING_ERROR_CH;
+            ch = _decodingErrorCh;
         }
 
         // all lenth checks use '>' instead of '>=' because an extra NUL
@@ -169,72 +256,9 @@ size_t ucdCh8StrToCh16Str(
 ) {
     size_t bufIdx = 0;
     for (size_t strIdx = 0; strIdx < strLen;) {
-        UcdCh8 ch8 = str[strIdx++];
-        UcdCP ch = 0;
-
-        switch (ucdCh8RunLen(ch8)) {
-        case 0: // invalid byte
-            ch = DECODING_ERROR_CH;
-            break;
-        case 1:
-            ch = ch8;
-            break;
-        case 2:
-            if (
-                strIdx == strLen
-                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0x80
-            ) {
-                ch = DECODING_ERROR_CH;
-                break;
-            }
-            ch = ((ch8 & UTF8_ByteMask2) << 6)
-               | (str[strIdx++] & UTF8_ByteMaskX);
-            // ch cannot be < 0x80 (see ucdCh8RunLen)
-            break;
-        case 3:
-            if (
-                strIdx >= strLen - 1
-                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0x80
-                || (str[strIdx + 1] & (~UTF8_ByteMaskX)) != 0x80
-            ) {
-                ch = DECODING_ERROR_CH;
-                break;
-            }
-
-            ch = ((ch8 & UTF8_ByteMask3) << 12);
-            ch |= ((str[strIdx++] & UTF8_ByteMaskX) << 6);
-            ch |= (str[strIdx++] & UTF8_ByteMaskX);
-            if (ch < 0x800) {
-                ch = DECODING_ERROR_CH;
-            }
-            break;
-        case 4:
-            if (
-                strIdx >= strLen - 2
-                || (str[strIdx] & (~UTF8_ByteMaskX)) != 0x80
-                || (str[strIdx + 1] & (~UTF8_ByteMaskX)) != 0x80
-                || (str[strIdx + 2] & (~UTF8_ByteMaskX)) != 0x80
-            ) {
-                ch = DECODING_ERROR_CH;
-                break;
-            }
-
-            ch = ((ch8 & UTF8_ByteMask4) << 18);
-            ch |= ((str[strIdx++] & UTF8_ByteMaskX) << 12);
-            ch |= ((str[strIdx++] & UTF8_ByteMaskX) << 6);
-            ch |= (str[strIdx++] & UTF8_ByteMaskX);
-            if (ch < 0x10000) {
-                ch = DECODING_ERROR_CH;
-            }
-            break;
-        default:
-            assert(false);
-        }
-
-        // replace invalid characters with U+FFFD
-        if (!ucdIsCPValid(ch)) {
-            ch = DECODING_ERROR_CH;
-        }
+        UcdCh8CheckResult res = _ucdCh8CheckSingle(str, strLen, strIdx);
+        strIdx += res.advance;
+        UcdCP ch = res.cp;
 
         // all lenth checks use '>' instead of '>=' because an extra NUL
         // character is added at the end
@@ -292,7 +316,7 @@ UcdCP ucdCh8ToCP(const UcdCh8 *bytes) {
              | ((UcdCP)(bytes[2] & UTF8_ByteMaskX) << 6)
              |  (UcdCP)(bytes[3] & UTF8_ByteMaskX);
     default:
-        return DECODING_ERROR_CH;
+        return _decodingErrorCh;
     }
 }
 
@@ -328,6 +352,17 @@ bool ucdCh8IsStart(UcdCh8 ch) {
     return ch < 0x80 || (ch >= 0xc2 && ch <= 0xf4);
 }
 
+bool ucdCh8Check(const UcdCh8 *str, size_t strLen) {
+    for (size_t strIdx = 0; strIdx < strLen;) {
+        UcdCh8CheckResult res = _ucdCh8CheckSingle(str, strLen, strIdx);
+        strIdx += res.advance;
+        if (!res.isValid) {
+            return false;
+        }
+    }
+    return true;
+}
+
 uint8_t ucdCh16RunLen(UcdCh16 firstCh) {
     return (
         1 + (!!(
@@ -355,7 +390,7 @@ UcdCh32 ucdCh16ToCP(const UcdCh16 *bytes) {
         bytes[0] >= ucdLowSurrogateFirst
         && bytes[0] <= ucdLowSurrogateLast
     ) {
-        return DECODING_ERROR_CH;
+        return _decodingErrorCh;
     }
 
     return ((bytes[0] & 0x3ff) << 10) + (bytes[1] & 0x3ff) + 0x10000;
