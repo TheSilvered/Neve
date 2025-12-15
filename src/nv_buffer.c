@@ -38,23 +38,36 @@ static void _bufMapExpand(BufMap *map) {
 static void _bufMapShrink(BufMap *map) {
     if (map->cap == 0 || map->cap < map->len * 4) {
         return;
+    } else if (map->cap > _mapMinCap) {
+        _bufMapResize(map, nvMax(map->cap / 2, _mapMinCap));
     }
-    _bufMapResize(map, nvMax(map->cap / 2, _mapMinCap));
+}
+
+static void _bufMapReinsert(BufMap *map, Buf *buf, BufHandle handle) {
+    uint32_t mask = map->cap - 1;
+    uint32_t idx = handle & mask;
+    for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
+        if (map->_buckets[idx].handle == bufInvalidHandle) {
+            break;
+        }
+        idx = (idx + 1) & mask;
+    }
+    map->_buckets[idx].buf = buf;
+    map->_buckets[idx].handle = handle;
 }
 
 static void _bufMapResize(BufMap *map, uint32_t newCap) {
     uint32_t oldCap = map->cap;
-    BufMapBucket *oldBufs = map->_buckets;
+    BufMapBucket *oldBuckets = map->_buckets;
     map->_buckets = memAllocZeroed(newCap, sizeof(*map->_buckets));
     map->cap = newCap;
 
-    // re-insert the values
     for (uint32_t i = 0; i < oldCap; i++) {
-        if (oldBufs[i].handle != bufInvalidHandle) {
-            _bufMapInsert(map, oldBufs[i].buf, oldBufs[i].handle);
+        if (oldBuckets[i].handle != bufInvalidHandle) {
+            _bufMapReinsert(map, oldBuckets[i].buf, oldBuckets[i].handle);
         }
     }
-    memFree(oldBufs);
+    memFree(oldBuckets);
 }
 
 void bufMapInit(BufMap *map) {
