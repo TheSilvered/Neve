@@ -79,7 +79,7 @@ FileIOResult fileOpenTemp(File *file) {
     }
     file->fp = fp;
     file->mode = FileMode_WriteEx;
-    strInitFromC(&file->path, "");
+    strInitFromC(&file->path, "<tmp>");
     return FileIOResult_Success;
 }
 

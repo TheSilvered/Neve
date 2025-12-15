@@ -4,6 +4,10 @@
 
 #define _mapMinCap 4
 
+#ifndef _readBufSize
+#define _readBufSize (4 * 1024 * 1024)
+#endif // !_readBufSize
+
 static BufHandle g_handleCounter = 1;
 
 static void _bufFree(Buf *buf);
@@ -87,6 +91,7 @@ BufHandle bufInitEmpty(BufMap *map) {
     BufHandle handle = g_handleCounter++;
     Buf *buf = memAlloc(1, sizeof(Buf));
     ctxInit(&buf->ctx, true);
+    ctxCurAdd(&buf->ctx, 0);
     strInit(&buf->path, 0);
     _bufMapInsert(map, buf, handle);
     return handle;
@@ -120,7 +125,7 @@ BufResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
     Ctx ctx;
     ctxInit(&ctx, true);
 
-    const size_t readBufSize = 4 * 1024 * 1024;
+    const size_t readBufSize = _readBufSize;
     uint8_t *readBuf = memAllocBytes(readBufSize);
     size_t leftover = 0;
 
@@ -151,13 +156,15 @@ BufResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
             goto failure;
         }
         leftover = bytesRead - validLen;
-
+        ctxAppend(&ctx, readBuf, validLen);
+        memmove(readBuf, readBuf + validLen, leftover);
     }
     memFree(readBuf);
 
     BufHandle handle = g_handleCounter++;
     Buf *buf = memAlloc(1, sizeof(Buf));
     buf->ctx = ctx;
+    ctxCurAdd(&buf->ctx, 0);
     strInit(&buf->path, 0);
     _bufMapInsert(map, buf, handle);
     *outHandle = handle;
