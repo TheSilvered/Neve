@@ -114,6 +114,7 @@ size_t _bufGetUTF8Part(UcdCh8 *buf, size_t len) {
 }
 
 BufResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
+    // TODO: skip BOM
     assert(outHandle != NULL);
 
     Ctx ctx;

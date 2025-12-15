@@ -5,6 +5,9 @@
 #ifdef _WIN32
 typedef wchar_t mode_char_t;
 #define MODE_STR_(s) L##s
+#define fseeko _fseeki64
+#define ftello _ftelli64
+typedef uint64_t off_t
 #else
 typedef char mode_char_t;
 #define MODE_STR_(s) s
@@ -18,6 +21,18 @@ FileIOResult fileOpen(File *file, const char *path, FileMode mode) {
         break;
     case FileMode_Write:
         modeStr = MODE_STR_("wb");
+        break;
+    case FileMode_Append:
+        modeStr = MODE_STR_("ab");
+        break;
+    case FileMode_ReadEx:
+        modeStr = MODE_STR_("r+b");
+        break;
+    case FileMode_WriteEx:
+        modeStr = MODE_STR_("w+b");
+        break;
+    case FileMode_AppendEx:
+        modeStr = MODE_STR_("a+b");
         break;
     }
 
@@ -57,6 +72,17 @@ FileIOResult fileOpen(File *file, const char *path, FileMode mode) {
     return FileIOResult_Success;
 }
 
+FileIOResult fileOpenTemp(File *file) {
+    FILE *fp = tmpfile();
+    if (fp == NULL) {
+        return FileIOResult_OtherIOError;
+    }
+    file->fp = fp;
+    file->mode = FileMode_WriteEx;
+    strInitFromC(&file->path, "");
+    return FileIOResult_Success;
+}
+
 void fileClose(File *file) {
     if (file->fp == NULL) {
         return;
@@ -72,7 +98,7 @@ FileIOResult fileRead(
     size_t bufSize,
     size_t *outBytesRead
 ) {
-    if (file->fp == NULL || file->mode != FileMode_Read) {
+    if (file->fp == NULL || (file->mode & FileMode_Read) == 0) {
         return FileIOResult_OperationNotAllowed;
     }
 
@@ -88,7 +114,7 @@ FileIOResult fileRead(
 }
 
 FileIOResult fileWrite(File *file, const uint8_t *buf, size_t bufSize) {
-    if (file->fp == NULL || file->mode != FileMode_Write) {
+    if (file->fp == NULL || (file->mode & FileMode_Write) == 0) {
         return FileIOResult_OperationNotAllowed;
     }
 
@@ -97,4 +123,33 @@ FileIOResult fileWrite(File *file, const uint8_t *buf, size_t bufSize) {
         return FileIOResult_OtherIOError;
     }
     return FileIOResult_Success;
+}
+
+
+bool filePosToBeginning(File *file) {
+    if (file->fp == NULL) {
+        return false;
+    }
+    return fseeko(file->fp, 0, SEEK_SET) == 0;
+}
+
+bool filePosToEnd(File *file) {
+    if (file->fp == NULL) {
+        return false;
+    }
+    return fseeko(file->fp, 0, SEEK_END) == 0;
+}
+
+bool filePosMove(File *file, int64_t offset) {
+    if (file->fp == NULL) {
+        return false;
+    }
+    return fseeko(file->fp, (off_t)offset, SEEK_CUR) == 0;
+}
+
+int64_t filePosGet(File *file) {
+    if (file->fp == NULL) {
+        return -1;
+    }
+    return (int64_t)ftello(file->fp);
 }
