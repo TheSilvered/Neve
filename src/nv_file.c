@@ -7,7 +7,6 @@ typedef wchar_t mode_char_t;
 #define MODE_STR_(s) L##s
 #define fseeko _fseeki64
 #define ftello _ftelli64
-typedef uint64_t off_t
 #else
 typedef char mode_char_t;
 #define MODE_STR_(s) s
@@ -144,7 +143,7 @@ bool filePosMove(File *file, int64_t offset) {
     if (file->fp == NULL) {
         return false;
     }
-    return fseeko(file->fp, (off_t)offset, SEEK_CUR) == 0;
+    return fseeko(file->fp, offset, SEEK_CUR) == 0;
 }
 
 int64_t filePosGet(File *file) {
