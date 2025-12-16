@@ -162,8 +162,18 @@ void ctxInsertLineBelow(Ctx *ctx);
 
 /*********************************** Other ************************************/
 
-// Get the line and column at `idx`
+// Get the line and column at `idx`.
 void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol);
+// Get the index at `line` and `col`.
+// `line` must match exactly, the index returned is the closest to `col`.
+// You can get the actual column of the index through `outTrueCol`.
+// If the line does not exist the function returns -1
+ptrdiff_t ctxIdxAt(
+    const Ctx *ctx,
+    size_t line,
+    size_t col,
+    size_t *outTrueCol
+);
 
 // Get the number of lines in the text of a context.
 size_t ctxLineCount(const Ctx *ctx);

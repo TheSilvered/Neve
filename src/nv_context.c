@@ -61,7 +61,6 @@ static bool _ctxCurMoveEx(Ctx *ctx, size_t old, size_t new, size_t newCol);
 
 // Find the index at position `line`, `col`.
 // The line must match exactly, the column is the closest to `col`.
-static ptrdiff_t _ctxIdxAt(const Ctx *ctx, size_t line, size_t col);
 
 // Join cursor selections in the _sels array
 static void _ctxSelJoin(Ctx *ctx);
@@ -372,7 +371,12 @@ void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol) {
     *outCol = col;
 }
 
-static ptrdiff_t _ctxIdxAt(const Ctx *ctx, size_t line, size_t col) {
+ptrdiff_t ctxIdxAt(
+    const Ctx *ctx,
+    size_t line,
+    size_t col,
+    size_t *outTrueCol
+) {
     ptrdiff_t refsIdx = _ctxGetLineRefBlock(ctx, line);
     size_t i;
     size_t refLine;
@@ -422,7 +426,7 @@ static ptrdiff_t _ctxIdxAt(const Ctx *ctx, size_t line, size_t col) {
 
     for (i = ctxNext(ctx, i - 1, &cp); i != -1; i = ctxNext(ctx, i, &cp)) {
         if (cp == '\n') {
-            return i;
+            break;
         }
         uint8_t chWidth = ucdCPWidth(cp, ctx->tabStop, refCol);
         if (refCol + chWidth < col) {
@@ -430,13 +434,19 @@ static ptrdiff_t _ctxIdxAt(const Ctx *ctx, size_t line, size_t col) {
             continue;
         }
         // If it is closer to the end of the character do another iteration
-        if (refCol + chWidth - col < col - refCol) {
-            refCol = col;
+        if ((ptrdiff_t)(refCol + chWidth - col) < (ptrdiff_t)(col - refCol)) {
+            refCol += chWidth;
             continue;
         }
-        return i;
+        break;
     }
-    return ctx->_buf.len;
+    if (i == -1) {
+        i = ctx->_buf.len;
+    }
+    if (outTrueCol != NULL) {
+        *outTrueCol = refCol;
+    }
+    return i;
 }
 
 ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
@@ -1393,7 +1403,7 @@ void ctxCurMoveUp(Ctx *ctx) {
         CtxCursor oldCur = ctx->cursors.items[i];
         size_t oldLine;
         ctxPosAt(ctx, oldCur.idx, &oldLine, NULL);
-        ptrdiff_t newCur = _ctxIdxAt(ctx, oldLine - 1, oldCur.baseCol);
+        ptrdiff_t newCur = ctxIdxAt(ctx, oldLine - 1, oldCur.baseCol, NULL);
         if (newCur < 0) {
             continue;
         }
@@ -1409,7 +1419,7 @@ void ctxCurMoveDown(Ctx *ctx) {
         CtxCursor oldCur = ctx->cursors.items[ctx->cursors.len - i - 1];
         size_t oldLine;
         ctxPosAt(ctx, oldCur.idx, &oldLine, NULL);
-        ptrdiff_t newCur = _ctxIdxAt(ctx, oldLine + 1, oldCur.baseCol);
+        ptrdiff_t newCur = ctxIdxAt(ctx, oldLine + 1, oldCur.baseCol, NULL);
         if (newCur < 0) {
             continue;
         }
