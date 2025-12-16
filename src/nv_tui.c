@@ -1,3 +1,4 @@
+#include "nv_editor.h"
 #include "nv_tui.h"
 
 static void _uiBufPanelUpdater(UIBufPanel *panel);
@@ -8,9 +9,11 @@ static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key);
 static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key);
 static bool _uiHandleArrowKeys(UIBufPanel *panel, int32_t key);
 
-void uiBufPanelInit(UIBufPanel *panel, Buf *buf) {
-panel->buf = buf;
-panel->w = 0;
+void uiBufPanelInit(UIBufPanel *panel, BufHandle bufHd) {
+    panel->bufHd = bufHd;
+    panel->x = 0;
+    panel->y = 0;
+    panel->w = 0;
     panel->h = 0;
 
     panel->keyHandler = _uiBufPanelKeyHandler;
@@ -18,7 +21,12 @@ panel->w = 0;
 }
 
 static void _uiBufPanelUpdater(UIBufPanel *panel) {
-    Ctx *ctx = &panel->buf->ctx;
+    Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
+    if (buf == NULL) {
+        return;
+    }
+
+    Ctx *ctx = &buf->ctx;
     size_t lines = ctxLineCount(ctx);
 
     if (ctx->cursors.len != 1) {
@@ -57,7 +65,12 @@ static bool _uiBufPanelKeyHandler(UIBufPanel *panel, int32_t key) {
 }
 
 static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key) {
-    Ctx *ctx = &panel->buf->ctx;
+    Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
+    if (buf == NULL) {
+        return false;
+    }
+
+    Ctx *ctx = &buf->ctx;
     switch (key) {
     case 'i':
         ctxCurMoveUp(ctx);
@@ -118,7 +131,12 @@ static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key) {
 }
 
 static bool _uiHandleArrowKeys(UIBufPanel *panel, int32_t key) {
-    Ctx *ctx = &panel->buf->ctx;
+    Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
+    if (buf == NULL) {
+        return false;
+    }
+
+    Ctx *ctx = &buf->ctx;
     switch (key) {
     case TermKey_ArrowDown:
         ctxCurMoveDown(ctx);
@@ -139,7 +157,12 @@ static bool _uiHandleArrowKeys(UIBufPanel *panel, int32_t key) {
 }
 
 static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
-    Ctx *ctx = &panel->buf->ctx;
+    Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
+    if (buf == NULL) {
+        return false;
+    }
+
+    Ctx *ctx = &buf->ctx;
     if (_uiHandleNormalMovement(panel, key) || _uiHandleArrowKeys(panel, key)) {
         return true;
     }
@@ -211,7 +234,12 @@ static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
 }
 
 static bool _uiBufHandleEditMode(UIBufPanel *panel, int32_t key) {
-    Ctx *ctx = &panel->buf->ctx;
+    Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
+    if (buf == NULL) {
+        return false;
+    }
+
+    Ctx *ctx = &buf->ctx;
     if (_uiHandleArrowKeys(panel, key)) {
         return true;
     }
@@ -287,7 +315,12 @@ static bool _uiBufHandleEditMode(UIBufPanel *panel, int32_t key) {
 }
 
 static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key) {
-    Ctx *ctx = &panel->buf->ctx;
+    Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
+    if (buf == NULL) {
+        return false;
+    }
+
+    Ctx *ctx = &buf->ctx;
     if (_uiHandleNormalMovement(panel, key) || _uiHandleArrowKeys(panel, key)) {
         return true;
     }

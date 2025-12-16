@@ -4,6 +4,7 @@
 #include "nv_screen.h"
 #include "nv_context.h"
 #include "nv_buffer.h"
+#include "nv_tui.h"
 
 typedef struct EditorStrings {
     Str savePrompt;
@@ -13,10 +14,10 @@ typedef struct EditorStrings {
 // The state of the editor.
 typedef struct Editor {
     Screen screen;
-
+    BufMap buffers;
+    UIBufPanel bufPanel;
     EditorStrings strings;
-    bool running; // If the editor is running.
-    bool savingFile;
+    bool running;
 } Editor;
 
 // Global editor variable.

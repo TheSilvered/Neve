@@ -45,15 +45,15 @@ typedef enum UIBufMode {
 } UIBufMode;
 
 struct UIBufPanel {
-    Buf *buf;
+    BufHandle bufHd;
     UIBufMode mode;
+    int16_t x, y;
     uint16_t w, h;
     size_t scrollX, scrollY;
     UIKeyHandler keyHandler;
     UIUpdater updater;
 };
 
-// TODO: separate buffers and tabs
-void uiBufPanelInit(UIBufPanel *panel, Buf *buf);
+void uiBufPanelInit(UIBufPanel *panel, BufHandle bufHd);
 
 #endif // !NV_TUI_H_
