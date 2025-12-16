@@ -327,7 +327,6 @@ static ptrdiff_t _ctxLineEnd(const Ctx *ctx, size_t lineNo) {
 void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol) {
     assert(idx <= ctx->_buf.len);
 
-    size_t refsLen = ctx->_refs.len;
     CtxRef *refs = ctx->_refs.items;
 
     size_t line = 0;
@@ -363,7 +362,7 @@ void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol) {
         j >= 0;
         j = ctxNext(ctx, j, &cp)
     ) {
-        if (j >= idx) {
+        if ((size_t)j >= idx) {
             break;
         }
         col += ucdCPWidth(cp, ctx->tabStop, col);
@@ -378,7 +377,7 @@ ptrdiff_t ctxIdxAt(
     size_t *outTrueCol
 ) {
     ptrdiff_t refsIdx = _ctxGetLineRefBlock(ctx, line);
-    size_t i;
+    ptrdiff_t i;
     size_t refLine;
     size_t refCol;
     UcdCP cp;
@@ -407,7 +406,7 @@ ptrdiff_t ctxIdxAt(
         : ctx->_buf.len;
 
     // Get the precise index
-    for (; refLine < line && i < endIdx; i++) {
+    for (; refLine < line && i < (ptrdiff_t)endIdx; i++) {
         if (*_ctxBufGet(&ctx->_buf, i) != '\n') {
             continue;
         }
@@ -458,7 +457,7 @@ ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
         if (offset == 0) {
             idx++;
             while (
-                idx < ctx->_buf.len
+                (size_t)idx < ctx->_buf.len
                 && !ucdCh8IsStart(*_ctxBufGet(&ctx->_buf, idx))
             ) {
                 idx++;
@@ -511,7 +510,7 @@ endReached:
 
 ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
     ptrdiff_t i = _ctxLineStart(ctx, lineIdx);
-    if (i == ctx->_buf.len || i < 0) {
+    if (i == (ptrdiff_t)ctx->_buf.len || i < 0) {
         goto noLine;
     }
     if (*_ctxBufGet(&ctx->_buf, i) == '\n') {
@@ -803,7 +802,7 @@ static void _ctxReplaceUpdateSelections(
     size_t end,
     ptrdiff_t lenDiff
 ) {
-    bool mayJoin = -lenDiff == end - start;
+    bool mayJoin = -lenDiff == (ptrdiff_t)(end - start);
     for (size_t i = 0; i < ctx->_sels.len; i++) {
         CtxSelection *sel = &ctx->_sels.items[i];
         if (sel->endIdx <= start) {
@@ -996,7 +995,7 @@ static void _ctxReplace(
 
     for (size_t i = refBlock, n = refs->len; i < n; i++) {
         CtxRef *ref = &refs->items[i];
-        if (colDiff == 0 || ref->idx > lineEnd) {
+        if (colDiff == 0 || ref->idx > (size_t)lineEnd) {
             break;
         } else if (ref->idx < tabIdx) {
             ref->col += colDiff;

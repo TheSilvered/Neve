@@ -78,7 +78,7 @@ static void _drawCtxLine(
     screenWrite(&g_ed.screen, lineX, lineY, outBuf->buf, outBuf->len);
 }
 
-void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
+void drawBufPanel(const UIBufPanel *panel) {
     BufHandle bufHandle = panel->bufHd;
     Buf *buf = bufRef(&g_ed.buffers, bufHandle);
     if (buf == NULL) {
@@ -88,14 +88,14 @@ void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
     Str lineBuf = { 0 };
     size_t lineCount = ctxLineCount(ctx);
 
-    size_t totLines = nvMin(lineCount - panel->y, panel->h);
+    size_t totLines = nvMin(lineCount - panel->elem.y, panel->elem.h);
     for (size_t i = 0; i < totLines; i++) {
         _drawCtxLine(
             ctx,
             i + panel->scrollY,
             &lineBuf,
-            panel->x, i,
-            panel->w, panel->scrollX
+            panel->elem.x, i,
+            panel->elem.w, panel->scrollX
         );
     }
 }

@@ -33,10 +33,17 @@
 |--------------------------------------------------------------------------------|
 */
 
-typedef struct UIBufPanel UIBufPanel;
+typedef struct UIElement UIElement;
 
-typedef bool (*UIKeyHandler)(UIBufPanel *panel, int32_t key);
-typedef void (*UIUpdater)(UIBufPanel *panel);
+typedef bool (*UIKeyHandler)(UIElement *panel, int32_t key);
+typedef void (*UIUpdater)(UIElement *panel);
+
+struct UIElement {
+    int16_t x, y;
+    uint16_t w, h;
+    UIKeyHandler keyHandler;
+    UIUpdater updater;
+};
 
 typedef enum UIBufMode {
     UIBufMode_Normal,
@@ -44,15 +51,15 @@ typedef enum UIBufMode {
     UIBufMode_Selection
 } UIBufMode;
 
-struct UIBufPanel {
+typedef struct UIBufPanel {
+    UIElement elem;
     BufHandle bufHd;
     UIBufMode mode;
-    int16_t x, y;
-    uint16_t w, h;
     size_t scrollX, scrollY;
-    UIKeyHandler keyHandler;
-    UIUpdater updater;
-};
+} UIBufPanel;
+
+void uiUpdate(UIElement *elem);
+bool uiHandleKey(UIElement *elem, int32_t key);
 
 void uiBufPanelInit(UIBufPanel *panel, BufHandle bufHd);
 

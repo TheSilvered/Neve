@@ -15,6 +15,7 @@
 static KeyQueue g_keyQ = { 0 };
 static Thread g_inputThread;
 static bool g_inputThreadRun = true;
+static bool g_neveIsInit = false;
 
 ThreadRet inputThreadRoutine(void *arg);
 
@@ -35,10 +36,15 @@ bool initNeve(void) {
     }
 
     editorInit();
+    g_neveIsInit = true;
     return true;
 }
 
 void quitNeve(void) {
+    if (!g_neveIsInit) {
+        return;
+    }
+
     termWrite(sLen(
         escScreenClear
         escDisableAltBuffer
@@ -51,25 +57,6 @@ void quitNeve(void) {
 
     editorQuit();
     termQuit();
-}
-
-void loadOrCreateFile(const char *path) {
-    File file;
-
-    switch (fileOpen(&file, path, FileMode_Read)) {
-    case FileIOResult_FileNotFound: {
-        StrView pathSv = strViewMakeFromC(path);
-        bufSetPath(&g_ed.fileBuf, &pathSv);
-        return;
-    }
-    case FileIOResult_Success:
-        bufDestroy(&g_ed.fileBuf);
-        bufInitFromFile(&g_ed.fileBuf, &file);
-        fileClose(&file);
-        return;
-    default:
-        return;
-    }
 }
 
 ThreadRet inputThreadRoutine(void *arg) {
@@ -123,27 +110,33 @@ int keyLogMode(void) {
 
 // TODO: use wmain on Windows
 int main(int argc, char **argv) {
+    memInit();
+
     int ret = 0;
     if (!logInit(NULL)) {
         printf("Failed to generate log.\n");
-        return 1;
+        ret = 1;
+        goto exit;
     }
 
     if (argc > 2) {
         printf("Usage: neve [file]\n");
-        return 1;
+        ret = 1;
+        goto exit;
     }
 
     if (argc == 2 && strcmp(argv[1], "--keys") == 0) {
-        return keyLogMode();
+        ret = keyLogMode();
+        goto exit;
     }
 
     if (!initNeve()) {
-        return 1;
+        ret = 1;
+        goto exit;
     }
 
     if (argc == 2) {
-        loadOrCreateFile(argv[1]);
+        editorOpen(argv[1]);
     }
 
     while (g_ed.running) {
@@ -159,5 +152,6 @@ int main(int argc, char **argv) {
 exit:
     quitNeve();
     logQuit();
+    memQuit();
     return ret;
 }

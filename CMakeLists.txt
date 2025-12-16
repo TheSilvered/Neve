@@ -13,7 +13,7 @@ endif()
 
 add_definitions(-D_FILE_OFFSET_BITS=64)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions(-DNV_DEBUG)
+    add_definitions(-DNV_DEBUG -DNV_DISABLE_ALT)
 endif()
 
 include_directories(neve include)

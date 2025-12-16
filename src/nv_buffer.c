@@ -234,6 +234,17 @@ void bufClose(BufMap *map, BufHandle bufH) {
     _bufMapShrink(map);
 }
 
+bool bufSetPath(BufMap *map, BufHandle bufH, const char *path) {
+    Buf *buf = bufRef(map, bufH);
+    if (buf == NULL) {
+        return false;
+    }
+
+    strDestroy(&buf->path);
+    strInitFromC(&buf->path, path);
+    return true;
+}
+
 FileIOResult bufWriteToDisk(Buf *buf) {
     if (buf->path.len == 0) {
         return FileIOResult_BadPath;

@@ -63,7 +63,7 @@ ScreenRows *_resizeRows(ScreenRows *rows, uint16_t w, uint16_t h) {
 
     for (uint16_t i = 0; i < h; i++) {
         newRows->sBufs[i] = (StrBuf) {
-            .buf = newRows->buffer + (w * 4 * i),
+            .buf = (char *)newRows->buffer + (w * 4 * i),
             .bufSize = w * 4,
             .len = 0
         };
@@ -151,7 +151,7 @@ void screenWrite(
 
     // Append the part before the string to the new row
     StrView sv = {
-        .buf = row->buf,
+        .buf = (UcdCh8 *)row->buf,
         .len = startIdx < 0 ? row->len : (size_t)startIdx
     };
     strAppend(&screen->buf, &sv);
@@ -184,21 +184,21 @@ void screenWrite(
 
     strRepeat(&screen->buf, ' ', rowW - w);
 
-    sv.buf = row->buf + rowIdx;
+    sv.buf = (UcdCh8 *)row->buf + rowIdx;
     sv.len = row->len - rowIdx;
     (void)cutStr(&sv, screenW, rowW);
     strAppend(&screen->buf, &sv);
 
 replaceRow:
-    strClear(row, screen->buf.len);
-    strAppend(row, (StrView *)&screen->buf);
+    strBufClear(row);
+    strBufAppend(row, (StrView *)&screen->buf);
     strClear(&screen->buf, screen->buf.cap);
 }
 
-NV_UNIX_FMT(4, 5) void screenWriteFmt(
+nvUnixFmt(4, 5) void screenWriteFmt(
     Screen *screen,
     uint16_t x, uint16_t y,
-    NV_WIN_FMT const char *fmt, ...
+    nvWinFmt const char *fmt, ...
 ) {
     char buf[2048] = { 0 };
     va_list args;
@@ -447,7 +447,7 @@ bool screenRefresh(Screen *screen) {
     screen->displayStyles = tempStyles;
 
     for (uint16_t y = 0; y < screen->h; y++) {
-        strClear(&screen->editRows[y], screen->w);
+        strBufClear(&screen->editRows->sBufs[y]);
     }
     memset(
         screen->editStyles,
@@ -455,10 +455,7 @@ bool screenRefresh(Screen *screen) {
         sizeof(*screen->editStyles) * screen->w * screen->h
     );
 
-    Ctx *ctx = editorGetActiveCtx();
-
-    uint16_t curX, curY;
-    ctxGetCurTermPos(ctx, &curX, &curY);
+    uint16_t curX = 0, curY = 0;
 
     strAppendFmt(&screen->buf, escCursorSetPos("%u", "%u"), curY + 1, curX + 1);
     strAppendC(&screen->buf, escCursorShow);

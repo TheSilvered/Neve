@@ -13,10 +13,15 @@
 // Clear the line the cursor is on
 #define escLineClear "\x1b[2K\x1b[G"
 
+#ifdef NV_DISABLE_ALT
+#define escEnableAltBuffer ""
+#define escDisableAltBuffer ""
+#else
 // Enable the alternative screen buffer
 #define escEnableAltBuffer "\x1b[?1049h"
 // Disable the alternative screen buffer
 #define escDisableAltBuffer "\x1b[?1049l"
+#endif
 
 /***************************** Cursor positioning *****************************/
 

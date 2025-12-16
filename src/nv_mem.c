@@ -326,7 +326,7 @@ static void _mhPrint(MemHeader *header) {
     fprintf(
         stderr,
         "%p - %s:%"PRIu32" - size=%zi\n",
-        header + 1,
+        (void *)(header + 1),
         header->file,
         header->line,
         header->blockSize

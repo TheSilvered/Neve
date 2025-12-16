@@ -4,6 +4,6 @@
 #include "nv_tui.h"
 #include "nv_screen.h"
 
-void drawBufPanel(Screen *screen, const UIBufPanel *panel);
+void drawBufPanel(const UIBufPanel *panel);
 
 #endif // !NV_DRAW_H_

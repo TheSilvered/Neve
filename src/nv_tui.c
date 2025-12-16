@@ -1,6 +1,15 @@
 #include "nv_editor.h"
 #include "nv_tui.h"
 
+static void _uiElemInit(
+    UIElement *elem,
+    int16_t x,
+    int16_t y,
+    uint16_t w,
+    uint16_t h,
+    UIKeyHandler keyHandler,
+    UIUpdater updater
+);
 static void _uiBufPanelUpdater(UIBufPanel *panel);
 static bool _uiBufPanelKeyHandler(UIBufPanel *panel, int32_t key);
 static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key);
@@ -9,15 +18,43 @@ static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key);
 static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key);
 static bool _uiHandleArrowKeys(UIBufPanel *panel, int32_t key);
 
-void uiBufPanelInit(UIBufPanel *panel, BufHandle bufHd) {
-    panel->bufHd = bufHd;
-    panel->x = 0;
-    panel->y = 0;
-    panel->w = 0;
-    panel->h = 0;
+static void _uiElemInit(
+    UIElement *elem,
+    int16_t x,
+    int16_t y,
+    uint16_t w,
+    uint16_t h,
+    UIKeyHandler keyHandler,
+    UIUpdater updater
+) {
+    elem->x = x;
+    elem->y = y;
+    elem->w = w;
+    elem->h = h;
+    elem->keyHandler = keyHandler;
+    elem->updater = updater;
+}
 
-    panel->keyHandler = _uiBufPanelKeyHandler;
-    panel->updater = _uiBufPanelUpdater;
+void uiUpdate(UIElement *elem) {
+    elem->updater(elem);
+}
+
+bool uiHandleKey(UIElement *elem, int32_t key) {
+    return elem->keyHandler(elem, key);
+}
+
+void uiBufPanelInit(UIBufPanel *panel, BufHandle bufHd) {
+    _uiElemInit(
+        &panel->elem,
+        0, 0, 0, 0,
+        (UIKeyHandler)_uiBufPanelKeyHandler,
+        (UIUpdater)_uiBufPanelUpdater
+    );
+
+    panel->bufHd = bufHd;
+    panel->mode = UIBufMode_Normal;
+    panel->scrollX = 0;
+    panel->scrollY = 0;
 }
 
 static void _uiBufPanelUpdater(UIBufPanel *panel) {
@@ -40,14 +77,14 @@ static void _uiBufPanelUpdater(UIBufPanel *panel) {
     ctxPosAt(ctx, ctx->cursors.items[0].idx, &line, &col);
     if (panel->scrollX > col) {
         panel->scrollX = col;
-    } else if (panel->scrollX + panel->w < col) {
-        panel->scrollX = col - panel->w;
+    } else if (panel->scrollX + panel->elem.w < col) {
+        panel->scrollX = col - panel->elem.w;
     }
 
     if (panel->scrollY > line) {
         panel->scrollY = line;
-    } else if (panel->scrollY + panel->h < line) {
-        panel->scrollY = line - panel->h;
+    } else if (panel->scrollY + panel->elem.h < line) {
+        panel->scrollY = line - panel->elem.h;
     }
 }
 
@@ -79,7 +116,7 @@ static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key) {
         ctxCurMoveToPrevParagraph(ctx);
         break;
     case TermKey_CtrlI:
-        for (uint16_t i = 0; i < panel->w / 2; i++) {
+        for (uint16_t i = 0; i < panel->elem.w / 2; i++) {
             ctxCurMoveUp(ctx);
         }
         break;
@@ -90,7 +127,7 @@ static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key) {
         ctxCurMoveToNextParagraph(ctx);
         break;
     case TermKey_CtrlK:
-        for (uint16_t i = 0; i < panel->w / 2; i++) {
+        for (uint16_t i = 0; i < panel->elem.w / 2; i++) {
             ctxCurMoveDown(ctx);
         }
         break;

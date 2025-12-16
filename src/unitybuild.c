@@ -1,10 +1,9 @@
-# if 0 // build disabled while refactoring
 #include "nv_buffer.c"
 #include "nv_context.c"
+#include "nv_draw.c"
 #include "nv_editor.c"
 #include "nv_error.c"
 #include "nv_file.c"
-#include "nv_gapbuffer.c"
 #include "nv_key_queue.c"
 #include "nv_logging.c"
 #include "nv_main.c"
@@ -13,8 +12,6 @@
 #include "nv_string.c"
 #include "nv_term.c"
 #include "nv_threads.c"
+#include "nv_tui.c"
 #include "nv_udb.c"
 #include "nv_unicode.c"
-#else
-int main(void) { return 0; }
-#endif

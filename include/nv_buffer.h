@@ -50,6 +50,9 @@ Buf *bufRef(const BufMap *map, BufHandle bufH);
 // Close a buffer.
 void bufClose(BufMap *map, BufHandle bufH);
 
+// Change the path of a buffer
+bool bufSetPath(BufMap *map, BufHandle bufH, const char *path);
+
 // Save the buffer if the path is valid.
 FileIOResult bufWriteToDisk(Buf *buf);
 

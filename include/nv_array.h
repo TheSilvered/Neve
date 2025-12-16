@@ -61,7 +61,7 @@
 
 #define arrInsert(arr, idx, ...)                                               \
     do {                                                                       \
-        assert((idx) < (arr)->len);                                            \
+        assert((size_t)(idx) < (arr)->len);                                    \
         arrReserve((arr), 1);                                                  \
         memmove(                                                               \
             &(arr)->items[(idx) + 1],                                          \
@@ -74,7 +74,7 @@
 
 #define arrRemove(arr, idx)                                                    \
     do {                                                                       \
-        assert((idx) < (arr)->len);                                            \
+        assert((size_t)(idx) < (arr)->len);                                    \
         memmove(                                                               \
             &(arr)->items[(idx)],                                              \
             &(arr)->items[(idx) + 1],                                          \

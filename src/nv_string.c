@@ -264,7 +264,7 @@ ptrdiff_t strViewNext(const StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
     }
     uint8_t runLen = ucdCh8RunLen(sv->buf[idx]);
 
-    if (runLen == 0 || idx + runLen > sv->len) {
+    if (runLen == 0 || (size_t)idx + runLen > sv->len) {
         goto endReached;
     }
 
@@ -294,7 +294,7 @@ ptrdiff_t strViewPrev(const StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
         goto endReached;
     }
     uint8_t runLen = ucdCh8RunLen(sv->buf[idx]);
-    if (runLen == 0 || idx + runLen > sv->len) {
+    if (runLen == 0 || (size_t)idx + runLen > sv->len) {
         goto endReached;
     }
     if (outCP != NULL) {

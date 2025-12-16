@@ -30,16 +30,14 @@ void editorQuit(void);
 // Query the size of the terminal and update the editor accordingly.
 bool editorUpdateSize(void);
 
-// Handle a key event.
-void editorHandleKey(uint32_t key);
-
+// Handle a key press.
+void editorHandleKey(int32_t key);
 // Refresh the editor screen.
 bool editorRefresh(void);
-// Get the current active context.
-Ctx *editorGetActiveCtx(void);
-// Get the current active file buffer.
-Buf *editorGetActiveBuf(void);
-// Save the current file. Fail if no path is set for the file context.
-bool editorSaveFile(void);
+
+// Open a file or create a new buffer with the path.
+bool editorOpen(const char *path);
+// Create a new file.
+void editorNewBuf(void);
 
 #endif // !NV_EDITOR_H_
