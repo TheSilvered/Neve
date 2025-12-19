@@ -1,4 +1,8 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.30)
+
+option(NV_DISABLE_ALT "Disable alternate screen buffer" OFF)
+set(NV_TERM_W 0 CACHE STRING "Manual terminal width")
+set(NV_TERM_H 0 CACHE STRING "Manual terminal height")
 
 project(neve VERSION 0.0.1)
 
@@ -11,9 +15,19 @@ if (${CMAKE_GENERATOR} MATCHES ".*(Make|Ninja).*")
     set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 endif()
 
-add_definitions(-D_FILE_OFFSET_BITS=64)
+add_compile_definitions(_FILE_OFFSET_BITS=64)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions(-DNV_DEBUG -DNV_DISABLE_ALT)
+    add_compile_definitions(NV_DEBUG)
+endif()
+
+if (NV_DISABLE_ALT)
+    add_compile_definitions(NV_DISABLE_ALT)
+endif()
+if (NOT NV_TERM_W STREQUAL "0")
+    add_compile_definitions(NV_TERM_W=${NV_TERM_W})
+endif()
+if (NOT NV_TERM_H STREQUAL "0")
+    add_compile_definitions(NV_TERM_H=${NV_TERM_H})
 endif()
 
 include_directories(neve include)

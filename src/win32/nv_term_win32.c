@@ -261,6 +261,11 @@ bool termWrite(const void *buf, size_t size) {
 }
 
 bool termSize(uint16_t *outRows, uint16_t *outCols) {
+#if defined(NV_TERM_W) && defined(NV_TERM_H)
+    *outRows = NV_TERM_H;
+    *outCols = NV_TERM_W;
+    return true;
+#else
     CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
     if (GetConsoleScreenBufferInfo(g_consoleOutput, &bufferInfo) == FALSE) {
         errSetErrno();
@@ -279,6 +284,7 @@ bool termSize(uint16_t *outRows, uint16_t *outCols) {
         *outCols = (uint16_t)bufferInfo.dwSize.X;
     }
     return true;
+#endif // !NV_TERM_W,H
 }
 
 bool termCursorGetPos(uint16_t *outX, uint16_t *outY) {
