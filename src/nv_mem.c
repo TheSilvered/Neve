@@ -144,12 +144,14 @@ void memFree(void *block) {
 // Keep the headers in an AVL tree sorted by memory address
 
 typedef struct MemHeader {
+    uint64_t sentinels1[_sentinelLen];
     struct MemHeader *left, *right;
+    uint64_t sentinels2[_sentinelLen];
     uint32_t height;
     uint32_t line;
     const char *file; // assume static storage for file names
     size_t blockSize;
-    uint64_t sentinels[_sentinelLen]; // ps. rand. pattern for bounds checking
+    uint64_t sentinels3[_sentinelLen];
 } MemHeader;
 
 // Code for PRNG found at https://stackoverflow.com/a/53900430/16275142
@@ -180,6 +182,7 @@ static MemHeader *_mhInsert(MemHeader *root, MemHeader *mh);
 static bool _mhContains(MemHeader *root, MemHeader *header);
 static MemHeader *_mhMin(MemHeader *root);
 static MemHeader *_mhRemove(MemHeader *root, MemHeader *mh);
+static void _mhCheckIntegrity(MemHeader *header);
 static bool _mhCheckBounds(MemHeader *header);
 static void _mhPrint(MemHeader *header);
 static void _mhPrintAll(MemHeader *root);
@@ -264,6 +267,7 @@ static MemHeader *_mhInsert(MemHeader *root, MemHeader *mh) {
     }
 
     assert(mh != root);
+    _mhCheckIntegrity(root);
     if ((uintptr_t)mh < (uintptr_t)root) {
         root->left = _mhInsert(root->left, mh);
     } else {
@@ -277,10 +281,13 @@ static bool _mhContains(MemHeader *root, MemHeader *header) {
     if (root == NULL) {
         return false;
     } else if ((uintptr_t)root == (uintptr_t)header) {
+        _mhCheckIntegrity(root);
         return true;
     } else if ((uintptr_t)header < (uintptr_t)root) {
+        _mhCheckIntegrity(root);
         return _mhContains(root->left, header);
     } else {
+        _mhCheckIntegrity(root);
         return _mhContains(root->right, header);
     }
 }
@@ -314,9 +321,30 @@ static MemHeader *_mhRemove(MemHeader *root, MemHeader *mh) {
     return _mhRebalance(root);
 }
 
+static void _mhCheckIntegrity(MemHeader *header) {
+    for (int i = 0; i < _sentinelLen; i++) {
+        if (header->sentinels1[i] != header->sentinels2[i]) {
+            goto corruptionDetected;
+        }
+    }
+    for (int i = 0; i < _sentinelLen; i++) {
+        if (header->sentinels1[i] != header->sentinels3[i]) {
+            goto corruptionDetected;
+        }
+    }
+    return;
+
+corruptionDetected:
+    fprintf(stderr, "memory block corrupted, info not reliable\n");
+    fprintf(stderr, "line: %"PRId32"\n", header->line);
+    fprintf(stderr, "file: %.128s\n", header->file);
+    abort();
+}
+
 static bool _mhCheckBounds(MemHeader *header) {
+    _mhCheckIntegrity(header);
     return 0 == memcmp(
-        header->sentinels,
+        header->sentinels1,
         (uint8_t *)(header + 1) + header->blockSize,
         sizeof(uint64_t) * _sentinelLen
     );
@@ -337,6 +365,7 @@ static void _mhPrintAll(MemHeader *root) {
     if (root == NULL) {
         return;
     }
+    _mhCheckIntegrity(root);
     _mhPrintAll(root->left);
     _mhPrint(root);
     _mhPrintAll(root->right);
@@ -368,11 +397,13 @@ static void *_memAllocFilled(
     void *tailSentinels = (uint8_t *)(block + 1) + byteCount;
     for (int i = 0; i < _sentinelLen; i++) {
         uint64_t sentinel = _prngNext(&state);
-        block->sentinels[i] = sentinel;
+        block->sentinels1[i] = sentinel;
+        block->sentinels2[i] = sentinel;
+        block->sentinels3[i] = sentinel;
     }
     // cannot set tailSentinels[i] directly because the pointer might not be
     // aligned
-    memcpy(tailSentinels, block->sentinels, sizeof(uint64_t)*_sentinelLen);
+    memcpy(tailSentinels, block->sentinels1, sizeof(uint64_t)*_sentinelLen);
 
     memset((void *)(block + 1), val, byteCount);
 
@@ -501,6 +532,9 @@ void *_memExpandBytes(
         fprintf(stderr, "   at %s:%x"PRIu32"\n", file, line);
         abort();
     }
+    if (block != NULL) {
+        _mhCheckIntegrity(header);
+    }
     if (block != NULL && header->blockSize > newByteCount) {
         fprintf(stderr, "memExpand: new size (%zi) is smaller\n", newByteCount);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
@@ -536,6 +570,9 @@ void *_memShrinkBytes(
         fputs("memShrink: invalid pointer\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         abort();
+    }
+    if (block != NULL) {
+        _mhCheckIntegrity(header);
     }
     if (header->blockSize < newByteCount) {
         fprintf(stderr, "memShrink: new size (%zi) is bigger\n", newByteCount);
@@ -575,7 +612,9 @@ void *_memChangeBytes(
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         abort();
     }
-
+    if (block != NULL) {
+        _mhCheckIntegrity(header);
+    }
     if (!_mhCheckBounds(header)) {
         fputs("memChange: out of bounds write\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
@@ -607,7 +646,9 @@ void _memFree(void *block, uint32_t line, const char *file) {
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
         abort();
     }
-
+    if (block != NULL) {
+        _mhCheckIntegrity(header);
+    }
     if (!_mhCheckBounds(header)) {
         fputs("memFree: out of bounds write\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
@@ -638,7 +679,7 @@ void _memCheckBounds(void *block, uint32_t line, const char *file) {
         fputs("memCheckBounds: invalid pointer\n", stderr);
         abort();
     }
-
+    _mhCheckIntegrity(header);
     if (!_mhCheckBounds(header)) {
         fputs("memCheckBounds: out of bounds write\n", stderr);
         fprintf(stderr, "   at %s:%"PRIu32"\n", file, line);
@@ -663,6 +704,7 @@ bool memIsAlloc(void *block) {
 void memFreeAllAllocs(void) {
     assert(threadMutexLock(&g_memMutex));
     while (g_memRoot != NULL) {
+        _mhCheckIntegrity(g_memRoot);
         _memFreeUnchecked(g_memRoot + 1);
     }
     assert(threadMutexUnlock(&g_memMutex));
