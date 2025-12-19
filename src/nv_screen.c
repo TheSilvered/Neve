@@ -77,8 +77,8 @@ void screenResize(Screen *screen, uint16_t w, uint16_t h) {
     }
     screen->resized = true;
 
-    screen->editRows = _resizeRows(screen->editRows, screen->h, h);
-    screen->displayRows = _resizeRows(screen->displayRows, screen->h, h);
+    screen->editRows = _resizeRows(screen->editRows, w, h);
+    screen->displayRows = _resizeRows(screen->displayRows, w, h);
     screen->editStyles = _resizeStyles(
         screen->editStyles,
         screen->w * screen->h,

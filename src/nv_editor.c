@@ -62,10 +62,10 @@ bool editorRefresh(void) {
     }
     uiUpdate(&g_ed.bufPanel.elem);
 
-    // screenClear(&g_ed.screen, -1);
-    // drawBufPanel(&g_ed.bufPanel);
+    screenClear(&g_ed.screen, -1);
+    drawBufPanel(&g_ed.bufPanel);
 
-    return true; // screenRefresh(&g_ed.screen);
+    return screenRefresh(&g_ed.screen);
 }
 
 bool editorOpen(const char *path) {
