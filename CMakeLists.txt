@@ -15,7 +15,7 @@ if (${CMAKE_GENERATOR} MATCHES ".*(Make|Ninja).*")
     set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 endif()
 
-add_compile_definitions(_FILE_OFFSET_BITS=64)
+add_compile_definitions(_FILE_OFFSET_BITS=64 _CRT_SECURE_NO_WARNINGS)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(NV_DEBUG)
 endif()
