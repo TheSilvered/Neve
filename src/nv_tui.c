@@ -121,7 +121,7 @@ static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key) {
         ctxCurMoveToPrevParagraph(ctx);
         break;
     case TermKey_CtrlI:
-        for (uint16_t i = 0; i < panel->elem.w / 2; i++) {
+        for (uint16_t i = 0; i < panel->elem.h / 2; i++) {
             ctxCurMoveUp(ctx);
         }
         break;
@@ -132,7 +132,7 @@ static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key) {
         ctxCurMoveToNextParagraph(ctx);
         break;
     case TermKey_CtrlK:
-        for (uint16_t i = 0; i < panel->elem.w / 2; i++) {
+        for (uint16_t i = 0; i < panel->elem.h / 2; i++) {
             ctxCurMoveDown(ctx);
         }
         break;
