@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "nv_context.h"
-#include "nv_editor.h"
 #include "nv_escapes.h"
 #include "nv_mem.h"
 #include "nv_screen.h"
@@ -410,8 +408,13 @@ static void _writeLine(Screen *screen, uint16_t idx) {
 
     span.len = editRow->len - (span.buf - editRow->buf);
     strAppend(&screen->buf, &span);
-    if (width < screen->w) {
-        strRepeat(&screen->buf, ' ', screen->w - width);
+    for (size_t i = 0, n = screen->w - width; i < n; i++) {
+        ScreenStyle cellSt = screen->editStyles[idx * screen->w + width + i];
+        if (!_screenStyleEq(cellSt, currSt)) {
+            currSt = cellSt;
+            _screenChangeStyle(screen, cellSt);
+        }
+        strAppendRaw(&screen->buf, (UcdCh8 *)" ", 1);
     }
 
     _screenChangeStyle(screen, (ScreenStyle) { 0 });
@@ -420,7 +423,6 @@ static void _writeLine(Screen *screen, uint16_t idx) {
 bool screenRefresh(Screen *screen) {
     strAppendC(
         &screen->buf,
-        escCursorHide
         escCursorSetPos("", "")
     );
 
@@ -458,7 +460,6 @@ bool screenRefresh(Screen *screen) {
     uint16_t curX = 0, curY = 0;
 
     strAppendFmt(&screen->buf, escCursorSetPos("%u", "%u"), curY + 1, curX + 1);
-    strAppendC(&screen->buf, escCursorShow);
 
     if (!termWrite(screen->buf.buf, screen->buf.len)) {
         return false;

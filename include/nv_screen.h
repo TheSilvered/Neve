@@ -15,16 +15,16 @@
 #define screenColT16(col) { .r = (col) }
 #define screenColT256(col) { .r = (col) }
 
-#define screenFmtBold 0x01
-#define screenFmtDim 0x02
-#define screenFmtItalic 0x04
-#define screenFmtUnderline 0x08
-#define screenFmtInverse 0x10
-#define screenFmtStrike 0x20
+#define screenFmtBold ((uint8_t)0x01)
+#define screenFmtDim ((uint8_t)0x02)
+#define screenFmtItalic ((uint8_t)0x04)
+#define screenFmtUnderline ((uint8_t)0x08)
+#define screenFmtInverse ((uint8_t)0x10)
+#define screenFmtStrike ((uint8_t)0x20)
 
-#define screenStyleNoFg 0x1
-#define screenStyleNoBg 0x2
-#define screenStyleNoFmt 0x4
+#define screenStyleNoFg ((uint8_t)0x1)
+#define screenStyleNoBg ((uint8_t)0x2)
+#define screenStyleNoFmt ((uint8_t)0x4)
 
 // The color of one cell
 // The IDs for the TERM16 color mode are the following:

@@ -1,7 +1,5 @@
-#include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
-#include <string.h>
 #include <math.h>
 
 #include "nv_draw.h"
@@ -10,7 +8,6 @@
 #include "nv_screen.h"
 #include "nv_term.h"
 #include "nv_tui.h"
-#include "nv_utils.h"
 
 Editor g_ed = { 0 };
 
@@ -26,7 +23,7 @@ void editorInit(void) {
 
     termWrite(sLen(
         escEnableAltBuffer
-        escCursorShapeStillBlock
+        escCursorHide
     ));
 }
 

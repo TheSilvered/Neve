@@ -77,14 +77,14 @@ static void _uiBufPanelUpdater(UIBufPanel *panel) {
     ctxPosAt(ctx, ctx->cursors.items[0].idx, &line, &col);
     if (panel->scrollX > col) {
         panel->scrollX = col;
-    } else if (panel->scrollX + panel->elem.w < col) {
-        panel->scrollX = col - panel->elem.w;
+    } else if (panel->scrollX + panel->elem.w <= col) {
+        panel->scrollX = col - panel->elem.w + 1;
     }
 
     if (panel->scrollY > line) {
         panel->scrollY = line;
-    } else if (panel->scrollY + panel->elem.h < line) {
-        panel->scrollY = line - panel->elem.h;
+    } else if (panel->scrollY + panel->elem.h <= line) {
+        panel->scrollY = line - panel->elem.h + 1;
     }
 }
 

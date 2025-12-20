@@ -1,5 +1,6 @@
 #include "nv_draw.h"
 #include "nv_editor.h"
+#include "nv_screen.h"
 #include "nv_utils.h"
 
 static void _drawCtxLine(
@@ -96,6 +97,28 @@ void drawBufPanel(const UIBufPanel *panel) {
             &lineBuf,
             panel->elem.x, i,
             panel->elem.w, panel->scrollX
+        );
+    }
+
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        CtxCursor *cursor = &ctx->cursors.items[i];
+        size_t line, col;
+        ctxPosAt(ctx, cursor->idx, &line, &col);
+
+        if (line < panel->scrollY || line > panel->scrollY + panel->elem.h
+            || col < panel->scrollX || col > panel->scrollX + panel->elem.w
+        ) {
+            continue;
+        }
+        screenSetStyle(
+            &g_ed.screen,
+            (ScreenStyle) {
+                .fg = screenColT16(1),
+                .bg = screenColT16(8)
+            },
+            col - panel->scrollX,
+            line - panel->scrollY,
+            1
         );
     }
 }
