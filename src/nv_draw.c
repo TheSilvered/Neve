@@ -1,3 +1,4 @@
+#include <math.h>
 #include "nv_draw.h"
 #include "nv_editor.h"
 #include "nv_screen.h"
@@ -88,15 +89,31 @@ void drawBufPanel(const UIBufPanel *panel) {
     Ctx *ctx = &buf->ctx;
     Str lineBuf = { 0 };
     size_t lineCount = ctxLineCount(ctx);
+    uint8_t numColWidth = log10((double)lineCount) + 2;
 
-    size_t totLines = nvMin(lineCount - panel->elem.y, panel->elem.h);
+    size_t totLines = nvMin(lineCount - panel->scrollY, panel->elem.h);
+    int16_t x = panel->elem.x;
     for (size_t i = 0; i < totLines; i++) {
+        int16_t y = panel->elem.y + i;
+        size_t line = i + panel->scrollY;
+        screenWriteFmt(
+            &g_ed.screen,
+            x, y,
+            "%*zu",
+            (int)(numColWidth - 1), line + 1
+        );
+        screenSetFg(
+            &g_ed.screen,
+            (ScreenColor) { .col = screenColT16(61) },
+            x, y,
+            numColWidth
+        );
         _drawCtxLine(
             ctx,
-            i + panel->scrollY,
+            line,
             &lineBuf,
-            panel->elem.x, i,
-            panel->elem.w, panel->scrollX
+            x + numColWidth, y,
+            panel->elem.w - numColWidth, panel->scrollX
         );
     }
 
@@ -116,7 +133,7 @@ void drawBufPanel(const UIBufPanel *panel) {
                 .fg = screenColT16(1),
                 .bg = screenColT16(8)
             },
-            col - panel->scrollX,
+            col - panel->scrollX + numColWidth,
             line - panel->scrollY,
             1
         );

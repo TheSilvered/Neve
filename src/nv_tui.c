@@ -1,3 +1,4 @@
+#include <math.h>
 #include "nv_editor.h"
 #include "nv_tui.h"
 
@@ -65,20 +66,24 @@ static void _uiBufPanelUpdater(UIBufPanel *panel) {
 
     Ctx *ctx = &buf->ctx;
     size_t lines = ctxLineCount(ctx);
+    // log10(lines) + 1 is the width of the number, +1 for a space after
+    uint8_t numColWidth = (uint8_t)log10((double)lines) + 2;
+
+    if (panel->scrollY > lines) {
+        panel->scrollY = lines - 1;
+    }
 
     if (ctx->cursors.len != 1) {
-        if (panel->scrollY > lines) {
-            panel->scrollY = lines - 1;
-        }
         return;
     }
 
     size_t line, col;
     ctxPosAt(ctx, ctx->cursors.items[0].idx, &line, &col);
+
     if (panel->scrollX > col) {
         panel->scrollX = col;
-    } else if (panel->scrollX + panel->elem.w <= col) {
-        panel->scrollX = col - panel->elem.w + 1;
+    } else if (panel->scrollX + panel->elem.w - numColWidth <= col) {
+        panel->scrollX = col - panel->elem.w - numColWidth + 1;
     }
 
     if (panel->scrollY > line) {
