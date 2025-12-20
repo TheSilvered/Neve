@@ -1,12 +1,10 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include "nv_editor.h"
 #include "nv_error.h"
 #include "nv_escapes.h"
-#include "nv_file.h"
 #include "nv_key_queue.h"
 #include "nv_logging.h"
 #include "nv_term.h"
@@ -137,6 +135,8 @@ int main(int argc, char **argv) {
 
     if (argc == 2) {
         editorOpen(argv[1]);
+    } else {
+        editorNewBuf();
     }
 
     while (g_ed.running) {

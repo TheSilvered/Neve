@@ -187,6 +187,9 @@ static void _bufFree(Buf *buf) {
 }
 
 Buf *bufRef(const BufMap *map, BufHandle bufH) {
+    if (bufH == bufInvalidHandle) {
+        return NULL;
+    }
     uint32_t mask = map->cap - 1;
     uint32_t idx = bufH & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
@@ -201,6 +204,10 @@ Buf *bufRef(const BufMap *map, BufHandle bufH) {
 }
 
 void bufClose(BufMap *map, BufHandle bufH) {
+    if (bufH == bufInvalidHandle) {
+        return;
+    }
+
     uint32_t mask = map->cap - 1;
     uint32_t idx = bufH & mask;
     for (uint32_t i = 0, cap = map->cap; i < cap; i++) {
