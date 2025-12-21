@@ -17,6 +17,7 @@ typedef struct Editor {
     UI ui;
     EditorStrings strings;
     bool running;
+    uint64_t lastUpdate;
 } Editor;
 
 // Global editor variable.

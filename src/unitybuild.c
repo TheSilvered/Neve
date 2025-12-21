@@ -12,6 +12,7 @@
 #include "nv_string.c"
 #include "nv_term.c"
 #include "nv_threads.c"
+#include "nv_time.c"
 #include "nv_tui.c"
 #include "nv_udb.c"
 #include "nv_unicode.c"

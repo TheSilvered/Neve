@@ -9,6 +9,7 @@
 #include "nv_logging.h"
 #include "nv_screen.h"
 #include "nv_term.h"
+#include "nv_time.h"
 #include "nv_tui.h"
 
 Editor g_ed = { 0 };
@@ -17,6 +18,7 @@ void editorInit(void) {
     screenInit(&g_ed.screen);
     bufMapInit(&g_ed.buffers);
     g_ed.running = true;
+    g_ed.lastUpdate = 0;
 
     uiInit(&g_ed.ui);
 
@@ -57,6 +59,12 @@ void editorHandleKey(int32_t key) {
 }
 
 bool editorRefresh(void) {
+    uint64_t time = timeRelNs();
+    if (time - g_ed.lastUpdate < 16000000) {
+        timeSleep(16000000 + g_ed.lastUpdate - time);
+    }
+    g_ed.lastUpdate = timeRelNs();
+
     if (!editorUpdateSize()) {
         return false;
     }

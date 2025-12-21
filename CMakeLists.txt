@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.26)
 
 option(NV_DISABLE_ALT "Disable alternate screen buffer" OFF)
 set(NV_TERM_W 0 CACHE STRING "Manual terminal width")
