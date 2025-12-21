@@ -11,6 +11,8 @@ static void _uiElemInit(
     UIKeyHandler keyHandler,
     UIUpdater updater
 );
+static void _uiUpdater(UI *ui);
+static bool _uiKeyHandler(UI *ui, int32_t key);
 static void _uiBufPanelUpdater(UIBufPanel *panel);
 static bool _uiBufPanelKeyHandler(UIBufPanel *panel, int32_t key);
 static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key);
@@ -37,14 +39,36 @@ static void _uiElemInit(
 }
 
 void uiUpdate(UIElement *elem) {
-    elem->updater(elem);
+    if (elem->updater != NULL) {
+        elem->updater(elem);
+    }
 }
 
 bool uiHandleKey(UIElement *elem, int32_t key) {
-    return elem->keyHandler(elem, key);
+    if (elem->keyHandler != NULL) {
+        return elem->keyHandler(elem, key);
+    } else {
+        return false;
+    }
 }
 
-void uiBufPanelInit(UIBufPanel *panel, BufHandle bufHd) {
+void uiInit(UI *ui) {
+    _uiElemInit(
+        &ui->elem,
+        0, 0, 0, 0,
+        (UIKeyHandler)_uiKeyHandler,
+        (UIUpdater)_uiUpdater
+    );
+    _uiElemInit(&ui->statusBar, 0, 0, 0, 0, NULL, NULL);
+    uiBufPanelInit(&ui->bufPanel);
+}
+
+void uiResize(UI *ui, uint16_t w, uint16_t h) {
+    ui->elem.w = w;
+    ui->elem.h = h;
+}
+
+void uiBufPanelInit(UIBufPanel *panel) {
     _uiElemInit(
         &panel->elem,
         0, 0, 0, 0,
@@ -52,10 +76,39 @@ void uiBufPanelInit(UIBufPanel *panel, BufHandle bufHd) {
         (UIUpdater)_uiBufPanelUpdater
     );
 
-    panel->bufHd = bufHd;
+    panel->bufHd = bufInvalidHandle;
     panel->mode = UIBufMode_Normal;
     panel->scrollX = 0;
     panel->scrollY = 0;
+}
+
+static void _uiUpdater(UI *ui) {
+    if (ui->elem.h == 0) {
+        return;
+    }
+    ui->bufPanel.elem.w = ui->elem.w;
+    ui->bufPanel.elem.h = ui->elem.h - 1;
+
+    ui->statusBar.w = ui->elem.w;
+    ui->statusBar.h = 1;
+    ui->statusBar.y = ui->elem.h - 1;
+
+    uiUpdate(&ui->bufPanel.elem);
+    uiUpdate(&ui->statusBar);
+}
+
+static bool _uiKeyHandler(UI *ui, int32_t key) {
+    if (uiHandleKey(&ui->bufPanel.elem, key)) {
+        return true;
+    } else if (uiHandleKey(&ui->statusBar, key)) {
+        return true;
+    }
+
+    if (key == TermKey_CtrlQ) {
+        g_ed.running = false;
+        return true;
+    }
+    return false;
 }
 
 static void _uiBufPanelUpdater(UIBufPanel *panel) {

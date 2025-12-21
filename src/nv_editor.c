@@ -18,7 +18,7 @@ void editorInit(void) {
     bufMapInit(&g_ed.buffers);
     g_ed.running = true;
 
-    uiBufPanelInit(&g_ed.bufPanel, bufInvalidHandle);
+    uiInit(&g_ed.ui);
 
     strInitFromC(&g_ed.strings.savePrompt, "File path: ");
     strInitFromC(&g_ed.strings.noFilePath, "<New File>");
@@ -41,28 +41,29 @@ bool editorUpdateSize(void) {
     }
 
     screenResize(&g_ed.screen, cols, rows);
-    g_ed.bufPanel.elem.w = cols;
-    g_ed.bufPanel.elem.h = rows;
+    uiResize(&g_ed.ui, cols, rows);
 
     return true;
 }
 
 void editorHandleKey(int32_t key) {
-    if (key == TermKey_CtrlQ) {
-        g_ed.running = false;
+    if (uiHandleKey(&g_ed.ui.elem, key)) {
         return;
     }
-    uiHandleKey(&g_ed.bufPanel.elem, key);
+
+    if (key == TermKey_CtrlQ) {
+        g_ed.running = false;
+    }
 }
 
 bool editorRefresh(void) {
     if (!editorUpdateSize()) {
         return false;
     }
-    uiUpdate(&g_ed.bufPanel.elem);
+    uiUpdate(&g_ed.ui.elem);
 
     screenClear(&g_ed.screen, -1);
-    drawBufPanel(&g_ed.bufPanel);
+    drawUI(&g_ed.screen, &g_ed.ui);
 
     return screenRefresh(&g_ed.screen);
 }
@@ -73,7 +74,7 @@ bool editorOpen(const char *path) {
     bool success = true;
     switch (fileOpen(&file, path, FileMode_Read)) {
     case FileIOResult_Success:
-        bufClose(&g_ed.buffers, g_ed.bufPanel.bufHd);
+        bufClose(&g_ed.buffers, g_ed.ui.bufPanel.bufHd);
         if (
             bufInitFromFile(
                 &g_ed.buffers,
@@ -86,20 +87,20 @@ bool editorOpen(const char *path) {
         }
         break;
     case FileIOResult_FileNotFound:
-        bufClose(&g_ed.buffers, g_ed.bufPanel.bufHd);
+        bufClose(&g_ed.buffers, g_ed.ui.bufPanel.bufHd);
         newBuf = bufInitEmpty(&g_ed.buffers);
         bufSetPath(&g_ed.buffers, newBuf, path);
         break;
     default:
         success = false;
     }
-    g_ed.bufPanel.bufHd = newBuf;
+    g_ed.ui.bufPanel.bufHd = newBuf;
     fileClose(&file);
     return success;
 }
 
 void editorNewBuf(void) {
-    bufClose(&g_ed.buffers, g_ed.bufPanel.bufHd);
+    bufClose(&g_ed.buffers, g_ed.ui.bufPanel.bufHd);
     BufHandle newBuf = bufInitEmpty(&g_ed.buffers);
-    g_ed.bufPanel.bufHd = newBuf;
+    g_ed.ui.bufPanel.bufHd = newBuf;
 }

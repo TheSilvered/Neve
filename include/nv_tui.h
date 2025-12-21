@@ -58,9 +58,18 @@ typedef struct UIBufPanel {
     size_t scrollX, scrollY;
 } UIBufPanel;
 
+typedef struct UI {
+    UIElement elem;
+    UIBufPanel bufPanel;
+    UIElement statusBar;
+} UI;
+
+void uiInit(UI *ui);
+void uiResize(UI *ui, uint16_t w, uint16_t h);
+
 void uiUpdate(UIElement *elem);
 bool uiHandleKey(UIElement *elem, int32_t key);
 
-void uiBufPanelInit(UIBufPanel *panel, BufHandle bufHd);
+void uiBufPanelInit(UIBufPanel *panel);
 
 #endif // !NV_TUI_H_

@@ -14,7 +14,7 @@ typedef struct EditorStrings {
 typedef struct Editor {
     Screen screen;
     BufMap buffers;
-    UIBufPanel bufPanel;
+    UI ui;
     EditorStrings strings;
     bool running;
 } Editor;

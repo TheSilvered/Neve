@@ -1,10 +1,17 @@
+#include <assert.h>
 #include <math.h>
 #include "nv_draw.h"
 #include "nv_editor.h"
 #include "nv_screen.h"
 #include "nv_utils.h"
 
+void drawUI(Screen *screen, const UI *ui) {
+    drawBufPanel(screen, &ui->bufPanel);
+    drawStatusBar(screen, &ui->statusBar);
+}
+
 static void _drawCtxLine(
+    Screen *screen,
     const Ctx *ctx,
     size_t lineIdx,
     Str *outBuf,
@@ -40,7 +47,7 @@ static void _drawCtxLine(
             // Draw a gray '<' at the start if a character is cut off
             strAppendFmt(outBuf, startCutoffFmt, width - 1, "");
             screenSetFg(
-                &g_ed.screen,
+                screen,
                 (ScreenColor){ .col = screenColT16(61) },
                 lineX, lineY, 1
             );
@@ -53,7 +60,7 @@ static void _drawCtxLine(
                 maxWidth + chWidth - width - 1, ""
             );
             screenSetFg(
-                &g_ed.screen,
+                screen,
                 (ScreenColor) { .col = screenColT16(61) },
                 lineX + width - chWidth, lineY, 1
             );
@@ -61,7 +68,7 @@ static void _drawCtxLine(
         } else if (cp == '\t') {
             strAppendFmt(outBuf, tabFmt, chWidth - 1, "");
             screenSetFg(
-                &g_ed.screen,
+                screen,
                 (ScreenColor) { .col = screenColT16(61) },
                 lineX + width - chWidth, lineY, 1
             );
@@ -77,10 +84,10 @@ static void _drawCtxLine(
         }
     }
 
-    screenWrite(&g_ed.screen, lineX, lineY, outBuf->buf, outBuf->len);
+    screenWrite(screen, lineX, lineY, outBuf->buf, outBuf->len);
 }
 
-void drawBufPanel(const UIBufPanel *panel) {
+void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
     BufHandle bufHandle = panel->bufHd;
     Buf *buf = bufRef(&g_ed.buffers, bufHandle);
     if (buf == NULL) {
@@ -97,18 +104,19 @@ void drawBufPanel(const UIBufPanel *panel) {
         int16_t y = panel->elem.y + i;
         size_t line = i + panel->scrollY;
         screenWriteFmt(
-            &g_ed.screen,
+            screen,
             x, y,
             "%*zu",
             (int)(numColWidth - 1), line + 1
         );
         screenSetFg(
-            &g_ed.screen,
+            screen,
             (ScreenColor) { .col = screenColT16(61) },
             x, y,
             numColWidth
         );
         _drawCtxLine(
+            screen,
             ctx,
             line,
             &lineBuf,
@@ -128,7 +136,7 @@ void drawBufPanel(const UIBufPanel *panel) {
             continue;
         }
         screenSetStyle(
-            &g_ed.screen,
+            screen,
             (ScreenStyle) {
                 .fg = screenColT16(1),
                 .bg = screenColT16(8)
@@ -138,4 +146,35 @@ void drawBufPanel(const UIBufPanel *panel) {
             1
         );
     }
+}
+
+void drawStatusBar(Screen *screen, const UIElement *statusBar) {
+    screenSetTextFmt(
+        screen,
+        screenFmtInverse,
+        statusBar->x,
+        statusBar->y,
+        statusBar->w
+    );
+    const char *modeStr = NULL;
+    switch (g_ed.ui.bufPanel.mode) {
+    case UIBufMode_Normal:
+        modeStr = "Normal";
+        break;
+    case UIBufMode_Edit:
+        modeStr = "Edit";
+        break;
+    case UIBufMode_Selection:
+        modeStr = "Selection";
+        break;
+    default:
+        assert(false);
+    }
+
+    screenWriteFmt(
+        screen,
+        statusBar->x, 
+        statusBar->y,
+        "[%s]", modeStr
+    );
 }
