@@ -87,6 +87,58 @@ static void _drawCtxLine(
     screenWrite(screen, lineX, lineY, outBuf->buf, outBuf->len);
 }
 
+void _drawCtxSelection(
+    Screen *screen,
+    const Ctx *ctx,
+    const UIBufPanel *panel,
+    uint8_t numColWidth,
+    size_t startIdx, size_t endIdx
+) {
+    size_t startLine, startCol;
+    size_t endLine, endCol;
+
+    ctxPosAt(ctx, startIdx, &startLine, &startCol);
+    ctxPosAt(ctx, endIdx, &endLine, &endCol);
+
+    if (
+        endLine < panel->scrollY
+        || startLine >= panel->scrollY + panel->elem.h
+    ) {
+        return;
+    }
+
+    ptrdiff_t absX = panel->elem.x - panel->scrollX + numColWidth;
+    ptrdiff_t absY = panel->elem.y - panel->scrollY;
+    ScreenStyle selStyle = {
+        .bg = screenColT16(65),
+        .fg = screenColT16(1),
+        .style = screenStyleNoFmt
+    };
+
+    if (startLine == endLine) {
+        screenSetStyle(
+            screen,
+            selStyle,
+            startCol + absX,
+            startLine + absY,
+            endCol - startCol
+        );
+        return;
+    }
+
+    screenSetStyle(
+        screen,
+        selStyle,
+        startCol + absX,
+        startLine + absY,
+        screen->w
+    );
+    for (size_t line = startLine + 1; line < endLine; line++) {
+        screenSetStyle(screen, selStyle, absX, line + absY, screen->w);
+    }
+    screenSetStyle(screen, selStyle, absX, endLine + absY, endCol);
+}
+
 void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
     BufHandle bufHandle = panel->bufHd;
     Buf *buf = bufRef(&g_ed.buffers, bufHandle);
@@ -139,11 +191,30 @@ void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
             screen,
             (ScreenStyle) {
                 .fg = screenColT16(1),
-                .bg = screenColT16(8)
+                .bg = screenColT16(8),
+                .textFmt = screenFmtUnderline,
             },
             col - panel->scrollX + numColWidth,
             line - panel->scrollY,
             1
+        );
+        if (!ctxSelIsActive(ctx)) {
+            continue;
+        }
+        size_t selStart = nvMin(cursor->idx, cursor->_selStart);
+        size_t selEnd = nvMax(cursor->idx, cursor->_selStart);
+        _drawCtxSelection(screen, ctx, panel, numColWidth, selStart, selEnd);
+    }
+
+    for (size_t i = 0; i < ctx->_sels.len; i++) {
+        CtxSelection *sel = &ctx->_sels.items[i];
+        _drawCtxSelection(
+            screen,
+            ctx,
+            panel,
+            numColWidth,
+            sel->startIdx,
+            sel->endIdx
         );
     }
 }
