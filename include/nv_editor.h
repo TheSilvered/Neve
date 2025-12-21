@@ -2,7 +2,6 @@
 #define NV_EDITOR_H_
 
 #include "nv_screen.h"
-#include "nv_context.h"
 #include "nv_buffer.h"
 #include "nv_tui.h"
 

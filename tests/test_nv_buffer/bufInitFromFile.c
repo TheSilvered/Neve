@@ -25,6 +25,31 @@ void test_bufInitFromFileEmpty(void) {
     bufMapDestroy(&map);
 }
 
+void test_bufInitFromFileSmall(void) {
+    BufMap map;
+    bufMapInit(&map);
+
+    File temp;
+    testAssertRequire(fileOpenTemp(&temp) == FileIOResult_Success);
+    testAssertRequire(fileWrite(&temp, sLen("abc")) == FileIOResult_Success);
+    filePosToBeginning(&temp);
+
+    BufHandle hd;
+    BufResult res = bufInitFromFile(&map, &temp, &hd);
+
+    fileClose(&temp);
+
+    testAssertRequire(hd != bufInvalidHandle);
+    testAssert(res.kind == BufResult_Success);
+    Buf *buf = bufRef(&map, hd);
+    StrView content = ctxGetContent(&buf->ctx);
+    testAssert(content.len == 3);
+    testAssert(strncmp((char *)content.buf, "abc", content.len) == 0);
+
+    bufClose(&map, hd);
+    bufMapDestroy(&map);
+}
+
 void test_bufInitFromFileValid(void) {
     BufMap map;
     bufMapInit(&map);
@@ -107,6 +132,7 @@ void test_bufInitFromFileInvalid(void) {
 
 testList(
     testMake(test_bufInitFromFileEmpty),
+    testMake(test_bufInitFromFileSmall),
     testMake(test_bufInitFromFileValid),
     testMake(test_bufInitFromFileValid2),
     testMake(test_bufInitFromFileInvalid)

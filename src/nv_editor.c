@@ -2,9 +2,11 @@
 #include <assert.h>
 #include <math.h>
 
+#include "nv_buffer.h"
 #include "nv_draw.h"
 #include "nv_editor.h"
 #include "nv_escapes.h"
+#include "nv_logging.h"
 #include "nv_screen.h"
 #include "nv_term.h"
 #include "nv_tui.h"
@@ -67,7 +69,7 @@ bool editorRefresh(void) {
 
 bool editorOpen(const char *path) {
     File file;
-    BufHandle newBuf;
+    BufHandle newBuf = bufInvalidHandle;
     bool success = true;
     switch (fileOpen(&file, path, FileMode_Read)) {
     case FileIOResult_Success:
@@ -87,11 +89,11 @@ bool editorOpen(const char *path) {
         bufClose(&g_ed.buffers, g_ed.bufPanel.bufHd);
         newBuf = bufInitEmpty(&g_ed.buffers);
         bufSetPath(&g_ed.buffers, newBuf, path);
-        g_ed.bufPanel.bufHd = newBuf;
         break;
     default:
         success = false;
     }
+    g_ed.bufPanel.bufHd = newBuf;
     fileClose(&file);
     return success;
 }
