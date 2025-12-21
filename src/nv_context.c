@@ -131,7 +131,7 @@ static void _ctxBufShrink(CtxBuf *buf) {
     if (buf->len >= buf->cap / 4) {
         return;
     }
-    size_t newCap = nvMin(buf->len * 2, 128);
+    size_t newCap = nvMax(buf->len * 2, 128);
     size_t newGapSize = newCap - buf->len;
     size_t gapSize = buf->cap - buf->len;
     memmove(

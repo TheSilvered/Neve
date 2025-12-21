@@ -136,7 +136,7 @@ static void _uiBufPanelUpdater(UIBufPanel *panel) {
     if (panel->scrollX > col) {
         panel->scrollX = col;
     } else if (panel->scrollX + panel->elem.w - numColWidth <= col) {
-        panel->scrollX = col - panel->elem.w - numColWidth + 1;
+        panel->scrollX = col - panel->elem.w + numColWidth + 1;
     }
 
     if (panel->scrollY > line) {
