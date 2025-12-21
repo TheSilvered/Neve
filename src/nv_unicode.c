@@ -2,6 +2,7 @@
 
 #include "nv_unicode.h"
 #include "nv_udb.h"
+#include "nv_utils.h"
 
 // UTF-8 encoding table
 //
@@ -101,7 +102,7 @@ static UcdCh8CheckResult _ucdCh8CheckSingle(
         }
         break;
     default:
-        assert(false);
+        nvUnreachable;
         break;
     }
 
@@ -138,8 +139,7 @@ uint8_t ucdCPWidth(UcdCP cp, uint8_t tabStop, size_t currWidth) {
         case UdbWidth_Halfwidth:
             return 1;
         default:
-            assert(false);
-            return 0;
+            nvUnreachable;
         }
     }
 }

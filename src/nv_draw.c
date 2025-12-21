@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <math.h>
 #include "nv_draw.h"
 #include "nv_editor.h"
@@ -26,7 +25,7 @@ static void _drawCtxLine(
 
     strClear(outBuf, maxWidth);
 
-    ptrdiff_t width = -scrollX;
+    ptrdiff_t width = -(ptrdiff_t)scrollX;
 
     const char *tabFmt = "\xc2\xbb%*s"; // »%*s
     const char *startCutoffFmt = "<%*s";
@@ -62,7 +61,7 @@ static void _drawCtxLine(
             screenSetFg(
                 screen,
                 (ScreenColor) { .col = screenColT16(61) },
-                lineX + width - chWidth, lineY, 1
+                (uint16_t)(lineX + width - chWidth), lineY, 1
             );
             break;
         } else if (cp == '\t') {
@@ -70,7 +69,7 @@ static void _drawCtxLine(
             screenSetFg(
                 screen,
                 (ScreenColor) { .col = screenColT16(61) },
-                lineX + width - chWidth, lineY, 1
+                (uint16_t)(lineX + width - chWidth), lineY, 1
             );
         } else {
             UcdCh8 buf[4];
@@ -119,9 +118,9 @@ void _drawCtxSelection(
         screenSetStyle(
             screen,
             selStyle,
-            startCol + absX,
-            startLine + absY,
-            endCol - startCol
+            (uint16_t)(startCol + absX),
+            (uint16_t)(startLine + absY),
+            (uint16_t)(endCol - startCol)
         );
         return;
     }
@@ -129,14 +128,26 @@ void _drawCtxSelection(
     screenSetStyle(
         screen,
         selStyle,
-        startCol + absX,
-        startLine + absY,
+        (uint16_t)(startCol + absX),
+        (uint16_t)(startLine + absY),
         screen->w
     );
     for (size_t line = startLine + 1; line < endLine; line++) {
-        screenSetStyle(screen, selStyle, absX, line + absY, screen->w);
+        screenSetStyle(
+            screen,
+            selStyle,
+            (uint16_t)(absX),
+            (uint16_t)(line + absY),
+            screen->w
+        );
     }
-    screenSetStyle(screen, selStyle, absX, endLine + absY, endCol);
+    screenSetStyle(
+        screen,
+        selStyle,
+        (uint16_t)(absX),
+        (uint16_t)(endLine + absY),
+        (uint16_t)(endCol)
+    );
 }
 
 void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
@@ -148,12 +159,12 @@ void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
     Ctx *ctx = &buf->ctx;
     Str lineBuf = { 0 };
     size_t lineCount = ctxLineCount(ctx);
-    uint8_t numColWidth = log10((double)lineCount) + 2;
+    uint8_t numColWidth = (uint8_t)log10((double)lineCount) + 2;
 
     size_t totLines = nvMin(lineCount - panel->scrollY, panel->elem.h);
     int16_t x = panel->elem.x;
     for (size_t i = 0; i < totLines; i++) {
-        int16_t y = panel->elem.y + i;
+        int16_t y = (int16_t)(panel->elem.y + i);
         size_t line = i + panel->scrollY;
         screenWriteFmt(
             screen,
@@ -177,6 +188,8 @@ void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
         );
     }
 
+    strDestroy(&lineBuf);
+
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor *cursor = &ctx->cursors.items[i];
         size_t line, col;
@@ -194,8 +207,8 @@ void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
                 .bg = screenColT16(8),
                 .textFmt = screenFmtUnderline,
             },
-            col - panel->scrollX + numColWidth,
-            line - panel->scrollY,
+            (uint16_t)(col - panel->scrollX + numColWidth),
+            (uint16_t)(line - panel->scrollY),
             1
         );
         if (!ctxSelIsActive(ctx)) {
@@ -239,7 +252,7 @@ void drawStatusBar(Screen *screen, const UIElement *statusBar) {
         modeStr = "Selection";
         break;
     default:
-        assert(false);
+        nvUnreachable;
     }
 
     screenWriteFmt(

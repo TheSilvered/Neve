@@ -131,7 +131,7 @@ static void _ctxBufShrink(CtxBuf *buf) {
     if (buf->len >= buf->cap / 4) {
         return;
     }
-    size_t newCap = buf->cap / 2;
+    size_t newCap = nvMin(buf->len * 2, 128);
     size_t newGapSize = newCap - buf->len;
     size_t gapSize = buf->cap - buf->len;
     memmove(
@@ -142,7 +142,7 @@ static void _ctxBufShrink(CtxBuf *buf) {
 
     buf->bytes = memShrink(
         buf->bytes,
-        buf->cap / 2,
+        newCap,
         sizeof(*buf->bytes)
     );
 
@@ -1023,7 +1023,7 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     size_t spanStart = 0;
     bool ignoreNL = !ctx->multiline;
     CtxBuf *buf = &ctx->_buf;
-    uint16_t lastBlockSize = ctx->_refs.len == 0
+    size_t lastBlockSize = ctx->_refs.len == 0
         ? buf->len
         : buf->len - ctx->_refs.items[ctx->_refs.len - 1].idx;
 

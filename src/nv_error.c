@@ -76,7 +76,7 @@ void errLog(const char *msg) {
 #endif // !_WIN32
         break;
     default:
-        assert(false);
+        nvUnreachable;
     }
 }
 

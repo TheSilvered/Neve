@@ -33,6 +33,8 @@ FileIOResult fileOpen(File *file, const char *path, FileMode mode) {
     case FileMode_AppendEx:
         modeStr = MODE_STR_("a+b");
         break;
+    default:
+        nvUnreachable;
     }
 
 #ifdef _WIN32

@@ -22,7 +22,7 @@
 #endif // !NvNoreturn
 
 #ifdef _MSC_VER
-#define nvUnreachable __assume(0)
+#define nvUnreachable (__assume(0))
 #elif defined(__GNUC__)
 #define nvUnreachable __builtin_unreachable()
 #else

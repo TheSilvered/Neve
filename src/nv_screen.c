@@ -159,7 +159,7 @@ void screenWrite(
     // Add the string without going over the width of the screen
     sv.buf = str;
     sv.len = len;
-    w = cutStr(&sv, screenW, w);
+    w = (uint16_t)cutStr(&sv, screenW, w);
     strAppend(&screen->buf, &sv);
 
     if (w == screenW || startIdx == -1) {

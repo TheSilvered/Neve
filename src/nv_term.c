@@ -77,7 +77,7 @@ static size_t _readEscapeSeq(int32_t *outBuf, size_t bufSize) {
         // Add digits to numBuf to be parsed later
         if (key >= '0' && key <= '9') {
             if (numIdx < sizeof(numBuf) - 1) {
-                numBuf[numIdx++] = key;
+                numBuf[numIdx++] = (char)key;
             }
             continue;
         }
