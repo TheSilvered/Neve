@@ -25,18 +25,6 @@ static void _ctxBufRemove(CtxBuf *buf, size_t len);
 // Change the gap index
 static void _ctxBufSetGapIdx(CtxBuf *buf, size_t gapIdx);
 
-// Get the index of the first character of a line, it may be equal to the length
-// of the buffer
-static ptrdiff_t _ctxLineStart(const Ctx *ctx, size_t lineNo);
-// Get the index of the last characer of a line, it may be equal to the length
-// of the buffer
-static ptrdiff_t _ctxLineEnd(const Ctx *ctx, size_t lineNo);
-
-// Get the unicode character after `idx`
-static UcdCP _ctxGetChAfter(const Ctx *ctx, size_t idx);
-// Get the unicode character before `idx`
-static UcdCP _ctxGetChBefore(const Ctx *ctx, size_t idx);
-
 static size_t _ctxFindNextWordStart(const Ctx *ctx, size_t idx);
 static size_t _ctxFindNextWordEnd(const Ctx *ctx, size_t idx);
 static size_t _ctxFindPrevWordStart(const Ctx *ctx, size_t idx);
@@ -109,7 +97,7 @@ static void _ctxBufReserve(CtxBuf *buf, size_t amount) {
         return;
     }
 
-    size_t newCap = requiredLen + requiredLen / 2;
+    size_t newCap = nvMax(requiredLen + requiredLen / 2, 128);
     buf->bytes = memChange(
         buf->bytes,
         newCap,
@@ -254,7 +242,7 @@ static ptrdiff_t _ctxGetIdxRefBlock(const Ctx *ctx, size_t idx) {
     return lo - 1;
 }
 
-static ptrdiff_t _ctxLineStart(const Ctx *ctx, size_t lineNo) {
+static ptrdiff_t ctxLineStart(const Ctx *ctx, size_t lineNo) {
     if (lineNo == 0) {
         return 0;
     }
@@ -290,7 +278,7 @@ static ptrdiff_t _ctxLineStart(const Ctx *ctx, size_t lineNo) {
     return -1;
 }
 
-static ptrdiff_t _ctxLineEnd(const Ctx *ctx, size_t lineNo) {
+static ptrdiff_t ctxLineEnd(const Ctx *ctx, size_t lineNo) {
     ptrdiff_t refsIdx = _ctxGetLineRefBlock(ctx, lineNo + 1);
     size_t i;
     size_t lineCount;
@@ -509,7 +497,7 @@ endReached:
 }
 
 ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    ptrdiff_t i = _ctxLineStart(ctx, lineIdx);
+    ptrdiff_t i = ctxLineStart(ctx, lineIdx);
     if (i == (ptrdiff_t)ctx->_buf.len || i < 0) {
         goto noLine;
     }
@@ -529,7 +517,7 @@ noLine:
 }
 
 ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
-    ptrdiff_t i = _ctxLineEnd(ctx, lineIdx);
+    ptrdiff_t i = ctxLineEnd(ctx, lineIdx);
     if (i <= 0) {
         goto noLine;
     }
@@ -557,10 +545,20 @@ noLine:
 ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     if (idx < 0) {
         idx = 0;
-    }
-
-    if ((size_t)idx < ctx->_buf.len) {
-        idx += ucdCh8RunLen(*_ctxBufGet(&ctx->_buf, idx));
+    } else if ((size_t)idx < ctx->_buf.len) {
+        uint8_t offset = ucdCh8RunLen(*_ctxBufGet(&ctx->_buf, idx));
+        // If idx is not on a character boundary find the next one
+        if (offset == 0) {
+            idx++;
+            while (
+                (size_t)idx < ctx->_buf.len
+                && !ucdCh8IsStart(*_ctxBufGet(&ctx->_buf, idx))
+            ) {
+                idx++;
+            }
+        } else {
+            idx += offset;
+        }
     }
 
     if ((size_t)idx >= ctx->_buf.len) {
@@ -765,7 +763,7 @@ static void _ctxReplaceUpdateCursors(
     CtxCursor *cursors = ctx->cursors.items;
     size_t changedLine;
     ctxPosAt(ctx, end + lenDiff, &changedLine, NULL);
-    size_t lastBaseIdxCalc = _ctxLineEnd(ctx, changedLine);
+    size_t lastBaseIdxCalc = ctxLineEnd(ctx, changedLine);
 
     // Move the active selections, if selecting
     // When not selecting the value of _selStart is assumed to be invalid
@@ -983,7 +981,7 @@ static void _ctxReplace(
 
     ptrdiff_t colDiff = col - prevCol;
     size_t tabIdx = buf->len;
-    ptrdiff_t lineEnd = _ctxLineEnd(ctx, line);
+    ptrdiff_t lineEnd = ctxLineEnd(ctx, line);
     assert(lineEnd >= 0);
     if (tabStop != 0 && colDiff % tabStop != 0 && end + lenDiff < buf->len) {
         UcdCh8 *s = _ctxBufGet(buf, end + lenDiff);
@@ -1460,7 +1458,7 @@ void ctxCurMoveToLineStart(Ctx *ctx) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t lineNo;
         ctxPosAt(ctx, oldCur, &lineNo, NULL);
-        ptrdiff_t newCur = _ctxLineStart(ctx, lineNo);
+        ptrdiff_t newCur = ctxLineStart(ctx, lineNo);
         if (newCur < 0) {
             continue;
         }
@@ -1475,7 +1473,7 @@ void ctxCurMoveToLineEnd(Ctx *ctx) {
         size_t oldCur = ctx->cursors.items[i].idx;
         size_t lineNo;
         ctxPosAt(ctx, oldCur, &lineNo, NULL);
-        ptrdiff_t newCur = _ctxLineEnd(ctx, lineNo);
+        ptrdiff_t newCur = ctxLineEnd(ctx, lineNo);
         if (newCur < 0) {
             continue;
         }
@@ -1566,11 +1564,11 @@ void ctxCurMoveToNextParagraph(Ctx *ctx) {
         ptrdiff_t newCur = -1;
         bool skippedBlankLines = false;
         for (;;) {
-            ptrdiff_t lineStart = _ctxLineStart(ctx, lineNo);
+            ptrdiff_t lineStart = ctxLineStart(ctx, lineNo);
             if (lineStart < 0) {
                 break;
             }
-            newCur = _ctxLineEnd(ctx, lineNo);
+            newCur = ctxLineEnd(ctx, lineNo);
             assert(newCur >= 0);
             if (newCur - lineStart != 0) {
                 skippedBlankLines = true;
@@ -1599,11 +1597,11 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx) {
         ptrdiff_t newCur = -1;
         bool skippedBlankLines = false;
         for (;;) {
-            ptrdiff_t lineEnd = _ctxLineEnd(ctx, lineNo);
+            ptrdiff_t lineEnd = ctxLineEnd(ctx, lineNo);
             if (lineEnd < 0) {
                 break;
             }
-            newCur = _ctxLineStart(ctx, lineNo);
+            newCur = ctxLineStart(ctx, lineNo);
             assert(newCur >= 0);
             if (lineEnd - newCur != 0) {
                 skippedBlankLines = true;

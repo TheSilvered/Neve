@@ -405,9 +405,13 @@ static void _writeLine(Screen *screen, uint16_t idx) {
             _screenChangeStyle(screen, cellSt);
         }
     }
-
     span.len = editRow->len - (span.buf - editRow->buf);
     strAppend(&screen->buf, &span);
+
+    if (width >= screen->w) {
+        goto end;
+    }
+
     for (size_t i = 0, n = screen->w - width; i < n; i++) {
         ScreenStyle cellSt = screen->editStyles[idx * screen->w + width + i];
         if (!_screenStyleEq(cellSt, currSt)) {
@@ -417,6 +421,7 @@ static void _writeLine(Screen *screen, uint16_t idx) {
         strAppendRaw(&screen->buf, (UcdCh8 *)" ", 1);
     }
 
+end:
     _screenChangeStyle(screen, (ScreenStyle) { 0 });
 }
 

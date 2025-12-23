@@ -4,6 +4,75 @@
 #include "nv_screen.h"
 #include "nv_utils.h"
 
+static const size_t _cSymbolLen = 3;
+static const UcdCh8 _cSymbols[][3] = {
+    [0x00] = { 0xe2, 0x90, 0x80 },
+    [0x01] = { 0xe2, 0x90, 0x81 },
+    [0x02] = { 0xe2, 0x90, 0x82 },
+    [0x03] = { 0xe2, 0x90, 0x83 },
+    [0x04] = { 0xe2, 0x90, 0x84 },
+    [0x05] = { 0xe2, 0x90, 0x85 },
+    [0x06] = { 0xe2, 0x90, 0x86 },
+    [0x07] = { 0xe2, 0x90, 0x87 },
+    [0x08] = { 0xe2, 0x90, 0x88 },
+    [0x09] = { 0xe2, 0x90, 0x89 },
+    [0x0a] = { 0xe2, 0x90, 0x8a },
+    [0x0b] = { 0xe2, 0x90, 0x8b },
+    [0x0c] = { 0xe2, 0x90, 0x8c },
+    [0x0d] = { 0xe2, 0x90, 0x8d },
+    [0x0e] = { 0xe2, 0x90, 0x8e },
+    [0x0f] = { 0xe2, 0x90, 0x8f },
+    [0x10] = { 0xe2, 0x90, 0x90 },
+    [0x11] = { 0xe2, 0x90, 0x91 },
+    [0x12] = { 0xe2, 0x90, 0x92 },
+    [0x13] = { 0xe2, 0x90, 0x93 },
+    [0x14] = { 0xe2, 0x90, 0x94 },
+    [0x15] = { 0xe2, 0x90, 0x95 },
+    [0x16] = { 0xe2, 0x90, 0x96 },
+    [0x17] = { 0xe2, 0x90, 0x97 },
+    [0x18] = { 0xe2, 0x90, 0x98 },
+    [0x19] = { 0xe2, 0x90, 0x99 },
+    [0x1a] = { 0xe2, 0x90, 0x9a },
+    [0x1b] = { 0xe2, 0x90, 0x9b },
+    [0x1c] = { 0xe2, 0x90, 0x9c },
+    [0x1d] = { 0xe2, 0x90, 0x9d },
+    [0x1e] = { 0xe2, 0x90, 0x9e },
+    [0x1f] = { 0xe2, 0x90, 0x9f },
+    [0x7f] = { 0xe2, 0x90, 0xa1 },
+    [0x80] = { 0xe2, 0x96, 0xaf },
+    [0x81] = { 0xe2, 0x96, 0xaf },
+    [0x82] = { 0xe2, 0x96, 0xaf },
+    [0x83] = { 0xe2, 0x96, 0xaf },
+    [0x84] = { 0xe2, 0x96, 0xaf },
+    [0x85] = { 0xe2, 0x96, 0xaf },
+    [0x86] = { 0xe2, 0x96, 0xaf },
+    [0x87] = { 0xe2, 0x96, 0xaf },
+    [0x88] = { 0xe2, 0x96, 0xaf },
+    [0x89] = { 0xe2, 0x96, 0xaf },
+    [0x8a] = { 0xe2, 0x96, 0xaf },
+    [0x8b] = { 0xe2, 0x96, 0xaf },
+    [0x8c] = { 0xe2, 0x96, 0xaf },
+    [0x8d] = { 0xe2, 0x96, 0xaf },
+    [0x8e] = { 0xe2, 0x96, 0xaf },
+    [0x8f] = { 0xe2, 0x96, 0xaf },
+    [0x90] = { 0xe2, 0x96, 0xaf },
+    [0x91] = { 0xe2, 0x96, 0xaf },
+    [0x92] = { 0xe2, 0x96, 0xaf },
+    [0x93] = { 0xe2, 0x96, 0xaf },
+    [0x94] = { 0xe2, 0x96, 0xaf },
+    [0x95] = { 0xe2, 0x96, 0xaf },
+    [0x96] = { 0xe2, 0x96, 0xaf },
+    [0x97] = { 0xe2, 0x96, 0xaf },
+    [0x98] = { 0xe2, 0x96, 0xaf },
+    [0x99] = { 0xe2, 0x96, 0xaf },
+    [0x9a] = { 0xe2, 0x96, 0xaf },
+    [0x9b] = { 0xe2, 0x96, 0xaf },
+    [0x9c] = { 0xe2, 0x96, 0xaf },
+    [0x9d] = { 0xe2, 0x96, 0xaf },
+    [0x9e] = { 0xe2, 0x96, 0xaf },
+    [0x9f] = { 0xe2, 0x96, 0xaf }
+};
+
 void drawUI(Screen *screen, const UI *ui) {
     drawBufPanel(screen, &ui->bufPanel);
     drawStatusBar(screen, &ui->statusBar);
@@ -12,7 +81,7 @@ void drawUI(Screen *screen, const UI *ui) {
 static void _drawCtxLine(
     Screen *screen,
     const Ctx *ctx,
-    size_t lineIdx,
+    size_t lineNo,
     Str *outBuf,
     uint16_t lineX,
     uint16_t lineY,
@@ -25,38 +94,51 @@ static void _drawCtxLine(
 
     strClear(outBuf, maxWidth);
 
-    ptrdiff_t width = -(ptrdiff_t)scrollX;
-
     const char *tabFmt = "\xc2\xbb%*s"; // »%*s
     const char *startCutoffFmt = "<%*s";
     const char *endCutoffFmt = "%*s>";
 
+    ptrdiff_t width = 0;
     UcdCP cp = -1;
+    ptrdiff_t i = ctxIdxAt(ctx, lineNo, scrollX, (size_t *)&width);
+    ptrdiff_t lineEnd = ctxLineEnd(ctx, lineNo);
+    if (i >= lineEnd) {
+        return;
+    }
+
+    width -= scrollX; // Makes calculations easier later
+    // Put i to begin with the first character after scrollX
+    if (width < 0) {
+        i = ctxNext(ctx, i - 1, &cp);
+        width += ucdCPWidth(cp, ctx->tabStop, width + scrollX);
+    } else {
+        i--;
+    }
+
+    if (width > 0) {
+        strAppendFmt(outBuf, startCutoffFmt, width - 1, "");
+        screenSetFg(
+            screen,
+            (ScreenColor){ .col = screenColT16(61) },
+            lineX, lineY, 1
+        );
+    }
+
     for (
-        ptrdiff_t i = ctxLineNextStart(ctx, lineIdx, &cp);
-        i != -1;
-        i = ctxLineNext(ctx, i, &cp)
+        i = ctxNext(ctx, i, &cp);
+        i != -1 && i < lineEnd;
+        i = ctxNext(ctx, i, &cp)
     ) {
         uint8_t chWidth = ucdCPWidth(cp, ctx->tabStop, width + scrollX);
         width += chWidth;
 
-        if (width <= 0) {
-            continue;
-        } else if (width - chWidth < 0) {
-            // Draw a gray '<' at the start if a character is cut off
-            strAppendFmt(outBuf, startCutoffFmt, width - 1, "");
-            screenSetFg(
-                screen,
-                (ScreenColor){ .col = screenColT16(61) },
-                lineX, lineY, 1
-            );
-        } else if ((size_t)width > maxWidth) {
+        if (width > maxWidth) {
             // Draw a gray '>' at the end if a character is cut off
             // If the character is a tab it can just draw a '»'
             strAppendFmt(
                 outBuf,
                 cp == '\t' ? tabFmt : endCutoffFmt,
-                maxWidth + chWidth - width - 1, ""
+                maxWidth - (width - chWidth) - 1, ""
             );
             screenSetFg(
                 screen,
@@ -69,7 +151,19 @@ static void _drawCtxLine(
             screenSetFg(
                 screen,
                 (ScreenColor) { .col = screenColT16(61) },
-                (uint16_t)(lineX + width - chWidth), lineY, 1
+                (uint16_t)(lineX + width - chWidth), lineY, chWidth
+            );
+        } else if (cp < 32 || (cp >= 0x7f && cp <= 0x9f)) {
+            strAppendRaw(outBuf, _cSymbols[cp], _cSymbolLen);
+            screenSetFg(
+                screen,
+                (ScreenColor) { .col = screenColT16(1) },
+                (uint16_t)(lineX + width - chWidth), lineY, chWidth
+            );
+            screenSetBg(
+                screen,
+                (ScreenColor) { .col = screenColT16(62) },
+                (uint16_t)(lineX + width - chWidth), lineY, chWidth
             );
         } else {
             UcdCh8 buf[4];
@@ -78,7 +172,7 @@ static void _drawCtxLine(
             strAppend(outBuf, &sv);
         }
 
-        if ((size_t)width == maxWidth) {
+        if (width == maxWidth) {
             break;
         }
     }

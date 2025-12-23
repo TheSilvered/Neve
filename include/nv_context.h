@@ -177,8 +177,12 @@ ptrdiff_t ctxIdxAt(
 
 // Get the number of lines in the text of a context.
 size_t ctxLineCount(const Ctx *ctx);
-// Get the length of a line in characters.
-size_t ctxLineLen(const Ctx *ctx, size_t lineIdx);
+// Get the index of the fist character of line `lineNo`.
+ptrdiff_t ctxLineStart(const Ctx *ctx, size_t lineNo);
+// Get the index after the last character of line `lineNo`. This is the index
+// of the line feed for a regular line and the length of the buffer for the last
+// line.
+ptrdiff_t ctxLineEnd(const Ctx *ctx, size_t lineNo);
 
 // Get the content of the context as a string view.
 // The view is valid until the text is edited.
@@ -186,6 +190,7 @@ StrView ctxGetContent(Ctx *ctx);
 
 // Iterate over the whole content of the context.
 // Use `idx == -1` to begin iterating.
+// Use `idx - 1` to begin iterating from the character at `idx`.
 // Pass the returned value as `idx` to continue iterating.
 // The iteration ends once the return value is `-1`.
 // `idx` is the index of the first byte of the character in the text.
