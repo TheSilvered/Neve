@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define ucdHighSurrogateFirst 0xD800
 #define ucdHighSurrogateLast  0xDBFF
