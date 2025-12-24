@@ -395,6 +395,7 @@ static bool _uiBufHandleEditMode(UIBufPanel *panel, int32_t key) {
         ctxSelEnd(ctx);
         ctxRemoveBack(ctx);
         break;
+    case TermKey_CtrlC:
     case TermKey_CtrlQ:
     case TermKey_Escape:
         panel->mode = UIBufMode_Normal;
@@ -441,6 +442,7 @@ static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key) {
             ctxSelBegin(ctx);
         }
         break;
+    case TermKey_CtrlC:
     case TermKey_CtrlQ:
     case TermKey_Escape:
         ctxSelCancel(ctx);

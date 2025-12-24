@@ -153,7 +153,7 @@ Additional keybindings:
 - `[space][c]` surround the selection with curly brackets
 - `[space][q]` surround the selection with double quotes
 - `[space][t]` surround the selection with single quotes
-- `[^Q]`/`[esc]` quit selection mode
+- `[^C]`/`[^Q]`/`[esc]` quit selection mode
 
 ### Text objects
 
@@ -188,8 +188,6 @@ In immediate selection text object still work.
 
 In edit mode the key bindings available are the following:
 
-GKLC
-
 - `[^A]` move to the start of the line
 - `[^E]` move to the end of the line
 - `[^F]` move cursor foreward
@@ -208,7 +206,7 @@ GKLC
 - `[^Y]` delete to the end of the line
 - `[^H]` suspend edit mode for one command
 - `[^V]` enter a digraph
-- `[^Q]`/`[esc]` quit edit mode
+- `[^C]`/`[^Q]`/`[esc]` quit edit mode
 
 ## Other key bindings
 
