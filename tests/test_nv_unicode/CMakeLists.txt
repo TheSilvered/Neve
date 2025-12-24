@@ -1,1 +1,1 @@
-add_tests_in_directory(unicode/nv_ucd.c unicode/nv_utf.c)
+add_tests_in_directory(nv_unicode unicode/nv_ucd.c unicode/nv_utf.c)

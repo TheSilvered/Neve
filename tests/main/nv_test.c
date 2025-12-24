@@ -54,28 +54,14 @@ bool _testAssertRequire(
     return false;
 }
 
-/* ----------------------------- Program Entry ------------------------------ */
-
-int main(void) {
-    memInit();
-
-    size_t testCount;
-    Test *tests = _testGetTests(&testCount);
-
-    for (size_t i = 0; i < testCount; i++) {
-        printf("running test %s...\n", tests[i].name);
-        fflush(stdout);
-        tests[i].callback();
-
-#ifdef NV_DEBUG
-        if (memHasAllocs()) {
-            memPrintAllocs();
-            memFreeAllAllocs();
-            g_failed = true;
-        }
-#endif
+void _testCheckAllocs(void) {
+    if (memHasAllocs()) {
+        memPrintAllocs();
+        memFreeAllAllocs();
+        g_failed = true;
     }
+}
 
-    memQuit();
-    return g_failed ? 1 : 0;
+bool _testFailed(void) {
+    return g_failed;
 }

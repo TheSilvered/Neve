@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include "nv_mem.h"
 #include "nv_utils.h" // Useful inside the tests
 
 // Length of a char array
@@ -30,33 +31,37 @@ typedef struct Test {
     if (!_testAssertRequire((expr), #expr, __FILE__, __LINE__)) return; \
     } while (0)
 
-// Helper for `testAssert`
 void _testAssert(bool expr, const char *exprStr, const char *file, int line);
-// Helper for `testAssertWith`
 bool _testAssertWith(
     bool expr,
     const char *exprStr,
     const char *file,
     int line
 );
-// Helper for `testAssertRequire`
 bool _testAssertRequire(
     bool expr,
     const char *exprStr,
     const char *file,
     int line
 );
-
-// Helper function for `testList`
-Test *_testGetTests(size_t *outTestCount);
+void _testCheckAllocs(void);
+bool _testFailed(void);
 
 // Put the initializers of the tests defined in the file
 // Usage: testList(testMake(myTestFunc), { myFunc, "A name" })
-#define testList(...) \
-    static Test g_tests__[] = { __VA_ARGS__ }; \
-    Test *_testGetTests(size_t *outTestCount) { \
-        *outTestCount = sizeof(g_tests__) / sizeof(*g_tests__); \
-        return g_tests__; \
+#define testList(...)                                                          \
+    int main(void) {                                                           \
+        memInit();                                                             \
+        Test tests[] = { __VA_ARGS__ };                                        \
+        size_t testCount = sizeof(tests) / sizeof(*tests);                     \
+        for (size_t i = 0; i < testCount; i++) {                               \
+            printf("running test %s...\n", tests[i].name);                     \
+            fflush(stdout);                                                    \
+            tests[i].callback();                                               \
+            _testCheckAllocs();                                                \
+        }                                                                      \
+        memQuit();                                                             \
+        return _testFailed() ? 1 : 0;                                          \
     }
 
 #endif // !NV_TEST_H_
