@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
-#include "nv_unicode.h"
+#include "unicode/nv_utf.h"
 
 // Special keys
 typedef enum TermKey {
@@ -80,7 +80,7 @@ UcdCP termGetInput(void);
 // Get key press, returns a negative value on error.
 int32_t termGetKey(void);
 // Read from the terminal.
-int64_t termRead(UcdCh8 *buf, size_t bufSize);
+int64_t termRead(Utf8Ch *buf, size_t bufSize);
 
 /*********************************** Output ***********************************/
 

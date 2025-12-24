@@ -5,7 +5,7 @@ void test_ctxCurMoveToTextEndWithCursors(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abc\ndef";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 0);
     ctxCurAdd(&ctx, 1);
@@ -28,7 +28,7 @@ void test_ctxCurMoveToTextEndNoCursors(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abc\ndef";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurMoveToTextEnd(&ctx);
 

@@ -5,7 +5,7 @@ void test_ctxCurAdd(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcde";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 3);
     testAssert(ctx.cursors.len == 1);

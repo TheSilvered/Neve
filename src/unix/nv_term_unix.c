@@ -10,7 +10,7 @@
 #include "nv_error.h"
 #include "nv_escapes.h"
 #include "nv_term.h"
-#include "nv_unicode.h"
+#include "unicode/nv_utf.h"
 #include "nv_utils.h"
 
 static struct termios g_origTermios = { 0 };
@@ -56,7 +56,7 @@ void termQuit(void) {
 // Input
 
 UcdCP termGetInput(void) {
-    UcdCh8 ch = 0;
+    Utf8Ch ch = 0;
 
     if (read(STDIN_FILENO, &ch, 1) < 0) {
         errSetErrno();
@@ -66,8 +66,8 @@ UcdCP termGetInput(void) {
     }
 
     // Read the full UTF-8 character
-    UcdCh8 chBytes[4] = { ch, 0, 0, 0 };
-    uint8_t chLen = ucdCh8RunLen(ch);
+    Utf8Ch chBytes[4] = { ch, 0, 0, 0 };
+    uint8_t chLen = utf8ChRunLen(ch);
 
     // Do one less iteration as we already have the first byte
     for (size_t i = 1; i < chLen; i++) {
@@ -82,10 +82,10 @@ UcdCP termGetInput(void) {
         chBytes[i] = ch;
     }
 
-    return ucdCh8ToCP(chBytes);
+    return utf8ChToCP(chBytes);
 }
 
-int64_t termRead(UcdCh8 *buf, size_t bufSize) {
+int64_t termRead(Utf8Ch *buf, size_t bufSize) {
     ssize_t res = read(STDIN_FILENO, buf, bufSize);
     if (res < 0) {
         errSetErrno();

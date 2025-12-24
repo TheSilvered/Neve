@@ -3,7 +3,7 @@
 
 void test_strViewNextEmpty(void) {
     StrView sv = {
-        .buf = (const UcdCh8 *)"",
+        .buf = (const Utf8Ch *)"",
         .len = 0
     };
     UcdCP cp;
@@ -13,7 +13,7 @@ void test_strViewNextEmpty(void) {
 
 void test_strViewNextAscii(void) {
     StrView sv = {
-        .buf = (const UcdCh8 *)"abc",
+        .buf = (const Utf8Ch *)"abc",
         .len = 3
     };
     UcdCP cp;
@@ -29,7 +29,7 @@ void test_strViewNextAscii(void) {
 
 void test_strViewNextUTF8(void) {
     StrView sv = {
-        .buf = (const UcdCh8 *)"\x00\xc2\x80\xe0\xa0\x80\xf0\x90\x80\x80",
+        .buf = (const Utf8Ch *)"\x00\xc2\x80\xe0\xa0\x80\xf0\x90\x80\x80",
         .len = 10
     };
     UcdCP cp;

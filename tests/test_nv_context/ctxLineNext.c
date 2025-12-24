@@ -6,7 +6,7 @@ void test_ctxLineNextFirst(void) {
     ctxInit(&ctx, true);
     const char s[] = "ab\ncde\n\nef";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     UcdCP ch;
     ptrdiff_t i = ctxLineNextStart(&ctx, 0, &ch);
@@ -29,7 +29,7 @@ void test_ctxLineNextMiddle(void) {
     ctxInit(&ctx, true);
     const char s[] = "ab\ncde\n\nef";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     UcdCP ch;
     ptrdiff_t i = ctxLineNextStart(&ctx, 1, &ch);
@@ -56,7 +56,7 @@ void test_ctxLineNextEmpty(void) {
     ctxInit(&ctx, true);
     const char s[] = "ab\ncde\n\nef";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     UcdCP ch;
     ptrdiff_t i = ctxLineNextStart(&ctx, 2, &ch);
@@ -71,7 +71,7 @@ void test_ctxLineNextLast(void) {
     ctxInit(&ctx, true);
     const char s[] = "ab\ncde\n\nef";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     UcdCP ch;
     ptrdiff_t i = ctxLineNextStart(&ctx, 3, &ch);

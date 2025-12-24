@@ -18,7 +18,7 @@ void test_ctxPrevAscii(void) {
     ctxInit(&ctx, true);
     const char s[] = "abcd";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     UcdCP cp;
     ptrdiff_t i = ctxPrev(&ctx, -1, &cp);
@@ -45,7 +45,7 @@ void test_ctxPrevUTF8(void) {
     ctxInit(&ctx, true);
     const char s[] = "a\xc3\xa8\xf0\x9f\x98\x8a\xe4\xb8\x96\xe7\x95\x8c";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     UcdCP cp;
     ptrdiff_t i = ctxPrev(&ctx, -1, &cp);

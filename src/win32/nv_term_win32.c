@@ -11,7 +11,7 @@
 
 #include "nv_error.h"
 #include "nv_term.h"
-#include "nv_unicode.h"
+#include "unicode/nv_utf.h"
 #include "nv_utils.h"
 
 static HANDLE g_consoleInput = INVALID_HANDLE_VALUE;
@@ -103,7 +103,7 @@ void termQuit(void) {
 
 // Input
 
-static int getCh(UcdCh16 *outCh) {
+static int getCh(Utf16Ch *outCh) {
     if (g_readTimeoutMs == 0) {
         DWORD charsRead;
         if (ReadConsoleW(g_consoleInput, outCh, 1, &charsRead, NULL) == FALSE) {
@@ -123,7 +123,7 @@ static int getCh(UcdCh16 *outCh) {
             continue;
         case KEY_EVENT:
             if (event->Event.KeyEvent.bKeyDown) {
-                *outCh = (UcdCh16)event->Event.KeyEvent.uChar.UnicodeChar;
+                *outCh = (Utf16Ch)event->Event.KeyEvent.uChar.UnicodeChar;
                 return 1;
             } else {
                 continue;
@@ -168,7 +168,7 @@ static int getCh(UcdCh16 *outCh) {
 }
 
 UcdCP termGetInput(void) {
-    UcdCh16 ch = 0;
+    Utf16Ch ch = 0;
 
     if (getCh(&ch) < 0) {
         errSetErrno();
@@ -178,8 +178,8 @@ UcdCP termGetInput(void) {
     }
 
     // Read the full UTF-16 character
-    UcdCh16 chBytes[2] = { ch, 0 };
-    uint8_t chLen = ucdCh16RunLen(ch);
+    Utf16Ch chBytes[2] = { ch, 0 };
+    uint8_t chLen = utf16ChRunLen(ch);
     if (chLen == 1) {
         return ch;
     } else if (chLen == 2) {
@@ -190,13 +190,13 @@ UcdCP termGetInput(void) {
             return (UcdCP)chBytes[0];
         }
         chBytes[1] = ch;
-        return ucdCh16ToCP(chBytes);
+        return utf16ChToCP(chBytes);
     } else {
         return 0;
     }
 }
 
-int64_t termRead(UcdCh8 *buf, size_t bufSize) {
+int64_t termRead(Utf8Ch *buf, size_t bufSize) {
     wchar_t readBuf[4096] = { 0 };
     size_t toRead = nvMin(bufSize, nvArrlen(readBuf));
     size_t idx = 0;
@@ -218,14 +218,14 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
         charsRead += offsetOutBuf;
 
         // If the read happened to stop in the middle of a code point
-        if (charsRead > 1 && ucdCh16RunLen(readBuf[charsRead - 1]) == 2) {
+        if (charsRead > 1 && utf16ChRunLen(readBuf[charsRead - 1]) == 2) {
             offsetOutBuf = 1;
             charsRead -= 1;
         } else {
             offsetOutBuf = 0;
         }
 
-        idx += ucdCh16StrToCh8Str(
+        idx += utf16ToUtf8(
             readBuf,
             charsRead,
             buf + idx,
@@ -244,7 +244,7 @@ int64_t termRead(UcdCh8 *buf, size_t bufSize) {
     }
 
     if (offsetOutBuf) {
-        idx += ucdCh16StrToCh8Str(readBuf, 1, buf + idx, bufSize - idx);
+        idx += utf16ToUtf8(readBuf, 1, buf + idx, bufSize - idx);
     }
 
     return idx;

@@ -5,7 +5,7 @@ void test_ctxCurMoveLineStartSingleLine(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcd";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 0);
     ctxCurAdd(&ctx, 1);
@@ -26,7 +26,7 @@ void test_ctxCurMoveLineStartMultiline(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "ab\ncde\nfg";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 0);
     ctxCurAdd(&ctx, 1);

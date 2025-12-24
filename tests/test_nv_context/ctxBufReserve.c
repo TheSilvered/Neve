@@ -29,7 +29,7 @@ void test_ctxBufReserveAlreadySatisfied(void) {
 
     size_t prevCap = buf.cap;
     size_t prevLen = buf.len;
-    UcdCh8 *prevBytes = buf.bytes;
+    Utf8Ch *prevBytes = buf.bytes;
 
     _ctxBufReserve(&buf, amount);
 

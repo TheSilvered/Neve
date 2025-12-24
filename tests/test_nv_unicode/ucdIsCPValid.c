@@ -1,5 +1,5 @@
 #include "nv_test.h"
-#include "nv_unicode.h"
+#include "unicode/nv_utf.h"
 
 void test_ucdIsCPValidU0000(void) {
     testAssert(ucdIsCPValid(0x0000));

@@ -97,24 +97,24 @@ BufHandle bufInitEmpty(BufMap *map) {
     return handle;
 }
 
-size_t _bufGetUTF8Part(UcdCh8 *buf, size_t len) {
+size_t _bufGetUTF8Part(Utf8Ch *buf, size_t len) {
     if (len == 0) {
         return 0;
     }
     // Find the last start byte and check if it is complete
     size_t idx = len - 1;
-    while (idx > 0 && !ucdCh8IsStart(buf[idx])) {
+    while (idx > 0 && !utf8ChIsStart(buf[idx])) {
         idx--;
     }
-    uint8_t runLen = ucdCh8RunLen(buf[idx]);
+    uint8_t runLen = utf8ChRunLen(buf[idx]);
     // If there was no valid start byte or there were extra invalid bytes at
     // the end
     if (runLen == 0 || idx + runLen < len) {
         return 0;
     } else if (idx + runLen == len) {
-        return ucdCh8Check(buf, len) ? len : 0;
+        return utf8Check(buf, len) ? len : 0;
     } else {
-        return ucdCh8Check(buf, idx) ? idx : 0;
+        return utf8Check(buf, idx) ? idx : 0;
     }
 }
 

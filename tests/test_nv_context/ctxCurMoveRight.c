@@ -5,7 +5,7 @@ void test_ctxCurMoveRightAscii(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcd";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 2);
     ctxCurAdd(&ctx, 3);
@@ -23,7 +23,7 @@ void test_ctxCurMoveRightMultiline(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "ab\ncd\n";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 1);
     ctxCurAdd(&ctx, 2);
@@ -44,7 +44,7 @@ void text_ctxCurMoveRightUnicode(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "\xc3\xa8\xf0\x9f\x98\x8a\ta";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 0);
     ctxCurAdd(&ctx, 2);

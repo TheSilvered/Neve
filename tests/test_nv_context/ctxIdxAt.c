@@ -6,7 +6,7 @@ void test_ctxIdxAtNoLineRef(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "a\n\td";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     size_t col;
     testAssert(ctxIdxAt(&ctx, 0, 0, &col) == 0);
@@ -40,7 +40,7 @@ void test_ctxIdxAtWithLineRef(void) {
     ctxInit(&ctx, true);
     // s = "aè😊\n\td😊"
     const char s[] = "a\xc3\xa8\xf0\x9f\x98\x8a\n\td\xf0\x9f\x98\x8a";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     size_t col;
     testAssert(ctxIdxAt(&ctx, 0, 0, &col) == 0);

@@ -5,21 +5,21 @@
 #include "nv_context.h"
 #include "nv_array.h"
 #include "nv_mem.h"
-#include "nv_unicode.h"
-#include "nv_udb.h"
+#include "unicode/nv_utf.h"
+#include "unicode/nv_ucd.h"
 
 #ifndef _lineRefMaxGap
 #define _lineRefMaxGap 4096
 #endif // !_lineRefMaxGap
 
 // Get from the gap buffer
-static inline UcdCh8 *_ctxBufGet(const CtxBuf *buf, size_t idx);
+static inline Utf8Ch *_ctxBufGet(const CtxBuf *buf, size_t idx);
 // Reserve space in the gap buffer
 static void _ctxBufReserve(CtxBuf *buf, size_t amount);
 // Shrkin if too much space is empty
 static void _ctxBufShrink(CtxBuf *buf);
 // Insert at the gapIdx and move it
-static void _ctxBufInsert(CtxBuf *buf, const UcdCh8 *text, size_t len);
+static void _ctxBufInsert(CtxBuf *buf, const Utf8Ch *text, size_t len);
 // Remove before the gap index and move it
 static void _ctxBufRemove(CtxBuf *buf, size_t len);
 // Change the gap index
@@ -35,7 +35,7 @@ static void _ctxReplace(
     Ctx *ctx,
     size_t start,
     size_t end,
-    const UcdCh8 *buf,
+    const Utf8Ch *buf,
     size_t len
 );
 
@@ -82,7 +82,7 @@ void ctxDestroy(Ctx *ctx) {
     ctxInit(ctx, ctx->multiline);
 }
 
-static inline UcdCh8 *_ctxBufGet(const CtxBuf *buf, size_t idx) {
+static inline Utf8Ch *_ctxBufGet(const CtxBuf *buf, size_t idx) {
     assert(idx < buf->len);
     if (idx >= buf->gapIdx) {
         size_t gapSize = buf->cap - buf->len;
@@ -137,7 +137,7 @@ static void _ctxBufShrink(CtxBuf *buf) {
     buf->cap = newCap;
 }
 
-static void _ctxBufInsert(CtxBuf *buf, const UcdCh8 *text, size_t len) {
+static void _ctxBufInsert(CtxBuf *buf, const Utf8Ch *text, size_t len) {
     _ctxBufReserve(buf, len);
     memcpy(buf->bytes + buf->gapIdx, text, len * sizeof(*text));
     buf->gapIdx += len;
@@ -154,7 +154,7 @@ static void _ctxBufRemove(CtxBuf *buf, size_t len) {
 
     assert(
         buf->gapIdx == buf->len
-        || ucdCh8IsStart(*_ctxBufGet(buf, buf->gapIdx))
+        || utf8ChIsStart(*_ctxBufGet(buf, buf->gapIdx))
     );
 
     _ctxBufShrink(buf);
@@ -164,7 +164,7 @@ static void _ctxBufSetGapIdx(CtxBuf *buf, size_t gapIdx) {
     assert(gapIdx <= buf->len);
     assert(
         gapIdx == buf->len
-        || ucdCh8IsStart(*_ctxBufGet(buf, gapIdx))
+        || utf8ChIsStart(*_ctxBufGet(buf, gapIdx))
     );
     if (buf->gapIdx == gapIdx) {
         return;
@@ -242,7 +242,7 @@ static ptrdiff_t _ctxGetIdxRefBlock(const Ctx *ctx, size_t idx) {
     return lo - 1;
 }
 
-static ptrdiff_t ctxLineStart(const Ctx *ctx, size_t lineNo) {
+ptrdiff_t ctxLineStart(const Ctx *ctx, size_t lineNo) {
     if (lineNo == 0) {
         return 0;
     }
@@ -278,7 +278,7 @@ static ptrdiff_t ctxLineStart(const Ctx *ctx, size_t lineNo) {
     return -1;
 }
 
-static ptrdiff_t ctxLineEnd(const Ctx *ctx, size_t lineNo) {
+ptrdiff_t ctxLineEnd(const Ctx *ctx, size_t lineNo) {
     ptrdiff_t refsIdx = _ctxGetLineRefBlock(ctx, lineNo + 1);
     size_t i;
     size_t lineCount;
@@ -440,13 +440,13 @@ ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     if (idx < 0) {
         idx = 0;
     } else if ((size_t)idx < ctx->_buf.len) {
-        uint8_t offset = ucdCh8RunLen(*_ctxBufGet(&ctx->_buf, idx));
+        uint8_t offset = utf8ChRunLen(*_ctxBufGet(&ctx->_buf, idx));
         // If idx is not on a character boundary find the next one
         if (offset == 0) {
             idx++;
             while (
                 (size_t)idx < ctx->_buf.len
-                && !ucdCh8IsStart(*_ctxBufGet(&ctx->_buf, idx))
+                && !utf8ChIsStart(*_ctxBufGet(&ctx->_buf, idx))
             ) {
                 idx++;
             }
@@ -463,7 +463,7 @@ ptrdiff_t ctxNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     }
 
     if (outCP != NULL) {
-        *outCP = ucdCh8ToCP(_ctxBufGet(&ctx->_buf, idx));
+        *outCP = utf8ChToCP(_ctxBufGet(&ctx->_buf, idx));
     }
     return idx;
 }
@@ -475,8 +475,8 @@ ptrdiff_t ctxPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
         idx = ctx->_buf.len;
     }
     idx--;
-    UcdCh8 *chPtr = _ctxBufGet(&ctx->_buf, idx);
-    while (idx >= 0 && !ucdCh8IsStart(*chPtr)) {
+    Utf8Ch *chPtr = _ctxBufGet(&ctx->_buf, idx);
+    while (idx >= 0 && !utf8ChIsStart(*chPtr)) {
         idx--;
         chPtr--;
     }
@@ -485,7 +485,7 @@ ptrdiff_t ctxPrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     }
 
     if (outCP != NULL) {
-        *outCP = ucdCh8ToCP(chPtr);
+        *outCP = utf8ChToCP(chPtr);
     }
     return idx;
 
@@ -505,7 +505,7 @@ ptrdiff_t ctxLineNextStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
         goto noLine;
     }
     if (outCP) {
-        *outCP = ucdCh8ToCP(_ctxBufGet(&ctx->_buf, i));
+        *outCP = utf8ChToCP(_ctxBufGet(&ctx->_buf, i));
     }
     return i;
 
@@ -522,16 +522,16 @@ ptrdiff_t ctxLinePrevStart(const Ctx *ctx, size_t lineIdx, UcdCP *outCP) {
         goto noLine;
     }
     i--;
-    UcdCh8 *chPtr = _ctxBufGet(&ctx->_buf, i);
+    Utf8Ch *chPtr = _ctxBufGet(&ctx->_buf, i);
     if (*chPtr == '\n') {
         goto noLine;
     }
-    while (i >= 0 && !ucdCh8IsStart(*chPtr)) {
+    while (i >= 0 && !utf8ChIsStart(*chPtr)) {
         i--;
         chPtr--;
     }
     if (outCP) {
-        *outCP = ucdCh8ToCP(chPtr);
+        *outCP = utf8ChToCP(chPtr);
     }
     return i;
 
@@ -546,13 +546,13 @@ ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     if (idx < 0) {
         idx = 0;
     } else if ((size_t)idx < ctx->_buf.len) {
-        uint8_t offset = ucdCh8RunLen(*_ctxBufGet(&ctx->_buf, idx));
+        uint8_t offset = utf8ChRunLen(*_ctxBufGet(&ctx->_buf, idx));
         // If idx is not on a character boundary find the next one
         if (offset == 0) {
             idx++;
             while (
                 (size_t)idx < ctx->_buf.len
-                && !ucdCh8IsStart(*_ctxBufGet(&ctx->_buf, idx))
+                && !utf8ChIsStart(*_ctxBufGet(&ctx->_buf, idx))
             ) {
                 idx++;
             }
@@ -565,14 +565,14 @@ ptrdiff_t ctxLineNext(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
         goto endReached;
     }
 
-    UcdCh8 *chPtr = _ctxBufGet(&ctx->_buf, idx);
+    Utf8Ch *chPtr = _ctxBufGet(&ctx->_buf, idx);
 
     if (*chPtr == '\n') {
         goto endReached;
     }
 
     if (outCP != NULL) {
-        *outCP = ucdCh8ToCP(chPtr);
+        *outCP = utf8ChToCP(chPtr);
     }
     return idx;
 
@@ -591,8 +591,8 @@ ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
         goto endReached;
     }
     idx--;
-    UcdCh8 *chPtr = _ctxBufGet(&ctx->_buf, idx);
-    while (idx >= 0 && !ucdCh8IsStart(*chPtr)) {
+    Utf8Ch *chPtr = _ctxBufGet(&ctx->_buf, idx);
+    while (idx >= 0 && !utf8ChIsStart(*chPtr)) {
         idx--;
         chPtr = _ctxBufGet(&ctx->_buf, idx);
     }
@@ -601,7 +601,7 @@ ptrdiff_t ctxLinePrev(const Ctx *ctx, ptrdiff_t idx, UcdCP *outCP) {
     }
 
     if (outCP != NULL) {
-        *outCP = ucdCh8ToCP(chPtr);
+        *outCP = utf8ChToCP(chPtr);
     }
     return idx;
 
@@ -616,7 +616,7 @@ static UcdCP _ctxGetChAfter(const Ctx *ctx, size_t idx) {
     if (idx >= ctx->_buf.len) {
         return -1;
     }
-    return ucdCh8ToCP(_ctxBufGet(&ctx->_buf, idx));
+    return utf8ChToCP(_ctxBufGet(&ctx->_buf, idx));
 }
 
 static UcdCP _ctxGetChBefore(const Ctx *ctx, size_t idx) {
@@ -882,7 +882,7 @@ static void _ctxReplace(
     Ctx *ctx,
     size_t start,
     size_t end,
-    const UcdCh8 *data,
+    const Utf8Ch *data,
     size_t len
 ) {
     assert(start <= end);
@@ -984,8 +984,8 @@ static void _ctxReplace(
     ptrdiff_t lineEnd = ctxLineEnd(ctx, line);
     assert(lineEnd >= 0);
     if (tabStop != 0 && colDiff % tabStop != 0 && end + lenDiff < buf->len) {
-        UcdCh8 *s = _ctxBufGet(buf, end + lenDiff);
-        UcdCh8 *p = memchr(s, '\t', lineEnd - end - lenDiff);
+        Utf8Ch *s = _ctxBufGet(buf, end + lenDiff);
+        Utf8Ch *p = memchr(s, '\t', lineEnd - end - lenDiff);
         if (p != NULL) {
             tabIdx = p - s + end + lenDiff;
         }
@@ -1011,7 +1011,7 @@ static void _ctxReplace(
     _ctxReplaceUpdateCursors(ctx, start, end, lenDiff);
 }
 
-void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
+void ctxAppend(Ctx *ctx, const Utf8Ch *data, size_t len) {
     if (len == 0) {
         return;
     }
@@ -1037,7 +1037,7 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
         // Do not insert blocks in the middle of a UTF8 sequence
         if (
             ++lastBlockSize < _lineRefMaxGap
-            || (i + 1 < len && !ucdCh8IsStart(data[i + 1]))
+            || (i + 1 < len && !utf8ChIsStart(data[i + 1]))
         ) {
             continue;
         }
@@ -1058,11 +1058,11 @@ void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len) {
     }
 }
 
-typedef Arr(const UcdCh8 *) InsertLines;
+typedef Arr(const Utf8Ch *) InsertLines;
 
 static void _ctxInsertRepSels(
     Ctx *ctx,
-    const UcdCh8 *data,
+    const Utf8Ch *data,
     size_t len,
     InsertLines *lines
 ) {
@@ -1093,7 +1093,7 @@ static void _ctxInsertRepSels(
 
 static void _ctxInsertCursors(
     Ctx *ctx,
-    const UcdCh8 *data,
+    const Utf8Ch *data,
     size_t len,
     InsertLines *lines
 ) {
@@ -1124,7 +1124,7 @@ static void _ctxInsertCursors(
     }
 }
 
-void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
+void ctxInsert(Ctx *ctx, const Utf8Ch *data, size_t len) {
     bool wasSelecting = ctx->_selecting;
     if (ctx->_selecting) {
         ctxSelEnd(ctx);
@@ -1143,8 +1143,8 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
 
     InsertLines lines = { 0 };
     arrAppend(&lines, data);
-    const UcdCh8 *p = data;
-    const UcdCh8 *end = data + len;
+    const Utf8Ch *p = data;
+    const Utf8Ch *end = data + len;
     while (p < end) {
         if (*p++ == '\n') {
             arrAppend(&lines, p);
@@ -1161,22 +1161,22 @@ void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len) {
     arrClear(&lines);
 }
 
-static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, UcdCh8 *outBuf) {
+static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, Utf8Ch *outBuf) {
     if (cp < 0 || cp > ucdCPMax) {
         return 0;
     }
 
-    UdbCPInfo info = udbGetCPInfo(cp);
+    UcdCPInfo info = ucdGetCPInfo(cp);
     // Do not insert control characters
     if (
         (cp != '\n' || !allowLF)
         && cp != '\t'
-        && UdbMajorCategory(info.category) == UdbCategory_C
+        && UcdMajorCategory(info.category) == UcdCategory_C
     ) {
         return 0;
     }
 
-    return ucdCh8FromCP(cp, outBuf);
+    return utf8FromCP(cp, outBuf);
 }
 
 void ctxInsertCP(Ctx *ctx, UcdCP cp) {
@@ -1184,7 +1184,7 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
         return;
     }
 
-    UcdCh8 buf[4];
+    Utf8Ch buf[4];
     size_t len = cpToUTF8Filtered_(cp, ctx->multiline, buf);
     if (len == 0) {
         return;
@@ -1231,13 +1231,13 @@ void ctxRemoveFwd(Ctx *ctx) {
 
 void ctxInsertLineAbove(Ctx *ctx) {
     ctxCurMoveToLineStart(ctx);
-    ctxInsert(ctx, (const UcdCh8 *)"\n", 1);
+    ctxInsert(ctx, (const Utf8Ch *)"\n", 1);
     ctxCurMoveBack(ctx);
 }
 
 void ctxInsertLineBelow(Ctx *ctx) {
     ctxCurMoveToLineEnd(ctx);
-    ctxInsert(ctx, (const UcdCh8 *)"\n", 1);
+    ctxInsert(ctx, (const Utf8Ch *)"\n", 1);
 }
 
 size_t ctxLineCount(const Ctx *ctx) {

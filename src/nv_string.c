@@ -92,10 +92,10 @@ nvUnixFmt(2, 3) void strAppendFmt(Str *str, nvWinFmt const char *fmt, ...) {
     va_start(args, fmt);
 
     size_t len = vsnprintf(buf, nvArrlen(buf), fmt, args);
-    strAppendRaw(str, (const UcdCh8 *)buf, len);
+    strAppendRaw(str, (const Utf8Ch *)buf, len);
 }
 
-void strAppendRaw(Str *str, const UcdCh8 *buf, size_t len) {
+void strAppendRaw(Str *str, const Utf8Ch *buf, size_t len) {
     if (len == 0) {
         return;
     }
@@ -168,13 +168,13 @@ char *strAsC(const Str *str) {
 }
 
 void strViewInitFromC(StrView *sv, const char *cStr) {
-    sv->buf = (const UcdCh8 *)cStr;
+    sv->buf = (const Utf8Ch *)cStr;
     sv->len = strlen(cStr);
 }
 
 StrView strViewMakeFromC(const char *cStr) {
     StrView sv = {
-        .buf = (const UcdCh8 *)cStr,
+        .buf = (const Utf8Ch *)cStr,
         .len = strlen(cStr)
     };
     return sv;
@@ -256,20 +256,20 @@ ptrdiff_t strViewNext(const StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
     } else if (idx < 0) {
         idx = 0;
     } else {
-        idx += ucdCh8RunLen(sv->buf[idx]);
+        idx += utf8ChRunLen(sv->buf[idx]);
     }
 
     if (idx >= (ptrdiff_t)sv->len) {
         goto endReached;
     }
-    uint8_t runLen = ucdCh8RunLen(sv->buf[idx]);
+    uint8_t runLen = utf8ChRunLen(sv->buf[idx]);
 
     if (runLen == 0 || (size_t)idx + runLen > sv->len) {
         goto endReached;
     }
 
     if (outCP != NULL) {
-        *outCP = ucdCh8ToCP(sv->buf + idx);
+        *outCP = utf8ChToCP(sv->buf + idx);
     }
     return idx;
 
@@ -287,18 +287,18 @@ ptrdiff_t strViewPrev(const StrView *sv, ptrdiff_t idx, UcdCP *outCP) {
         idx = sv->len;
     }
     idx--;
-    while (idx >= 0 && ucdCh8RunLen(sv->buf[idx]) == 0) {
+    while (idx >= 0 && utf8ChRunLen(sv->buf[idx]) == 0) {
         idx--;
     }
     if (idx < 0) {
         goto endReached;
     }
-    uint8_t runLen = ucdCh8RunLen(sv->buf[idx]);
+    uint8_t runLen = utf8ChRunLen(sv->buf[idx]);
     if (runLen == 0 || (size_t)idx + runLen > sv->len) {
         goto endReached;
     }
     if (outCP != NULL) {
-        *outCP = ucdCh8ToCP(sv->buf + idx);
+        *outCP = utf8ChToCP(sv->buf + idx);
     }
     return idx;
 
@@ -310,26 +310,26 @@ endReached:
 }
 
 #ifdef _WIN32
-#include "nv_unicode.h"
+#include "unicode/nv_utf.h"
 
 static char g_chBuf[4096];
 static wchar_t g_wchBuf[4096];
 
 const wchar_t *tempWStr(const char *str) {
-    (void)ucdCh8StrToCh16Str(
-        (const UcdCh8 *)str,
+    (void)utf8ToUtf16(
+        (const Utf8Ch *)str,
         strlen(str),
-        (UcdCh16 *)g_wchBuf,
+        (Utf16Ch *)g_wchBuf,
         nvArrlen(g_wchBuf)
     );
     return g_wchBuf;
 }
 
 const char *tempStr(const wchar_t *str) {
-    (void)ucdCh16StrToCh8Str(
-        (const UcdCh16 *)str,
+    (void)utf16ToUtf8(
+        (const Utf16Ch *)str,
         wcslen(str),
-        (UcdCh8 *)g_chBuf,
+        (Utf8Ch *)g_chBuf,
         nvArrlen(g_chBuf)
     );
     return g_chBuf;

@@ -2,14 +2,14 @@
 #define NV_STRING_H_
 
 #include <stddef.h>
-#include "nv_unicode.h"
+#include "unicode/nv_utf.h"
 #include "nv_utils.h"
 
 // A heap-allocated string.
 // Any function that expects a `StrView *` also accepts a `Str *`.
 // Use `strAsC` instead of reading the contents of `buf` directly.
 typedef struct Str {
-    UcdCh8 *buf;
+    Utf8Ch *buf;
     size_t len;
     size_t cap;
 } Str;
@@ -17,7 +17,7 @@ typedef struct Str {
 // A string view (does not own the memory).
 // `buf` is not guaranteed to end with a NUL character.
 typedef struct StrView {
-    const UcdCh8 *buf;
+    const Utf8Ch *buf;
     size_t len;
 } StrView;
 
@@ -52,7 +52,7 @@ void strAppend(Str *str, const StrView *sv);
 // Format a string and append it
 nvUnixFmt(2, 3) void strAppendFmt(Str *str, nvWinFmt const char *fmt, ...);
 // Append a buffer to a string
-void strAppendRaw(Str *str, const UcdCh8 *buf, size_t len);
+void strAppendRaw(Str *str, const Utf8Ch *buf, size_t len);
 // Append `ch` to the end of the string `count` times.
 void strRepeat(Str *str, char ch, size_t count);
 // Pop a number of characters from the end of a string.

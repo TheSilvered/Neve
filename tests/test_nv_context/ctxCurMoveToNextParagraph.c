@@ -5,7 +5,7 @@ void test_ctxCurMoveToNextParagraph(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "ab\ncd\n\nef\n\n\n\n\ngh";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 0);
     ctxCurMoveToNextParagraph(&ctx);

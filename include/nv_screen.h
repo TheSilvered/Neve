@@ -65,7 +65,7 @@ typedef struct {
 
 typedef struct ScreenRows {
     StrBuf *sBufs;
-    UcdCh8 *buffer;
+    Utf8Ch *buffer;
 } ScreenRows;
 
 // The painting surface.
@@ -91,7 +91,7 @@ void screenResize(Screen *screen, uint16_t w, uint16_t h);
 void screenWrite(
     Screen *screen,
     uint16_t x, uint16_t y,
-    const UcdCh8 *str, size_t len
+    const Utf8Ch *str, size_t len
 );
 
 // Write a string to the screen using printf-style formatting.

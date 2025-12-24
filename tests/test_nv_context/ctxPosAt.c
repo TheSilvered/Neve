@@ -6,7 +6,7 @@ void test_ctxPosAtNoLineRef(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "ab\nc";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     size_t line, col;
     ctxPosAt(&ctx, 0, &line, &col);
@@ -41,8 +41,8 @@ void test_ctxPosAtWithLineRef(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "ab\ncd\ne";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     size_t line, col;
     ctxPosAt(&ctx, 0, &line, &col);

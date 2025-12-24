@@ -30,11 +30,11 @@ class TableGenerator:
         line = ""
         for s in data_strings:
             if self.line_length(line + f" {s},") > self.max_line_length and line:
-                self.writeln(line)
+                self.writeln(line[1:])  # remove extra space at the front
                 line = ""
             line += f" {s},"
         if line:
-            self.writeln(line)
+            self.writeln(line[1:])
         self.dedent()
         self.writeln("};")
         self.writeln()

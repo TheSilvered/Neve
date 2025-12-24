@@ -4,7 +4,7 @@
 void test_ctxBufShrinkNoEffect(void) {
     CtxBuf buf = { 0 };
     const char s[] = "abcd";
-    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufInsert(&buf, (Utf8Ch *)s, chArrLen(s));
 
     _ctxBufShrink(&buf);
     testAssert(buf.len == 4);
@@ -30,7 +30,7 @@ void test_ctxShrkinkFull(void) {
     const char s[] = "abcd";
 
     _ctxBufReserve(&buf, 1000);
-    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufInsert(&buf, (Utf8Ch *)s, chArrLen(s));
     _ctxBufSetGapIdx(&buf, 2);
 
     size_t prevCap = buf.cap;

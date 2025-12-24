@@ -6,7 +6,7 @@ void test_ctxCurRemove(void) {
     ctxInit(&ctx, true);
     ctxInit(&ctx, true);
     const char s[] = "abcdefghijklmnop";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 2);
     ctxCurAdd(&ctx, 4);

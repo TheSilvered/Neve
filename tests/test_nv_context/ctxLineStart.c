@@ -6,7 +6,7 @@ void test_ctxLineStartNoLineRef(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "ab\ncd\ne";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     testAssert(ctxLineStart(&ctx, 0) == 0);
     testAssert(ctxLineStart(&ctx, 1) == 3);
@@ -20,8 +20,8 @@ void test_ctxLineStartWithLineRef(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "ab\ncd\ne";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     testAssert(ctxLineStart(&ctx, 0) == 0);
     testAssert(ctxLineStart(&ctx, 1) == 3);

@@ -18,7 +18,7 @@ void test_ctxLineNextStartOneLine(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefg";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     UcdCP cp = 0;
     ptrdiff_t i = ctxLineNextStart(&ctx, 0, &cp);
@@ -36,7 +36,7 @@ void test_ctxLineNextStartMultiLine(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "ab\ncde\n\nfg";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     UcdCP cp = 0;
     ptrdiff_t i = ctxLineNextStart(&ctx, 0, &cp);

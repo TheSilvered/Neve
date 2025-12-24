@@ -5,7 +5,7 @@
 #include "nv_utils.h"
 
 static const size_t _cSymbolLen = 3;
-static const UcdCh8 _cSymbols[][3] = {
+static const Utf8Ch _cSymbols[][3] = {
     [0x00] = { 0xe2, 0x90, 0x80 },
     [0x01] = { 0xe2, 0x90, 0x81 },
     [0x02] = { 0xe2, 0x90, 0x82 },
@@ -166,8 +166,8 @@ static void _drawCtxLine(
                 (uint16_t)(lineX + width - chWidth), lineY, chWidth
             );
         } else {
-            UcdCh8 buf[4];
-            size_t len = ucdCh8FromCP(cp, buf);
+            Utf8Ch buf[4];
+            size_t len = utf8FromCP(cp, buf);
             StrView sv = { buf, len };
             strAppend(outBuf, &sv);
         }

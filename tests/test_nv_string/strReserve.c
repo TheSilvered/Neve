@@ -49,7 +49,7 @@ void test_strReservePreventsRealloc(void) {
     strReserve(&str, reserve);
     testAssert(str.cap >= reserve + cStrLen);
 
-    UcdCh8 *prevBuf = str.buf;
+    Utf8Ch *prevBuf = str.buf;
 
     strAppendC(&str, longCStr);
     testAssert(strcmp(strAsC(&str), result) == 0);

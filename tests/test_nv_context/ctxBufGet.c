@@ -5,7 +5,7 @@ void test_ctxBufGetBeforeGap(void) {
     CtxBuf buf = { 0 };
     const char s[] = "abcd";
 
-    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufInsert(&buf, (Utf8Ch *)s, chArrLen(s));
     _ctxBufSetGapIdx(&buf, 2);
 
     testAssert(*_ctxBufGet(&buf, 0) == 'a');
@@ -18,7 +18,7 @@ void test_ctxBufGetAfterGap(void) {
     CtxBuf buf = { 0 };
     const char s[] = "abcd";
 
-    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufInsert(&buf, (Utf8Ch *)s, chArrLen(s));
     _ctxBufSetGapIdx(&buf, 2);
 
     testAssert(*_ctxBufGet(&buf, 2) == 'c');

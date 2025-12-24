@@ -5,7 +5,7 @@
 #define escNumMax 32767
 
 // Expand to a string literal and its length comma separated
-#define sLen(strLit) (UcdCh8 *)(strLit), sizeof(strLit) - 1
+#define sLen(strLit) (Utf8Ch *)(strLit), sizeof(strLit) - 1
 
 // Clear the screen
 #define escScreenClear "\x1b[2J\x1b[H"

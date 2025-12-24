@@ -57,7 +57,7 @@ ScreenRows *_resizeRows(ScreenRows *rows, uint16_t w, uint16_t h) {
     ScreenRows *newRows = memChangeBytes(rows, newSize);
 
     newRows->sBufs = (StrBuf *)(newRows + 1);
-    newRows->buffer = (UcdCh8 *)&newRows->sBufs[h];
+    newRows->buffer = (Utf8Ch *)&newRows->sBufs[h];
 
     for (uint16_t i = 0; i < h; i++) {
         newRows->sBufs[i] = (StrBuf) {
@@ -118,7 +118,7 @@ static size_t cutStr(StrView *sv, size_t maxWidth, size_t w) {
 void screenWrite(
     Screen *screen,
     uint16_t x, uint16_t y,
-    const UcdCh8 *str, size_t len
+    const Utf8Ch *str, size_t len
 ) {
     if (x >= screen->w || y >= screen->h) {
         return;
@@ -149,7 +149,7 @@ void screenWrite(
 
     // Append the part before the string to the new row
     StrView sv = {
-        .buf = (UcdCh8 *)row->buf,
+        .buf = (Utf8Ch *)row->buf,
         .len = startIdx < 0 ? row->len : (size_t)startIdx
     };
     strAppend(&screen->buf, &sv);
@@ -182,7 +182,7 @@ void screenWrite(
 
     strRepeat(&screen->buf, ' ', rowW - w);
 
-    sv.buf = (UcdCh8 *)row->buf + rowIdx;
+    sv.buf = (Utf8Ch *)row->buf + rowIdx;
     sv.len = row->len - rowIdx;
     (void)cutStr(&sv, screenW, rowW);
     strAppend(&screen->buf, &sv);
@@ -207,7 +207,7 @@ nvUnixFmt(4, 5) void screenWriteFmt(
         return;
     }
 
-    screenWrite(screen, x, y, (UcdCh8 *)buf, len);
+    screenWrite(screen, x, y, (Utf8Ch *)buf, len);
 }
 
 void screenClear(Screen *screen, int32_t line) {
@@ -418,7 +418,7 @@ static void _writeLine(Screen *screen, uint16_t idx) {
             currSt = cellSt;
             _screenChangeStyle(screen, cellSt);
         }
-        strAppendRaw(&screen->buf, (UcdCh8 *)" ", 1);
+        strAppendRaw(&screen->buf, (Utf8Ch *)" ", 1);
     }
 
 end:

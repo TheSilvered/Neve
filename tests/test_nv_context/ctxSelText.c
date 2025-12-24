@@ -5,7 +5,7 @@ void test_ctxSelText(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "ab cde f g";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 0);
     ctxCurAdd(&ctx, 3);

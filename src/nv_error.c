@@ -53,9 +53,9 @@ static void _printWindowsError(const char *msg) {
         );
         _printErrMsg(msg, msgBuf);
     } else {
-        ucdCh16StrToCh8Str(
+        utf16ToUtf8(
             wMsgBuf, wcslen(wMsgBuf),
-            (UcdCh8 *)msgBuf, nvArrlen(msgBuf)
+            (Utf8Ch *)msgBuf, nvArrlen(msgBuf)
         );
         _printErrMsg(msg, msgBuf);
     }

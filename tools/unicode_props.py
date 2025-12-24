@@ -81,6 +81,47 @@ class EastAsianWidth(UnicodeEnumProp):
     NEUTRAL = "N"
 
 
+class PropList(UnicodeEnumProp):
+    ASCII_HEX_DIGIT = "ASCII_Hex_Digit"
+    BIDI_CONTROL = "Bidi_Control"
+    DASH = "Dash"
+    DEPRECATED = "Deprecated"
+    DIACRITIC = "Diacritic"
+    EXTENDER = "Extender"
+    HEX_DIGIT = "Hex_Digit"
+    HYPHEN = "Hyphen"
+    IDEOGRAPHIC = "Ideographic"
+    ID_COMPAT_MATH_START = "ID_Compat_Math_Start"
+    ID_COMPAT_MATH_CONTINUE = "ID_Compat_Math_Continue"
+    IDS_UNARY_OPERATOR = "IDS_Unary_Operator"
+    IDS_BINARY_OPERATOR = "IDS_Binary_Operator"
+    IDS_TRINARY_OPERATOR = "IDS_Trinary_Operator"
+    JOIN_CONTROL = "Join_Control"
+    LOGICAL_ORDER_EXCEPTION = "Logical_Order_Exception"
+    MODIFIER_COMBINING_MARK = "Modifier_Combining_Mark"
+    NONCHARACTER_CODE_POINT = "Noncharacter_Code_Point"
+    OTHER_ALPHABETIC = "Other_Alphabetic"
+    OTHER_DEFAULT_IGNORABLE_CODE_POINT = "Other_Default_Ignorable_Code_Point"
+    OTHER_GRAPHEME_EXTEND = "Other_Grapheme_Extend"
+    OTHER_ID_CONTINUE = "Other_ID_Continue"
+    OTHER_ID_START = "Other_ID_Start"
+    OTHER_LOWERCASE = "Other_Lowercase"
+    OTHER_MATH = "Other_Math"
+    OTHER_UPPERCASE = "Other_Uppercase"
+    PATTERN_SYNTAX = "Pattern_Syntax"
+    PATTERN_WHITE_SPACE = "Pattern_White_Space"
+    PREPENDED_CONCATENATION_MARK = "Prepended_Concatenation_Mark"
+    QUOTATION_MARK = "Quotation_Mark"
+    RADICAL = "Radical"
+    REGIONAL_INDICATOR = "Regional_Indicator"
+    SENTENCE_TERMINAL = "Sentence_Terminal"
+    SOFT_DOTTED = "Soft_Dotted"
+    TERMINAL_PUNCTUATION = "Terminal_Punctuation"
+    UNIFIED_IDEOGRAPH = "Unified_Ideograph"
+    VARIATION_SELECTOR = "Variation_Selector"
+    WHITE_SPACE = "White_Space"
+
+
 class CodePoint(int):
     def __new__(cls, val: int | str):
         return super().__new__(cls, val if isinstance(val, int) else int(val, 16))

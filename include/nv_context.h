@@ -22,7 +22,7 @@ typedef Arr(CtxCursor) CtxCursors;
 typedef Arr(CtxSelection) CtxSelections;
 
 typedef struct CtxBuf {
-    UcdCh8 *bytes;
+    Utf8Ch *bytes;
     size_t len;
     size_t cap;
     size_t gapIdx;
@@ -146,9 +146,9 @@ Str *ctxSelText(Ctx *ctx);
 /********************************** Editing ***********************************/
 
 // Append to a context, does not change the cursor position.
-void ctxAppend(Ctx *ctx, const UcdCh8 *data, size_t len);
+void ctxAppend(Ctx *ctx, const Utf8Ch *data, size_t len);
 // Write in a context.
-void ctxInsert(Ctx *ctx, const UcdCh8 *data, size_t len);
+void ctxInsert(Ctx *ctx, const Utf8Ch *data, size_t len);
 // Insert a codepoint. Any invalid codepoint is ignored.
 void ctxInsertCP(Ctx *ctx, UcdCP cp);
 // Remove the cahracter before the cursor.

@@ -1,6 +1,6 @@
 #include "nv_test.h"
 #include "nv_context.c"
-#include "nv_unicode.h"
+#include "unicode/nv_utf.h"
 
 void test_ctxBufRemoveEmpty(void) {
     CtxBuf buf = { 0 };
@@ -16,7 +16,7 @@ void test_ctxBufRemoveFromEnd(void) {
     CtxBuf buf = { 0 };
     const char s[] = "abcd";
 
-    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufInsert(&buf, (Utf8Ch *)s, chArrLen(s));
 
     _ctxBufRemove(&buf, 2);
     testAssert(buf.len == 2);
@@ -30,7 +30,7 @@ void test_ctxBufRemoveFromMiddle(void) {
     CtxBuf buf = { 0 };
     const char s[] = "abcd";
 
-    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufInsert(&buf, (Utf8Ch *)s, chArrLen(s));
     _ctxBufSetGapIdx(&buf, 2);
     _ctxBufRemove(&buf, 2);
     testAssert(buf.len == 2);

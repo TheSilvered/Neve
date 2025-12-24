@@ -7,7 +7,7 @@ void test_ctxAppendFromEmptyNoLines(void) {
     ctxInit(&ctx, true);
     const char s[] = "abcd";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
     testAssertWith(ctx._refs.len == 1) {
         testAssert(ctx._refs.items[0].line == 0);
         testAssert(ctx._refs.items[0].col == 4);
@@ -27,17 +27,17 @@ void test_ctxAppendFromEmptyUnicodeNoLines(void) {
     ctxInit(&ctx, true);
     const char s[] = "\xf0\x9f\x98\x8a";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
     testAssertWith(ctx._refs.len == 1) {
         testAssert(ctx._refs.items[0].line == 0);
         testAssert(ctx._refs.items[0].col == 2);
     }
     testAssert(ctx._buf.len == chArrLen(s));
     testAssert(ctx._buf.gapIdx == chArrLen(s));
-    testAssert(ctx._buf.bytes[0] == (UcdCh8)'\xf0');
-    testAssert(ctx._buf.bytes[1] == (UcdCh8)'\x9f');
-    testAssert(ctx._buf.bytes[2] == (UcdCh8)'\x98');
-    testAssert(ctx._buf.bytes[3] == (UcdCh8)'\x8a');
+    testAssert(ctx._buf.bytes[0] == (Utf8Ch)'\xf0');
+    testAssert(ctx._buf.bytes[1] == (Utf8Ch)'\x9f');
+    testAssert(ctx._buf.bytes[2] == (Utf8Ch)'\x98');
+    testAssert(ctx._buf.bytes[3] == (Utf8Ch)'\x8a');
 
     ctxDestroy(&ctx);
 }
@@ -47,7 +47,7 @@ void test_ctxAppendFromEmptyWithLines(void) {
     ctxInit(&ctx, true);
     const char s[] = "a\nc\n";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
     testAssertWith(ctx._refs.len == 1) {
         testAssert(ctx._refs.items[0].line == 2);
         testAssert(ctx._refs.items[0].col == 0);
@@ -68,7 +68,7 @@ void test_ctxAppendFromEmptyWithEmptyLines(void) {
     ctxInit(&ctx, true);
     const char s[] = "a\n\nd";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
     testAssertWith(ctx._refs.len == 1) {
         testAssert(ctx._refs.items[0].line == 2);
         testAssert(ctx._refs.items[0].col == 1);
@@ -89,7 +89,7 @@ void test_ctxAppendFromEmptyWithCRLFLines(void) {
     ctxInit(&ctx, true);
     const char s[] = "a\r\nc\r\n";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
     testAssertWith(ctx._refs.len == 1) {
         testAssert(ctx._refs.items[0].line == 2);
         testAssert(ctx._refs.items[0].col == 0);
@@ -110,7 +110,7 @@ void test_ctxAppendFromEmptyWithEmptyCRLFLines(void) {
     ctxInit(&ctx, true);
     const char s[] = "a\r\n\r\nd";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
     testAssertWith(ctx._refs.len == 1) {
         testAssert(ctx._refs.items[0].line == 2);
         testAssert(ctx._refs.items[0].col == 1);
@@ -132,8 +132,8 @@ void test_ctxAppendFromFullNoLines(void) {
     const char s[] = "a\nc\n";
     const char s2[] = "abcd";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    ctxAppend(&ctx, (UcdCh8 *)s2, chArrLen(s2));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s2, chArrLen(s2));
     testAssertWith(ctx._refs.len == 2) {
         testAssert(ctx._refs.items[0].line == 2);
         testAssert(ctx._refs.items[1].line == 2);
@@ -158,8 +158,8 @@ void test_ctxAppendFromFullWithLines(void) {
     ctxInit(&ctx, true);
     const char s[] = "a\nc\n";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
     testAssertWith(ctx._refs.len == 2) {
         testAssert(ctx._refs.items[0].line == 2);
         testAssert(ctx._refs.items[1].line == 4);
@@ -185,8 +185,8 @@ void test_ctxAppendFromHalfFullNoLines(void) {
     const char s[] = "a\n";
     const char s2[] = "abcd";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    ctxAppend(&ctx, (UcdCh8 *)s2, chArrLen(s2));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s2, chArrLen(s2));
     testAssertWith(ctx._refs.len == 1) {
         testAssert(ctx._refs.items[0].line == 1);
     }
@@ -209,8 +209,8 @@ void test_ctxAppendFromHalfFullWithLines(void) {
     const char s[] = "a\n";
     const char s2[] = "\nbc\n";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
-    ctxAppend(&ctx, (UcdCh8 *)s2, chArrLen(s2));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s2, chArrLen(s2));
     testAssertWith(ctx._refs.len == 1) {
         testAssert(ctx._refs.items[0].line == 2);
     }
@@ -231,7 +231,7 @@ void test_ctxAppendMixedUnicode(void) {
     ctxInit(&ctx, true);
     const char s[] = "a\xf0\x9f\x98\x8a\xc3\xa8\xe5\xa5\xbd";
 
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
     testAssertWith(ctx._refs.len == 2) {
         testAssert(ctx._refs.items[0].line == 0);
         testAssert(ctx._refs.items[0].col == 3);

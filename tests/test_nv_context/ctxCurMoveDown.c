@@ -5,7 +5,7 @@ void test_ctxCurMoveDownLastLine(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcd";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 1);
     ctxCurAdd(&ctx, 2);
@@ -24,7 +24,7 @@ void test_ctxCurMoveDownMultiline(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcd\nefgh\njklm";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     /*
      a|b c d
@@ -63,7 +63,7 @@ void test_ctxCurMoveDownBaseCol(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcd\n\t\ne\xf0\x9f\x98\x8a\nfghi";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 2);
 

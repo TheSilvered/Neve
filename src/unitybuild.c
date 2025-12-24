@@ -14,5 +14,5 @@
 #include "nv_threads.c"
 #include "nv_time.c"
 #include "nv_tui.c"
-#include "nv_udb.c"
-#include "nv_unicode.c"
+#include "unicode/nv_ucd.c"
+#include "unicode/nv_utf.c"

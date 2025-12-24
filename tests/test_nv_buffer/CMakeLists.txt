@@ -5,6 +5,6 @@ add_tests_in_directory(
     nv_context.c
     nv_file.c
     nv_string.c
-    nv_udb.c
-    nv_unicode.c
+    unicode/nv_ucd.c
+    unicode/nv_utf.c
 )

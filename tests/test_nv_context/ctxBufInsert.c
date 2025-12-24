@@ -16,7 +16,7 @@ void test_ctxBufInsertFromEmpty(void) {
     CtxBuf buf = { 0 };
     const char s[] = "abcd";
 
-    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufInsert(&buf, (Utf8Ch *)s, chArrLen(s));
     testAssert(buf.len == chArrLen(s));
     testAssert(buf.cap >= chArrLen(s));
     testAssert(buf.gapIdx == chArrLen(s));
@@ -28,9 +28,9 @@ void test_ctxBufInsertFromEnd(void) {
     CtxBuf buf = { 0 };
     const char s[] = "abcd";
 
-    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufInsert(&buf, (Utf8Ch *)s, chArrLen(s));
     testAssert(buf.gapIdx == chArrLen(s));
-    _ctxBufInsert(&buf, (UcdCh8 *)s, chArrLen(s));
+    _ctxBufInsert(&buf, (Utf8Ch *)s, chArrLen(s));
     testAssert(buf.len == chArrLen(s) * 2);
     testAssert(buf.cap >= chArrLen(s) * 2);
     testAssert(buf.gapIdx == chArrLen(s) * 2);

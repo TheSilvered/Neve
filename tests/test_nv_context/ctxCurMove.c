@@ -5,7 +5,7 @@ void test_ctxCurMove(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abcdefgh";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 2);
     ctxCurAdd(&ctx, 4);

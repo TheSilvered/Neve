@@ -5,7 +5,7 @@ void test_ctxCurMoveToPrevWordStartAlpha(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abc \tdef\nghijkl";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 15);
     ctxCurMoveToPrevWordStart(&ctx);
@@ -24,7 +24,7 @@ void test_ctxCurMoveToPrevWordStartAlnum(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "a9c \t123\n2hijk5";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 15);
     ctxCurMoveToPrevWordStart(&ctx);
@@ -43,7 +43,7 @@ void test_ctxCurMoveToPrevWordStartPunctuation(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "()* \t.,-\n&%/!:;";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 15);
     ctxCurMoveToPrevWordStart(&ctx);
@@ -62,7 +62,7 @@ void test_ctxCurMoveToPrevWordStartMixed(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
     const char s[] = "abc9()*  ==?92\n\t& ab";
-    ctxAppend(&ctx, (UcdCh8 *)s, chArrLen(s));
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     ctxCurAdd(&ctx, 20);
     ctxCurMoveToPrevWordStart(&ctx);
