@@ -4,9 +4,11 @@
 .github/
     workflows/        # Github actions
 include/          # Header files for the editor
+    unicode/          # Header files for unicode functions (UTF and UCD)
 src/              # Source of the editor
-    unix/              # Unix-specific code
-    win32/              # Windows-specific code
+    unicode/          # Source files for unicode functions
+    unix/             # Unix-specific code
+    win32/            # Windows-specific code
 tests/
     main/             # Test support code
     test_nv_array/    # `nv_array.h` tests
@@ -28,9 +30,9 @@ regular types only if they are passed to or a the result of a system function.
 
 ### Strings
 
-- `UcdCh8 *` is a UTF-8 encoded string, it may not have a `NUL` terminator.
-- `UcdCh16 *` is a UTF-16 encoded string, it may not have a `NUL` terminator.
-- `UcdCh32 *` is a UTF-32 encoded string, it may not have a `NUL` terminator.
+- `Utf8Ch *` is a UTF-8 encoded string, it may not have a `NUL` terminator.
+- `Utf16Ch *` is a UTF-16 encoded string, it may not have a `NUL` terminator.
+- `Utf32Ch *` is a UTF-32 encoded string, it may not have a `NUL` terminator.
 - `char *` is a UTF-8 encoded and `NUL`-terminated string.
 
 Strings other than `char *` may contain `NUL` characters.
