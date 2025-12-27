@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -72,7 +71,8 @@ bool termEnableRawMode(uint8_t getInputTimeoutDSec) {
                  | ENABLE_WINDOW_INPUT);
     inputMode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
 
-    outputMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    outputMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING
+               | DISABLE_NEWLINE_AUTO_RETURN;
 
     if (SetConsoleMode(g_consoleInput, inputMode) == FALSE) {
         errSetErrno();
