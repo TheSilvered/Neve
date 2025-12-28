@@ -319,36 +319,7 @@ static void _drawBufPanel(Screen *screen, const UIBufPanel *panel) {
             panel->elem.w - numColWidth, panel->scrollX
         );
     }
-
-    for (size_t i = 0; i < ctx->cursors.len; i++) {
-        CtxCursor *cursor = &ctx->cursors.items[i];
-        size_t line, col;
-        ctxPosAt(ctx, cursor->idx, &line, &col);
-
-        if (line < panel->scrollY || line > panel->scrollY + panel->elem.h
-            || col < panel->scrollX || col > panel->scrollX + panel->elem.w
-        ) {
-            continue;
-        }
-        screenSetStyle(
-            screen,
-            (ScreenStyle) {
-                .fg = screenColT16(1),
-                .bg = screenColT16(8),
-                .textFmt = screenFmtUnderline,
-            },
-            (uint16_t)(col - panel->scrollX + numColWidth + panel->elem.x),
-            (uint16_t)(line - panel->scrollY + panel->elem.y),
-            1
-        );
-        if (!ctxSelIsActive(ctx)) {
-            continue;
-        }
-        size_t selStart = nvMin(cursor->idx, cursor->_selStart);
-        size_t selEnd = nvMax(cursor->idx, cursor->_selStart);
-        _drawCtxSelection(screen, ctx, panel, numColWidth, selStart, selEnd);
-    }
-
+    
     for (size_t i = 0; i < ctx->_sels.len; i++) {
         CtxSelection *sel = &ctx->_sels.items[i];
         _drawCtxSelection(
@@ -359,6 +330,51 @@ static void _drawBufPanel(Screen *screen, const UIBufPanel *panel) {
             sel->startIdx,
             sel->endIdx
         );
+    }
+
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        CtxCursor *cursor = &ctx->cursors.items[i];
+        size_t line, col;
+        ctxPosAt(ctx, cursor->idx, &line, &col);
+
+        if (ctxSelIsActive(ctx)) {
+            size_t selStart = nvMin(cursor->idx, cursor->_selStart);
+            size_t selEnd = nvMax(cursor->idx, cursor->_selStart);
+            _drawCtxSelection(
+                screen,
+                ctx,
+                panel,
+                numColWidth,
+                selStart, selEnd
+            );
+        }
+
+        if (line < panel->scrollY || line > panel->scrollY + panel->elem.h
+            || col < panel->scrollX || col > panel->scrollX + panel->elem.w
+        ) {
+            continue;
+        }
+        ScreenStyle cursorStyle;
+        if (ctxChInSel(ctx, cursor->idx)) {
+            cursorStyle = (ScreenStyle) {
+                .fg = screenColT16(1),
+                .bg = screenColT16(5)
+            };
+        } else {
+            cursorStyle = (ScreenStyle) {
+                .fg = screenColT16(1),
+                .bg = screenColT16(8)
+            };
+        }
+
+        screenSetStyle(
+            screen,
+            cursorStyle,
+            (uint16_t)(col - panel->scrollX + numColWidth + panel->elem.x),
+            (uint16_t)(line - panel->scrollY + panel->elem.y),
+            1
+        );
+        
     }
 }
 

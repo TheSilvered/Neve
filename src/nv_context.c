@@ -47,11 +47,11 @@ static void _ctxCurAddEx(Ctx *ctx, size_t idx, size_t col);
 static bool _ctxCurMove(Ctx *ctx, size_t old, size_t new);
 static bool _ctxCurMoveEx(Ctx *ctx, size_t old, size_t new, size_t newCol);
 
-// Find the index at position `line`, `col`.
-// The line must match exactly, the column is the closest to `col`.
-
 // Join cursor selections in the _sels array
 static void _ctxSelJoin(Ctx *ctx);
+
+// Get a selection from a cursor
+static CtxSelection _ctxCurToSel(CtxCursor *cur);
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->_refs = (CtxRefs){ 0 };
@@ -1240,6 +1240,28 @@ void ctxInsertLineBelow(Ctx *ctx) {
     ctxInsert(ctx, (const Utf8Ch *)"\n", 1);
 }
 
+bool ctxChInSel(const Ctx *ctx, size_t idx) {
+    for (size_t i = 0; i < ctx->_sels.len; i++) {
+        CtxSelection sel = ctx->_sels.items[i];
+        if (idx >= sel.startIdx && idx < sel.endIdx) {
+            return true;
+        }
+    }
+
+    if (!ctx->_selecting) {
+        return false;
+    }
+
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        CtxCursor *cur = &ctx->cursors.items[i];
+        CtxSelection sel = _ctxCurToSel(cur);
+        if (idx >= sel.startIdx && idx < sel.endIdx) {
+            return true;
+        }
+    }
+    return false;
+}
+
 size_t ctxLineCount(const Ctx *ctx) {
     size_t line;
     ctxPosAt(ctx, ctx->_buf.len, &line, NULL);
@@ -1638,14 +1660,8 @@ static void _ctxSelJoin(Ctx *ctx) {
     // Append non-empty selections
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor *cursor = &ctx->cursors.items[i];
-        CtxSelection sel;
-        if (cursor->idx < cursor->_selStart) {
-            sel.startIdx = cursor->idx;
-            sel.endIdx = cursor->_selStart;
-        } else if (cursor->_selStart < cursor->idx) {
-            sel.startIdx = cursor->_selStart;
-            sel.endIdx = cursor->idx;
-        } else {
+        CtxSelection sel = _ctxCurToSel(cursor);
+        if (sel.startIdx == sel.endIdx) {
             continue;
         }
         arrAppend(&ctx->_sels, sel);
@@ -1664,6 +1680,20 @@ static void _ctxSelJoin(Ctx *ctx) {
         }
         arrRemove(&ctx->_sels, i);
         i--;
+    }
+}
+
+static CtxSelection _ctxCurToSel(CtxCursor *cur) {
+    if (cur->idx < cur->_selStart) {
+        return (CtxSelection) {
+            .startIdx = cur->idx,
+            .endIdx = cur->_selStart
+        };
+    } else {
+        return (CtxSelection) {
+            .startIdx = cur->_selStart,
+            .endIdx = cur->idx
+        };
     }
 }
 
