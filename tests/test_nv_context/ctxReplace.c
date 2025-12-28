@@ -93,7 +93,10 @@ void test_ctxReplaceAtEnd(void) {
     StrView content = ctxGetContent(&ctx);
     testAssert(eqStrViewCStr(content, "abcdrplx"));
     testAssert(content.len == 8);
-    testAssert(ctx._refs.len == 0);
+    testAssert(ctx._refs.len == 1);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].col == 8);
+    testAssert(ctx._refs.items[0].line == 0);
 
     ctxDestroy(&ctx);
 }
@@ -582,9 +585,9 @@ void test_ctxReplaceMuchLongerCacheUpdate(void) {
     _ctxReplace(&ctx, 2, 2, (Utf8Ch *)"replace", 7);
 
     testAssert(ctx._refs.len == 3);
-    testAssert(ctx._refs.items[0].idx == 7);
+    testAssert(ctx._refs.items[0].idx == 8);
     testAssert(ctx._refs.items[0].line == 0);
-    testAssert(ctx._refs.items[0].col == 7);
+    testAssert(ctx._refs.items[0].col == 8);
     testAssert(ctx._refs.items[1].idx == 15);
     testAssert(ctx._refs.items[1].line == 0);
     testAssert(ctx._refs.items[1].col == 15);
@@ -667,9 +670,9 @@ void test_ctxReplaceCacheUpdateWithTabMuchLonger(void) {
     _ctxReplace(&ctx, 2, 2, (Utf8Ch *)"replace", 7);
 
     testAssert(ctx._refs.len == 4);
-    testAssert(ctx._refs.items[0].idx == 7);
+    testAssert(ctx._refs.items[0].idx == 8);
     testAssert(ctx._refs.items[0].line == 0);
-    testAssert(ctx._refs.items[0].col == 7);
+    testAssert(ctx._refs.items[0].col == 8);
     testAssert(ctx._refs.items[1].idx == 15);
     testAssert(ctx._refs.items[1].line == 0);
     testAssert(ctx._refs.items[1].col == 15);

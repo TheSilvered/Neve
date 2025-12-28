@@ -9,7 +9,7 @@
 #include "unicode/nv_ucd.h"
 
 #ifndef _lineRefMaxGap
-#define _lineRefMaxGap 4096
+#define _lineRefMaxGap (1024*256)
 #endif // !_lineRefMaxGap
 
 // Get from the gap buffer
@@ -370,20 +370,21 @@ ptrdiff_t ctxIdxAt(
     size_t refCol;
     UcdCP cp;
 
-    if (refsIdx == -1) {
+    refsIdx++;
+    while (
+        refsIdx < (ptrdiff_t)ctx->_refs.len
+        && ctx->_refs.items[refsIdx].line == line
+        && ctx->_refs.items[refsIdx].col <= col
+    ) {
+        refsIdx++;
+    }
+    refsIdx--;
+
+    if (refsIdx < 0) {
         i = 0;
         refLine = 0;
         refCol = 0;
     } else {
-        refsIdx++;
-        while (
-            ctx->_refs.items[refsIdx].line == line
-            && ctx->_refs.items[refsIdx].col <= col
-        ) {
-            refsIdx++;
-        }
-        refsIdx--;
-
         i = ctx->_refs.items[refsIdx].idx;
         refLine = ctx->_refs.items[refsIdx].line;
         refCol = ctx->_refs.items[refsIdx].col;
@@ -928,16 +929,17 @@ static void _ctxReplace(
     };
 
     UcdCP cp;
-    ptrdiff_t idx;
+    ptrdiff_t idxOffset = start;
     for (
-        idx = strViewNext(&sv, -1, &cp);
-        idx >= 0;
-        idx = strViewNext(&sv, idx, &cp)
+        ptrdiff_t i = strViewNext(&sv, -1, &cp);
+        i >= 0;
+        i = strViewNext(&sv, i, &cp)
     ) {
         if (cp == '\r' || (cp == '\n' && ignoreNL)) {
-            _ctxBufInsert(buf, &data[spanStart], idx - spanStart);
-            spanStart = idx + 1;
+            _ctxBufInsert(buf, &data[spanStart], i - spanStart);
+            spanStart = i + 1;
             lenDiff--;
+            idxOffset--;
             continue;
         } else if (cp == '\n') {
             line++;
@@ -946,18 +948,20 @@ static void _ctxReplace(
             col += ucdCPWidth(cp, tabStop, col);
         }
 
+        size_t idx = i + idxOffset + utf8CPLen(cp);
         if (idx - lastBlockIdx < _lineRefMaxGap) {
             continue;
         }
 
-        _ctxBufInsert(buf, &data[spanStart], idx - spanStart + 1);
-        spanStart = idx + 1;
+        _ctxBufInsert(buf, &data[spanStart], i - spanStart + 1);
+        spanStart = i + 1;
         lastBlockIdx = idx;
-        arrInsert(
-            refs,
-            refBlock,
-            (CtxRef){ .idx = idx, .line = line, .col = col }
-        );
+        CtxRef block = { .idx = idx, .line = line, .col = col };
+        if ((size_t)refBlock == refs->len) {
+            arrAppend(refs, block);
+        } else {
+            arrInsert(refs, refBlock, block);
+        }
         refBlock++;
     }
 
@@ -995,7 +999,7 @@ static void _ctxReplace(
         CtxRef *ref = &refs->items[i];
         if (colDiff == 0 || ref->idx > (size_t)lineEnd) {
             break;
-        } else if (ref->idx < tabIdx) {
+        } else if (ref->idx <= tabIdx) {
             ref->col += colDiff;
             continue;
         }
