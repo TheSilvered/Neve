@@ -4,6 +4,12 @@
 #include "nv_editor.h"
 #include "nv_mem.h"
 
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
+
 #define _defaultBufSize 128
 
 static CmdResult *_resultFmt(bool success, const char *fmt, va_list args) {
@@ -64,4 +70,61 @@ CmdResult *cmdQuit(StrView args) {
     }
     g_ed.running = false;
     return cmdResultSuccess("");
+}
+
+CmdResult *cmdWorkingDir(StrView args) {
+    if (args.len != 0) {
+        return cmdResultFailed("unexpected arguments");
+    }
+
+#define _bufLen 1024
+
+#ifdef _WIN32
+    wchar_t wbuf[_bufLen];
+    wchar_t *dir = _wgetcwd(wbuf, _bufLen);
+#else
+    char buf[_bufLen];
+    char *dir = getcwd(buf, _bufLen);
+#endif
+    if (dir == NULL) {
+        return cmdResultFailed("failed to get the current working directory");
+    }
+#ifdef _WIN32
+    const char *buf = tempStr(dir);
+#endif
+    return cmdResultSuccess("%s", buf);
+
+#undef _bufLen
+}
+
+CmdResult *cmdSave(StrView args) {
+    if (args.len != 0) {
+        return cmdResultFailed("unexpected arguments");
+    }
+    Buf *buf = bufRef(&g_ed.buffers, g_ed.ui.bufPanel.bufHd);
+    if (buf == NULL) {
+        return cmdResultFailed("no open buffer");
+    }
+    FileIOResult result = bufWriteToDisk(buf);
+    switch (result) {
+    case FileIOResult_Success:
+        return cmdResultSuccess("saved at "strFmt, strArg(&buf->path));
+    case FileIOResult_BadPath:
+        return cmdResultFailed("invalid path '"strFmt"'", strArg(&buf->path));
+    case FileIOResult_PermissionDenied:
+        return cmdResultFailed("write permission denied");
+    default:
+        return cmdResultFailed("failed to write");
+    }
+}
+
+CmdResult *cmdSaveAs(StrView args) {
+    if (args.len == 0) {
+        return cmdResultFailed("no path given");
+    }
+    if (!bufSetPath(&g_ed.buffers, g_ed.ui.bufPanel.bufHd, &args)) {
+        return cmdResultFailed("no open buffer");
+    }
+
+    return cmdSave((StrView){ 0 });
 }

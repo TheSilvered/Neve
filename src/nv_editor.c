@@ -27,6 +27,12 @@ void editorInit(void) {
     arrAppend(&g_ed.commands, cmdEntryNew("q", cmdQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("quit", cmdQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("exit", cmdQuit));
+    arrAppend(&g_ed.commands, cmdEntryNew("w", cmdSave));
+    arrAppend(&g_ed.commands, cmdEntryNew("write", cmdSave));
+    arrAppend(&g_ed.commands, cmdEntryNew("s", cmdSave));
+    arrAppend(&g_ed.commands, cmdEntryNew("save", cmdSave));
+    arrAppend(&g_ed.commands, cmdEntryNew("saveas", cmdSaveAs));
+    arrAppend(&g_ed.commands, cmdEntryNew("pwd", cmdWorkingDir));
 
     termWrite(sLen(
         escEnableAltBuffer
@@ -154,7 +160,7 @@ bool editorOpen(const char *path) {
     case FileIOResult_FileNotFound:
         bufClose(&g_ed.buffers, g_ed.ui.bufPanel.bufHd);
         newBuf = bufInitEmpty(&g_ed.buffers);
-        bufSetPath(&g_ed.buffers, newBuf, path);
+        bufSetPathC(&g_ed.buffers, newBuf, path);
         break;
     default:
         success = false;

@@ -241,7 +241,19 @@ void bufClose(BufMap *map, BufHandle bufH) {
     _bufMapShrink(map);
 }
 
-bool bufSetPath(BufMap *map, BufHandle bufH, const char *path) {
+bool bufSetPath(BufMap *map, BufHandle bufH, StrView *path) {
+    Buf *buf = bufRef(map, bufH);
+    if (buf == NULL) {
+        return false;
+    }
+
+    strDestroy(&buf->path);
+    strInit(&buf->path, path->len);
+    strAppend(&buf->path, path);
+    return true;
+}
+
+bool bufSetPathC(BufMap *map, BufHandle bufH, const char *path) {
     Buf *buf = bufRef(map, bufH);
     if (buf == NULL) {
         return false;

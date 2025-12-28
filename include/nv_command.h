@@ -24,5 +24,8 @@ CmdResult *cmdResultSuccess(const char *fmt, ...);
 CmdResult *cmdResultFailed(const char *fmt, ...);
 
 CmdResult *cmdQuit(StrView args);
+CmdResult *cmdWorkingDir(StrView args);
+CmdResult *cmdSave(StrView args);
+CmdResult *cmdSaveAs(StrView args);
 
 #endif // !NV_COMMAND_H_
