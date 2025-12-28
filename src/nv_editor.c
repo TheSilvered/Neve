@@ -168,8 +168,10 @@ bool editorOpen(const char *path) {
             ).kind != BufResult_Success
         ) {
             success = false;
+            fileClose(&file);
             break;
         }
+        fileClose(&file);
         break;
     case FileIOResult_FileNotFound:
         bufClose(&g_ed.buffers, g_ed.ui.bufPanel.bufHd);
@@ -180,7 +182,6 @@ bool editorOpen(const char *path) {
         success = false;
     }
     g_ed.ui.bufPanel.bufHd = newBuf;
-    fileClose(&file);
     return success;
 }
 
