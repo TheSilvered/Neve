@@ -1,6 +1,7 @@
 include_directories(BEFORE main)
 add_definitions(-DNV_THREADS_NO_ERROR)
 add_library(nv_test
+    OBJECT
     main/nv_test.c
     ../src/nv_mem.c
     ../src/nv_threads.c # needed for nv_mem.c
@@ -15,9 +16,7 @@ function(add_tests_in_directory TestsNamespace)
         list(APPEND ExpandedSources ${ExpandedSource})
     endforeach()
 
-    add_library(${TestsNamespace}
-        ${ExpandedSources}
-    )
+    add_library(${TestsNamespace} OBJECT ${ExpandedSources})
 
     foreach(TestSource ${TestSources})
         string(REPLACE ".c" "" TestName ${TestSource})
