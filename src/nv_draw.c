@@ -241,8 +241,8 @@ void _drawCtxSelection(
     ptrdiff_t absX = panel->elem.x - panel->scrollX + numColWidth;
     ptrdiff_t absY = panel->elem.y - panel->scrollY;
     ScreenStyle selStyle = {
-        .bg = screenColT16(65),
-        .fg = screenColT16(1),
+        .bg = screenColT16(61),
+        .fg = screenColT16(68),
         .style = screenStyleNoFmt
     };
 
@@ -319,7 +319,7 @@ static void _drawBufPanel(Screen *screen, const UIBufPanel *panel) {
             panel->elem.w - numColWidth, panel->scrollX
         );
     }
-    
+
     for (size_t i = 0; i < ctx->_sels.len; i++) {
         CtxSelection *sel = &ctx->_sels.items[i];
         _drawCtxSelection(
@@ -354,27 +354,14 @@ static void _drawBufPanel(Screen *screen, const UIBufPanel *panel) {
         ) {
             continue;
         }
-        ScreenStyle cursorStyle;
-        if (ctxChInSel(ctx, cursor->idx)) {
-            cursorStyle = (ScreenStyle) {
-                .fg = screenColT16(1),
-                .bg = screenColT16(5)
-            };
-        } else {
-            cursorStyle = (ScreenStyle) {
-                .fg = screenColT16(1),
-                .bg = screenColT16(8)
-            };
-        }
 
-        screenSetStyle(
+        screenSetTextFmt(
             screen,
-            cursorStyle,
+            screenFmtInverse,
             (uint16_t)(col - panel->scrollX + numColWidth + panel->elem.x),
             (uint16_t)(line - panel->scrollY + panel->elem.y),
             1
         );
-        
     }
 }
 
