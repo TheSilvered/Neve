@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "nv_escapes.h"
 #include "nv_mem.h"

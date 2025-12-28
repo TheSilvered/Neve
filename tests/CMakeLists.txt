@@ -11,7 +11,8 @@ function(add_tests_in_directory TestsNamespace)
     set(ExpandedSources "")
     list(POP_FRONT ARGV)
     foreach(src IN LISTS ARGV)
-        list(APPEND ExpandedSources "../../src/${src}")
+        file(REAL_PATH "../../src/${src}" ExpandedSource)
+        list(APPEND ExpandedSources ${ExpandedSource})
     endforeach()
 
     add_library(${TestsNamespace}

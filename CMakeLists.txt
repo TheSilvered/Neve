@@ -32,9 +32,24 @@ endif()
 
 include_directories(neve include)
 
-add_executable(neve
-    src/unitybuild.c
-)
+file(REAL_PATH "src/unitybuild.c" UnityBuildFile)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    file(READ ${UnityBuildFile} FileContent)
+    string(REPLACE "#include \"" "src/" FileContent ${FileContent})
+    string(REPLACE "\"\n" ";" FileContent ${FileContent})
+
+    set(NeveSources "")
+
+    foreach(src IN LISTS FileContent)
+        file(REAL_PATH "${src}" ExpandedSource)
+        list(APPEND NeveSources ${ExpandedSource})
+    endforeach()
+else()
+    set(NeveSources ${UnityBuildFile})
+endif()
+
+add_executable(neve ${NeveSources})
 
 if(MSVC)
     target_compile_options(neve PRIVATE /W4)
