@@ -68,8 +68,27 @@ CmdResult *cmdQuit(StrView args) {
     if (args.len != 0) {
         return cmdResultFailed("unexpected arguments");
     }
-    g_ed.running = false;
+    if (editorTryExit()) {
+        return cmdResultSuccess("");
+    } else {
+        return cmdResultFailed("unsaved changes");
+    }
+}
+
+CmdResult *cmdForceQuit(StrView args) {
+    if (args.len != 0) {
+        return cmdResultFailed("unexpected arguments");
+    }
+    editorForceExit();
     return cmdResultSuccess("");
+}
+
+CmdResult *cmdSaveAndQuit(StrView args) {
+    CmdResult *saveResult = cmdSave(args);
+    if (!saveResult->success) {
+        return saveResult;
+    }
+    return cmdQuit(args);
 }
 
 CmdResult *cmdWorkingDir(StrView args) {

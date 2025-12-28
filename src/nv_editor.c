@@ -25,11 +25,14 @@ void editorInit(void) {
     g_ed.runningCommand = false;
 
     arrAppend(&g_ed.commands, cmdEntryNew("q", cmdQuit));
+    arrAppend(&g_ed.commands, cmdEntryNew("fq", cmdForceQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("quit", cmdQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("exit", cmdQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("w", cmdSave));
+    arrAppend(&g_ed.commands, cmdEntryNew("wq", cmdSaveAndQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("write", cmdSave));
     arrAppend(&g_ed.commands, cmdEntryNew("s", cmdSave));
+    arrAppend(&g_ed.commands, cmdEntryNew("sq", cmdSaveAndQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("save", cmdSave));
     arrAppend(&g_ed.commands, cmdEntryNew("saveas", cmdSaveAs));
     arrAppend(&g_ed.commands, cmdEntryNew("pwd", cmdWorkingDir));
@@ -57,14 +60,25 @@ bool editorUpdateSize(void) {
     return true;
 }
 
-void editorHandleKey(int32_t key) {
-    if (uiHandleKey(&g_ed.ui.elem, key)) {
-        return;
-    }
-
-    if (key == TermKey_CtrlQ) {
+bool editorTryExit(void) {
+    Buf *buf = bufRef(&g_ed.buffers, g_ed.ui.bufPanel.bufHd);
+    if (buf == NULL) {
         g_ed.running = false;
+        return true;
     }
+    if (buf->ctx.edited) {
+        return false;
+    }
+    g_ed.running = false;
+    return true;
+}
+
+void editorForceExit(void) {
+    g_ed.running = false;
+}
+
+void editorHandleKey(int32_t key) {
+    uiHandleKey(&g_ed.ui.elem, key);
 }
 
 void _runCmd(void) {

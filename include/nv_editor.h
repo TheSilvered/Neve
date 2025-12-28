@@ -29,6 +29,11 @@ void editorQuit(void);
 // Query the size of the terminal and update the editor accordingly.
 bool editorUpdateSize(void);
 
+// Exit the editor if all changes are saved.
+bool editorTryExit(void);
+// Force exit the editor.
+void editorForceExit(void);
+
 // Handle a key press.
 void editorHandleKey(int32_t key);
 // Refresh the editor screen.

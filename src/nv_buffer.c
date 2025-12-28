@@ -277,5 +277,6 @@ FileIOResult bufWriteToDisk(Buf *buf) {
     StrView content = ctxGetContent(&buf->ctx);
     result = fileWrite(&file, content.buf, content.len);
     fileClose(&file);
+    buf->ctx.edited = false;
     return result;
 }
