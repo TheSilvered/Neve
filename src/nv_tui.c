@@ -4,13 +4,10 @@
 
 static void _uiElemInit(
     UIElement *elem,
-    int16_t x,
-    int16_t y,
-    uint16_t w,
-    uint16_t h,
     UIKeyHandler keyHandler,
     UIUpdater updater
 );
+
 static void _uiUpdater(UI *ui);
 static bool _uiKeyHandler(UI *ui, int32_t key);
 static void _uiBufPanelUpdater(UIBufPanel *panel);
@@ -19,21 +16,24 @@ static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key);
 static bool _uiBufHandleEditMode(UIBufPanel *panel, int32_t key);
 static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key);
 static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key);
-static bool _uiHandleArrowKeys(UIBufPanel *panel, int32_t key);
+
+// Edit always handles the input.
+// Return false if edit mode should be exited otherwise return true.
+static bool _uiHandleEditMode(Ctx *ctx, int32_t key);
+static bool _uiHandleArrowKeys(Ctx *ctx, int32_t key);
+
+static void _uiCmdInputUpdater(UICmdInput *cmdInput);
+static bool _uiCmdInputKeyHandler(UICmdInput *cmdInput, int32_t key);
 
 static void _uiElemInit(
     UIElement *elem,
-    int16_t x,
-    int16_t y,
-    uint16_t w,
-    uint16_t h,
     UIKeyHandler keyHandler,
     UIUpdater updater
 ) {
-    elem->x = x;
-    elem->y = y;
-    elem->w = w;
-    elem->h = h;
+    elem->x = 0;
+    elem->y = 0;
+    elem->w = 0;
+    elem->h = 0;
     elem->keyHandler = keyHandler;
     elem->updater = updater;
 }
@@ -45,7 +45,9 @@ void uiUpdate(UIElement *elem) {
 }
 
 bool uiHandleKey(UIElement *elem, int32_t key) {
-    if (elem->keyHandler != NULL) {
+    if (elem == NULL) {
+        return false;
+    } else if (elem->keyHandler != NULL) {
         return elem->keyHandler(elem, key);
     } else {
         return false;
@@ -53,14 +55,10 @@ bool uiHandleKey(UIElement *elem, int32_t key) {
 }
 
 void uiInit(UI *ui) {
-    _uiElemInit(
-        &ui->elem,
-        0, 0, 0, 0,
-        (UIKeyHandler)_uiKeyHandler,
-        (UIUpdater)_uiUpdater
-    );
-    _uiElemInit(&ui->statusBar, 0, 0, 0, 0, NULL, NULL);
+    _uiElemInit(&ui->elem, (UIKeyHandler)_uiKeyHandler, (UIUpdater)_uiUpdater);
+    _uiElemInit(&ui->statusBar, NULL, NULL);
     uiBufPanelInit(&ui->bufPanel);
+    uiCmdInputInit(&ui->cmdInput);
 }
 
 void uiResize(UI *ui, uint16_t w, uint16_t h) {
@@ -71,7 +69,6 @@ void uiResize(UI *ui, uint16_t w, uint16_t h) {
 void uiBufPanelInit(UIBufPanel *panel) {
     _uiElemInit(
         &panel->elem,
-        0, 0, 0, 0,
         (UIKeyHandler)_uiBufPanelKeyHandler,
         (UIUpdater)_uiBufPanelUpdater
     );
@@ -82,32 +79,59 @@ void uiBufPanelInit(UIBufPanel *panel) {
     panel->scrollY = 0;
 }
 
+void uiCmdInputInit(UICmdInput *cmdInput) {
+    _uiElemInit(
+        &cmdInput->elem,
+        (UIKeyHandler)_uiCmdInputKeyHandler,
+        (UIUpdater)_uiCmdInputUpdater
+    );
+    ctxInit(&cmdInput->ctx, false);
+    cmdInput->state = UICmdInput_Canceled;
+}
+
 static void _uiUpdater(UI *ui) {
     if (ui->elem.h == 0) {
         return;
     }
+
     ui->bufPanel.elem.w = ui->elem.w;
-    ui->bufPanel.elem.h = ui->elem.h - 1;
+    if (ui->cmdInput.state == UICmdInput_Inserting) {
+        ui->bufPanel.elem.h = ui->elem.h - 2;
+    } else {
+        ui->bufPanel.elem.h = ui->elem.h - 1;
+    }
+
+    ui->cmdInput.elem.w = ui->elem.w;
+    ui->cmdInput.elem.h = 1;
+    ui->cmdInput.elem.y = ui->elem.h - 2;
 
     ui->statusBar.w = ui->elem.w;
     ui->statusBar.h = 1;
     ui->statusBar.y = ui->elem.h - 1;
 
     uiUpdate(&ui->bufPanel.elem);
+    uiUpdate(&ui->cmdInput.elem);
     uiUpdate(&ui->statusBar);
 }
 
 static bool _uiKeyHandler(UI *ui, int32_t key) {
-    if (uiHandleKey(&ui->bufPanel.elem, key)) {
-        return true;
-    } else if (uiHandleKey(&ui->statusBar, key)) {
+    if (ui->cmdInput.state == UICmdInput_Inserting) {
+        if (uiHandleKey(&ui->cmdInput.elem, key)) {
+            return true;
+        }
+    } else if (uiHandleKey(&ui->bufPanel.elem, key)) {
         return true;
     }
 
-    if (key == TermKey_CtrlQ) {
+    switch (key) {
+    case TermKey_CtrlQ:
         g_ed.running = false;
         return true;
+    case 'p':
+        editorOpenCommandPalette();
+        return true;
     }
+
     return false;
 }
 
@@ -158,6 +182,42 @@ static bool _uiBufPanelKeyHandler(UIBufPanel *panel, int32_t key) {
         return false;
     }
 }
+
+
+static void _uiCmdInputUpdater(UICmdInput *cmdInput) {
+    if (cmdInput->ctx.cursors.len != 1) {
+        return;
+    }
+
+    size_t col;
+    ctxPosAt(&cmdInput->ctx, cmdInput->ctx.cursors.items[0].idx, NULL, &col);
+
+    if (cmdInput->scroll > col) {
+        cmdInput->scroll = col;
+    } else if (cmdInput->scroll + cmdInput->elem.w - 1 <= col) {
+        cmdInput->scroll = col - cmdInput->elem.w + 2;
+    }
+}
+
+static bool _uiCmdInputKeyHandler(UICmdInput *cmdInput, int32_t key) {
+    if (_uiHandleEditMode(&cmdInput->ctx, key)) {
+        return true;
+    }
+    switch (key) {
+    case TermKey_CtrlC:
+    case TermKey_CtrlQ:
+    case TermKey_Escape:
+        cmdInput->state = UICmdInput_Canceled;
+        return true;
+    case '\r':
+    case '\n':
+        cmdInput->state = UICmdInput_Confirmed;
+        return true;
+    default:
+        return false;
+    }
+}
+
 
 static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key) {
     Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
@@ -225,13 +285,7 @@ static bool _uiHandleNormalMovement(UIBufPanel *panel, int32_t key) {
     return true;
 }
 
-static bool _uiHandleArrowKeys(UIBufPanel *panel, int32_t key) {
-    Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
-    if (buf == NULL) {
-        return false;
-    }
-
-    Ctx *ctx = &buf->ctx;
+static bool _uiHandleArrowKeys(Ctx *ctx, int32_t key) {
     switch (key) {
     case TermKey_ArrowDown:
         ctxCurMoveDown(ctx);
@@ -251,6 +305,84 @@ static bool _uiHandleArrowKeys(UIBufPanel *panel, int32_t key) {
     return true;
 }
 
+static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
+    if (_uiHandleArrowKeys(ctx, key)) {
+        return true;
+    }
+    switch (key) {
+    case TermKey_CtrlA:
+        ctxCurMoveToLineStart(ctx);
+        break;
+    case TermKey_CtrlE:
+        ctxCurMoveToLineEnd(ctx);
+        break;
+    case TermKey_CtrlF:
+        ctxCurMoveFwd(ctx);
+        break;
+    case TermKey_CtrlB:
+        ctxCurMoveBack(ctx);
+        break;
+    case TermKey_CtrlP:
+        ctxCurMoveUp(ctx);
+        break;
+    case TermKey_CtrlN:
+        ctxCurMoveDown(ctx);
+        break;
+    case TermKey_CtrlZ:
+    case TermKey_Backspace:
+        ctxRemoveBack(ctx);
+        break;
+    case TermKey_CtrlX:
+    case TermKey_Delete:
+        ctxRemoveFwd(ctx);
+        break;
+    case TermKey_CtrlW:
+        ctxSelBegin(ctx);
+        ctxCurMoveToPrevWordStart(ctx);
+        ctxSelEnd(ctx);
+        ctxRemoveBack(ctx);
+        break;
+    case TermKey_CtrlR:
+        ctxSelBegin(ctx);
+        ctxCurMoveToNextWordEnd(ctx);
+        ctxSelEnd(ctx);
+        ctxRemoveBack(ctx);
+        break;
+    case TermKey_CtrlO:
+        ctxInsertLineAbove(ctx);
+        break;
+    case TermKey_CtrlU:
+        ctxInsertLineBelow(ctx);
+        break;
+    case TermKey_CtrlT:
+        ctxSelBegin(ctx);
+        ctxCurMoveToLineStart(ctx);
+        ctxSelEnd(ctx);
+        ctxRemoveBack(ctx);
+        break;
+    case TermKey_CtrlY:
+        ctxSelBegin(ctx);
+        ctxCurMoveToLineEnd(ctx);
+        ctxSelEnd(ctx);
+        ctxRemoveBack(ctx);
+        break;
+    case TermKey_CtrlC:
+    case TermKey_CtrlQ:
+    case TermKey_Escape:
+        return false;
+    case '\r':
+        key = '\n';
+        // fallthrough
+    default:
+        if (key == '\n' && !ctx->multiline) {
+            return false;
+        }
+        ctxInsertCP(ctx, (UcdCP)key);
+        break;
+    }
+    return 1;
+}
+
 static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
     Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
     if (buf == NULL) {
@@ -258,7 +390,7 @@ static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
     }
 
     Ctx *ctx = &buf->ctx;
-    if (_uiHandleNormalMovement(panel, key) || _uiHandleArrowKeys(panel, key)) {
+    if (_uiHandleNormalMovement(panel, key) || _uiHandleArrowKeys(ctx, key)) {
         return true;
     }
     switch (key) {
@@ -335,77 +467,8 @@ static bool _uiBufHandleEditMode(UIBufPanel *panel, int32_t key) {
     }
 
     Ctx *ctx = &buf->ctx;
-    if (_uiHandleArrowKeys(panel, key)) {
-        return true;
-    }
-    switch (key) {
-    case TermKey_CtrlA:
-        ctxCurMoveToLineStart(ctx);
-        break;
-    case TermKey_CtrlE:
-        ctxCurMoveToLineEnd(ctx);
-        break;
-    case TermKey_CtrlF:
-        ctxCurMoveFwd(ctx);
-        break;
-    case TermKey_CtrlB:
-        ctxCurMoveBack(ctx);
-        break;
-    case TermKey_CtrlP:
-        ctxCurMoveUp(ctx);
-        break;
-    case TermKey_CtrlN:
-        ctxCurMoveDown(ctx);
-        break;
-    case TermKey_CtrlZ:
-    case TermKey_Backspace:
-        ctxRemoveBack(ctx);
-        break;
-    case TermKey_CtrlX:
-    case TermKey_Delete:
-        ctxRemoveFwd(ctx);
-        break;
-    case TermKey_CtrlW:
-        ctxSelBegin(ctx);
-        ctxCurMoveToPrevWordStart(ctx);
-        ctxSelEnd(ctx);
-        ctxRemoveBack(ctx);
-        break;
-    case TermKey_CtrlR:
-        ctxSelBegin(ctx);
-        ctxCurMoveToNextWordEnd(ctx);
-        ctxSelEnd(ctx);
-        ctxRemoveBack(ctx);
-        break;
-    case TermKey_CtrlO:
-        ctxInsertLineAbove(ctx);
-        break;
-    case TermKey_CtrlU:
-        ctxInsertLineBelow(ctx);
-        break;
-    case TermKey_CtrlT:
-        ctxSelBegin(ctx);
-        ctxCurMoveToLineStart(ctx);
-        ctxSelEnd(ctx);
-        ctxRemoveBack(ctx);
-        break;
-    case TermKey_CtrlY:
-        ctxSelBegin(ctx);
-        ctxCurMoveToLineEnd(ctx);
-        ctxSelEnd(ctx);
-        ctxRemoveBack(ctx);
-        break;
-    case TermKey_CtrlC:
-    case TermKey_CtrlQ:
-    case TermKey_Escape:
+    if (!_uiHandleEditMode(ctx, key)) {
         panel->mode = UIBufMode_Normal;
-        break;
-    case '\r':
-        key = '\n';
-        // fallthrough
-    default:
-        ctxInsertCP(ctx, (UcdCP)key);
-        break;
     }
     return true;
 }
@@ -417,7 +480,7 @@ static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key) {
     }
 
     Ctx *ctx = &buf->ctx;
-    if (_uiHandleNormalMovement(panel, key) || _uiHandleArrowKeys(panel, key)) {
+    if (_uiHandleNormalMovement(panel, key) || _uiHandleArrowKeys(ctx, key)) {
         return true;
     }
     switch (key) {

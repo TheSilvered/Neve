@@ -16,14 +16,17 @@ Editor g_ed = { 0 };
 
 void editorInit(void) {
     screenInit(&g_ed.screen);
-    bufMapInit(&g_ed.buffers);
-    g_ed.running = true;
     g_ed.lastUpdate = 0;
 
+    bufMapInit(&g_ed.buffers);
     uiInit(&g_ed.ui);
 
-    strInitFromC(&g_ed.strings.savePrompt, "File path: ");
-    strInitFromC(&g_ed.strings.noFilePath, "<New File>");
+    g_ed.running = true;
+    g_ed.runningCommand = false;
+
+    arrAppend(&g_ed.commands, cmdEntryNew("q", cmdQuit));
+    arrAppend(&g_ed.commands, cmdEntryNew("quit", cmdQuit));
+    arrAppend(&g_ed.commands, cmdEntryNew("exit", cmdQuit));
 
     termWrite(sLen(
         escEnableAltBuffer
@@ -58,12 +61,66 @@ void editorHandleKey(int32_t key) {
     }
 }
 
+void _runCmd(void) {
+    StrView cmd = ctxGetContent(&g_ed.ui.cmdInput.ctx);
+    if (cmd.len == 0) {
+        return;
+    }
+    StrView cmdName = cmd;
+    StrView cmdArgs = { .buf = NULL, .len = 0 };
+    for (size_t i = 0; i < cmd.len; i++) {
+        if (cmd.buf[i] == ' ') {
+            cmdName.len = i;
+            cmdArgs = (StrView) {
+                .buf = &cmd.buf[i + 1],
+                .len = cmd.len - i - 1
+            };
+            break;
+        }
+    }
+
+    for (size_t i = 0; i < g_ed.commands.len; i++) {
+        CmdEntry *cmdEntry = g_ed.commands.items[i];
+        if (cmdEntry->nameLen != cmdName.len) {
+            continue;
+        }
+        if (memcmp(cmdEntry->name, cmdName.buf, cmdName.len) != 0) {
+            continue;
+        }
+        if (g_ed.cmdResult != NULL) {
+            memFree(g_ed.cmdResult);
+        }
+        g_ed.cmdResult = cmdEntry->cmd(cmdArgs);
+        return;
+    }
+    if (g_ed.cmdResult != NULL) {
+        memFree(g_ed.cmdResult);
+    }
+    g_ed.cmdResult = cmdResultFailed(
+        "command '"strFmt"' not found",
+        strArg(&cmdName)
+    );
+}
+
 bool editorRefresh(void) {
     uint64_t time = timeRelNs();
     if (time - g_ed.lastUpdate < 16000000) {
         timeSleep(16000000 + g_ed.lastUpdate - time);
     }
     g_ed.lastUpdate = timeRelNs();
+
+    if (g_ed.runningCommand) {
+        switch (g_ed.ui.cmdInput.state) {
+        case UICmdInput_Inserting:
+            break;
+        case UICmdInput_Confirmed:
+            _runCmd();
+            // fallthrough
+        case UICmdInput_Canceled:
+            g_ed.runningCommand = false;
+            break;
+        }
+    }
 
     if (!editorUpdateSize()) {
         return false;
@@ -111,4 +168,16 @@ void editorNewBuf(void) {
     bufClose(&g_ed.buffers, g_ed.ui.bufPanel.bufHd);
     BufHandle newBuf = bufInitEmpty(&g_ed.buffers);
     g_ed.ui.bufPanel.bufHd = newBuf;
+}
+
+void editorOpenCommandPalette(void) {
+    g_ed.runningCommand = true;
+    g_ed.ui.cmdInput.state = UICmdInput_Inserting;
+    ctxDestroy(&g_ed.ui.cmdInput.ctx);
+    ctxInit(&g_ed.ui.cmdInput.ctx, false);
+    ctxCurAdd(&g_ed.ui.cmdInput.ctx, 0);
+    if (g_ed.cmdResult != NULL) {
+        memFree(g_ed.cmdResult);
+        g_ed.cmdResult = NULL;
+    }
 }

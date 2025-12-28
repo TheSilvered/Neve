@@ -5,6 +5,11 @@
 #include "unicode/nv_utf.h"
 #include "nv_utils.h"
 
+// Printf format specifier for Str, StrView and StrBuf
+#define strFmt "%.*s"
+// Printf argument for Str, StrView and StrBuf
+#define strArg(s) (int)(s)->len, (const char *)(s)->buf
+
 // A heap-allocated string.
 // Any function that expects a `StrView *` also accepts a `Str *`.
 // Use `strAsC` instead of reading the contents of `buf` directly.

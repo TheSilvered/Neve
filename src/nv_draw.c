@@ -4,6 +4,12 @@
 #include "nv_screen.h"
 #include "nv_utils.h"
 
+static const char *_normalModeStr = "Normal";
+static const char *_editModeStr = "Edit";
+static const char *_selectionModeStr = "Selection";
+
+static Str lineBuf = { 0 };
+
 static const size_t _cSymbolLen = 3;
 static const Utf8Ch _cSymbols[][3] = {
     [0x00] = { 0xe2, 0x90, 0x80 },
@@ -73,9 +79,41 @@ static const Utf8Ch _cSymbols[][3] = {
     [0x9f] = { 0xe2, 0x96, 0xaf }
 };
 
+static void _drawBufPanel(Screen *screen, const UIBufPanel *panel);
+static void _drawStatusBar(Screen *screen, const UIElement *statusBar);
+static void _drawCmdInput(Screen *screen, const UICmdInput *cmdInput);
+static size_t _strWidth(Utf8Ch *str, size_t len);
+static size_t _cStrWidth(const char *cStr);
+
+static size_t _cStrWidth(const char *cStr) {
+    size_t len = strlen(cStr);
+    return _strWidth((Utf8Ch *)cStr, len);
+}
+
+static size_t _strWidth(Utf8Ch *str, size_t len) {
+    StrView sv = {
+        .buf = str,
+        .len = len
+    };
+
+    size_t width = 0;
+    UcdCP cp;
+    for (
+        ptrdiff_t i = strViewNext(&sv, -1, &cp);
+        i != -1;
+        i = strViewNext(&sv, i, &cp)
+    ) {
+        width += ucdCPWidth(cp, 8, width);
+    }
+    return width;
+}
+
 void drawUI(Screen *screen, const UI *ui) {
-    drawBufPanel(screen, &ui->bufPanel);
-    drawStatusBar(screen, &ui->statusBar);
+    _drawBufPanel(screen, &ui->bufPanel);
+    _drawStatusBar(screen, &ui->statusBar);
+    if (ui->cmdInput.state == UICmdInput_Inserting) {
+        _drawCmdInput(screen, &ui->cmdInput);
+    }
 }
 
 static void _drawCtxLine(
@@ -244,14 +282,14 @@ void _drawCtxSelection(
     );
 }
 
-void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
+static void _drawBufPanel(Screen *screen, const UIBufPanel *panel) {
     BufHandle bufHandle = panel->bufHd;
     Buf *buf = bufRef(&g_ed.buffers, bufHandle);
     if (buf == NULL) {
         return;
     }
     Ctx *ctx = &buf->ctx;
-    Str lineBuf = { 0 };
+
     size_t lineCount = ctxLineCount(ctx);
     uint8_t numColWidth = (uint8_t)log10((double)lineCount) + 2;
 
@@ -282,8 +320,6 @@ void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
         );
     }
 
-    strDestroy(&lineBuf);
-
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor *cursor = &ctx->cursors.items[i];
         size_t line, col;
@@ -301,8 +337,8 @@ void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
                 .bg = screenColT16(8),
                 .textFmt = screenFmtUnderline,
             },
-            (uint16_t)(col - panel->scrollX + numColWidth),
-            (uint16_t)(line - panel->scrollY),
+            (uint16_t)(col - panel->scrollX + numColWidth + panel->elem.x),
+            (uint16_t)(line - panel->scrollY + panel->elem.y),
             1
         );
         if (!ctxSelIsActive(ctx)) {
@@ -326,7 +362,7 @@ void drawBufPanel(Screen *screen, const UIBufPanel *panel) {
     }
 }
 
-void drawStatusBar(Screen *screen, const UIElement *statusBar) {
+static void _drawStatusBar(Screen *screen, const UIElement *statusBar) {
     screenSetTextFmt(
         screen,
         screenFmtInverse,
@@ -334,16 +370,26 @@ void drawStatusBar(Screen *screen, const UIElement *statusBar) {
         statusBar->y,
         statusBar->w
     );
+    if (g_ed.cmdResult != NULL && !g_ed.cmdResult->success) {
+        screenSetFg(
+            screen,
+            (ScreenColor) { .col = screenColT16(62) },
+            statusBar->x,
+            statusBar->y,
+            statusBar->w
+        );
+    }
+
     const char *modeStr = NULL;
     switch (g_ed.ui.bufPanel.mode) {
     case UIBufMode_Normal:
-        modeStr = "Normal";
+        modeStr = _normalModeStr;
         break;
     case UIBufMode_Edit:
-        modeStr = "Edit";
+        modeStr = _editModeStr;
         break;
     case UIBufMode_Selection:
-        modeStr = "Selection";
+        modeStr = _selectionModeStr;
         break;
     default:
         nvUnreachable;
@@ -355,4 +401,63 @@ void drawStatusBar(Screen *screen, const UIElement *statusBar) {
         statusBar->y,
         "[%s]", modeStr
     );
+
+    if (g_ed.cmdResult != NULL && g_ed.cmdResult->msg.len != 0) {
+        screenWriteFmt(
+            screen,
+            statusBar->x + _cStrWidth(modeStr) + 3,
+            statusBar->y,
+            strFmt, strArg(&g_ed.cmdResult->msg)
+        );
+    }
+}
+
+static void _drawCmdInput(Screen *screen, const UICmdInput *cmdInput) {
+    screenWrite(
+        screen,
+        cmdInput->elem.x,
+        cmdInput->elem.y,
+        (Utf8Ch *)"~", 1
+    );
+    _drawCtxLine(
+        screen,
+        &cmdInput->ctx,
+        0,
+        &lineBuf,
+        cmdInput->elem.x + 1,
+        cmdInput->elem.y,
+        cmdInput->elem.w - 1,
+        cmdInput->scroll
+    );
+    screenSetTextFmt(
+        screen,
+        screenFmtUnderline,
+        cmdInput->elem.x,
+        cmdInput->elem.y,
+        cmdInput->elem.w
+    );
+
+    for (size_t i = 0; i < cmdInput->ctx.cursors.len; i++) {
+        CtxCursor *cursor = &cmdInput->ctx.cursors.items[i];
+        size_t col;
+        ctxPosAt(&cmdInput->ctx, cursor->idx, NULL, &col);
+
+        if (
+            col < cmdInput->scroll
+            || col > cmdInput->scroll + cmdInput->elem.w - 1
+        ) {
+            continue;
+        }
+        screenSetStyle(
+            screen,
+            (ScreenStyle) {
+                .fg = screenColT16(1),
+                .bg = screenColT16(8),
+                .textFmt = screenFmtUnderline,
+            },
+            (uint16_t)(col - cmdInput->scroll + cmdInput->elem.x + 1),
+            (uint16_t)(cmdInput->elem.y),
+            1
+        );
+    }
 }

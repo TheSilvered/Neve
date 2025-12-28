@@ -58,10 +58,24 @@ typedef struct UIBufPanel {
     size_t scrollX, scrollY;
 } UIBufPanel;
 
+typedef enum UICmdInputState {
+    UICmdInput_Confirmed,
+    UICmdInput_Canceled,
+    UICmdInput_Inserting
+} UICmdInputState;
+
+typedef struct UICmdInput {
+    UIElement elem;
+    Ctx ctx;
+    size_t scroll;
+    UICmdInputState state;
+} UICmdInput;
+
 typedef struct UI {
     UIElement elem;
     UIBufPanel bufPanel;
     UIElement statusBar;
+    UICmdInput cmdInput;
 } UI;
 
 void uiInit(UI *ui);
@@ -71,5 +85,6 @@ void uiUpdate(UIElement *elem);
 bool uiHandleKey(UIElement *elem, int32_t key);
 
 void uiBufPanelInit(UIBufPanel *panel);
+void uiCmdInputInit(UICmdInput *cmdInput);
 
 #endif // !NV_TUI_H_

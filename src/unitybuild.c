@@ -1,4 +1,5 @@
 #include "nv_buffer.c"
+#include "nv_command.c"
 #include "nv_context.c"
 #include "nv_draw.c"
 #include "nv_editor.c"

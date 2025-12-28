@@ -1,23 +1,22 @@
 #ifndef NV_EDITOR_H_
 #define NV_EDITOR_H_
 
-#include "nv_screen.h"
+#include "nv_array.h"
 #include "nv_buffer.h"
+#include "nv_command.h"
+#include "nv_screen.h"
 #include "nv_tui.h"
-
-typedef struct EditorStrings {
-    Str savePrompt;
-    Str noFilePath;
-} EditorStrings;
 
 // The state of the editor.
 typedef struct Editor {
     Screen screen;
-    BufMap buffers;
-    UI ui;
-    EditorStrings strings;
-    bool running;
     uint64_t lastUpdate;
+    BufMap buffers;
+    CmdMap commands;
+    CmdResult *cmdResult;
+    UI ui;
+    bool running;
+    bool runningCommand;
 } Editor;
 
 // Global editor variable.
@@ -39,5 +38,7 @@ bool editorRefresh(void);
 bool editorOpen(const char *path);
 // Create a new file.
 void editorNewBuf(void);
+// Open the command palette.
+void editorOpenCommandPalette(void);
 
 #endif // !NV_EDITOR_H_
