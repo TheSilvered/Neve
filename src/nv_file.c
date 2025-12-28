@@ -13,6 +13,11 @@ typedef char mode_char_t;
 #endif
 
 FileIOResult fileOpen(File *file, const char *path, FileMode mode) {
+    // Always initialize the file, even if it cannot be opened
+    file->fp = NULL;
+    file->mode = mode;
+    strInit(&file->path, 0);
+
     const mode_char_t *modeStr;
     switch (mode) {
     case FileMode_Read:
