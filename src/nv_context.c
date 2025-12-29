@@ -9,7 +9,7 @@
 #include "unicode/nv_ucd.h"
 
 #ifndef _lineRefMaxGap
-#define _lineRefMaxGap (1024*256)
+#define _lineRefMaxGap 65535
 #endif // !_lineRefMaxGap
 
 // Get from the gap buffer

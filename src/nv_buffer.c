@@ -1,12 +1,17 @@
 #include <assert.h>
+#include <string.h>
 #include "nv_buffer.h"
 #include "nv_file.h"
 
 #define _mapMinCap 4
 
 #ifndef _readBufSize
-#define _readBufSize (4 * 1024 * 1024)
+#define _readBufSize (64 * 1024 * 1024)
+#else
+#define _disableAutoBufSize
 #endif // !_readBufSize
+
+#define _readMaxSize (1024 * 1024 * 1024) // 1 GiB
 
 static BufHandle g_handleCounter = 1;
 
@@ -125,7 +130,22 @@ BufResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
     Ctx ctx;
     ctxInit(&ctx, true);
 
-    const size_t readBufSize = _readBufSize;
+#ifdef _disableAutoBufSize
+    size_t readBufSize = _readBufSize;
+#else
+    filePosToEnd(file);
+    int64_t filePos = filePosGet(file);
+    filePosToBeginning(file);
+    size_t readBufSize;
+    if (filePos < 0) {
+        readBufSize = _readBufSize;
+    } else if (filePos > _readMaxSize) {
+        readBufSize = _readMaxSize;
+    } else {
+        readBufSize = (size_t)filePos;
+    }
+#endif
+
     uint8_t *readBuf = memAllocBytes(readBufSize);
     size_t leftover = 0;
 
