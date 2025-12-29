@@ -14,7 +14,7 @@ typedef CmdResult *(*Cmd)(StrView);
 typedef struct CmdEntry {
     Cmd cmd;
     size_t nameLen;
-    char name[];
+    char name[1];
 } CmdEntry;
 
 typedef Arr(CmdEntry *) CmdMap;

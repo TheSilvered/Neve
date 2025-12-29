@@ -408,7 +408,7 @@ static void _drawStatusBar(Screen *screen, const UIElement *statusBar) {
     if (g_ed.cmdResult != NULL && g_ed.cmdResult->msg.len != 0) {
         screenWriteFmt(
             screen,
-            statusBar->x + _cStrWidth(modeStr) + 3,
+            statusBar->x + (uint16_t)_cStrWidth(modeStr) + 3,
             statusBar->y,
             strFmt, strArg(&g_ed.cmdResult->msg)
         );
