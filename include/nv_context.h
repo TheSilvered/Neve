@@ -34,10 +34,12 @@ typedef struct Ctx {
     CtxSelections _sels;
     CtxBuf _buf;
     CtxCursors cursors;
-    bool _selecting;
-    bool edited;
-    bool multiline;
+    uint8_t _selecting : 1;
+    uint8_t edited : 1;
+    uint8_t multiline : 1;
+    uint8_t mergeSpaces : 1;
     uint8_t tabStop;
+    uint8_t indentWidth;
 } Ctx;
 
 /******************** Initialization and deinitialization *********************/
@@ -120,9 +122,13 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp);
 void ctxRemoveBack(Ctx *ctx);
 // Remove the character after the cursor.
 void ctxRemoveFwd(Ctx *ctx);
-// Create a new line above and move the cursor(s) to it
+// Indent by `ctx->indentWidth` all lines with a cursor.
+void ctxIndent(Ctx *ctx);
+// Dedent a line by `ctx->indentWidth` all lines with a cursor.
+void ctxDedent(Ctx *ctx);
+// Create a new line above and move the cursor(s) to it.
 void ctxInsertLineAbove(Ctx *ctx);
-// Create a new line below and move the cursor(s) to it
+// Create a new line below and move the cursor(s) to it.
 void ctxInsertLineBelow(Ctx *ctx);
 
 /*********************************** Other ************************************/

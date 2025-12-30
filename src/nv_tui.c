@@ -436,6 +436,12 @@ static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
     case 'Q':
         ctxRemoveFwd(ctx);
         break;
+    case 'd':
+        ctxIndent(ctx);
+        break;
+    case 'D':
+        ctxDedent(ctx);
+        break;
     case 'R':
         ctxCurMoveToLineStart(ctx);
         ctxSelBegin(ctx);

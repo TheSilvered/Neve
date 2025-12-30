@@ -5,12 +5,15 @@
 #include "nv_context.h"
 #include "nv_array.h"
 #include "nv_mem.h"
+#include "nv_string.h"
 #include "unicode/nv_utf.h"
 #include "unicode/nv_ucd.h"
 
 #ifndef _lineRefMaxGap
 #define _lineRefMaxGap 65535
 #endif // !_lineRefMaxGap
+
+#define _maxIndentWidth 32
 
 // Get from the gap buffer
 static inline Utf8Ch *_ctxBufGet(const CtxBuf *buf, size_t idx);
@@ -53,6 +56,21 @@ static void _ctxSelJoin(Ctx *ctx);
 // Get a selection from a cursor
 static CtxSelection _ctxCurToSel(CtxCursor *cur);
 
+// Get info about the indentation.
+static size_t _ctxIndentInfo(Ctx *ctx, size_t line, ptrdiff_t *outIdx);
+// Set the indent of a line.
+static void _ctxLineSetIndent(
+    Ctx *ctx,
+    size_t indentStart,
+    size_t indentEnd,
+    size_t indent,
+    Str *indentBuf
+);
+// Indent a line.
+static void _ctxLineIndent(Ctx *ctx, size_t line, Str *indentBuf);
+// Dedent a line.
+static void _ctxLineDedent(Ctx *ctx, size_t line, Str *indentBuf);
+
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->_refs = (CtxRefs){ 0 };
     ctx->_sels = (CtxSelections){ 0 };
@@ -69,6 +87,8 @@ void ctxInit(Ctx *ctx, bool multiline) {
     ctx->edited = false;
     ctx->multiline = multiline;
     ctx->tabStop = 8;
+    ctx->indentWidth = 4;
+    ctx->mergeSpaces = false;
 }
 
 void ctxDestroy(Ctx *ctx) {
@@ -1165,7 +1185,7 @@ void ctxInsert(Ctx *ctx, const Utf8Ch *data, size_t len) {
     arrClear(&lines);
 }
 
-static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, Utf8Ch *outBuf) {
+static size_t _cpToUTF8Filtered(UcdCP cp, bool allowLF, Utf8Ch *outBuf) {
     if (cp < 0 || cp > ucdCPMax) {
         return 0;
     }
@@ -1183,13 +1203,67 @@ static size_t cpToUTF8Filtered_(UcdCP cp, bool allowLF, Utf8Ch *outBuf) {
     return utf8FromCP(cp, outBuf);
 }
 
+static void _ctxInsertNLRepSels(Ctx *ctx) {
+    CtxSelections *sels = &ctx->_sels;
+    size_t selsLen = sels->len;
+    Str indentBuf = { 0 };
+
+    for (size_t i = 0; i < selsLen; i++) {
+        size_t idx = selsLen - i - 1;
+        CtxSelection sel = sels->items[idx];
+        arrRemove(sels, idx);
+
+        size_t line;
+        ctxPosAt(ctx, sel.startIdx, &line, NULL);
+        size_t indent = _ctxIndentInfo(ctx, line, NULL);
+        _ctxReplace(ctx, sel.startIdx, sel.endIdx, (Utf8Ch *)"\n", 1);
+        _ctxLineSetIndent(
+            ctx,
+            sel.startIdx + 1,
+            sel.startIdx + 1,
+            indent,
+            &indentBuf
+        );
+    }
+    strDestroy(&indentBuf);
+}
+
+static void _ctxInsertNLCursors(Ctx *ctx) {
+    CtxCursors *cursors = &ctx->cursors;
+    size_t cursorsLen = cursors->len;
+    Str indentBuf = { 0 };
+
+    for (size_t i = 0; i < cursorsLen; i++) {
+        CtxCursor *cur = &cursors->items[i];
+        size_t line;
+        ctxPosAt(ctx, cur->idx, &line, NULL);
+        size_t indent = _ctxIndentInfo(ctx, line, NULL);
+        _ctxReplace(ctx, cur->idx, cur->idx, (Utf8Ch *)"\n", 1);
+        _ctxLineSetIndent(ctx, cur->idx, cur->idx, indent, &indentBuf);
+    }
+    strDestroy(&indentBuf);
+}
+
 void ctxInsertCP(Ctx *ctx, UcdCP cp) {
-    if (cp == 0) {
+    if (cp == 0 || (cp == '\n' && !ctx->multiline)) {
+        return;
+    }
+
+    if (ctx->_selecting) {
+        ctxSelEnd(ctx);
+    }
+
+    if (cp == '\n') {
+        if (ctx->_sels.len != 0) {
+            _ctxInsertNLRepSels(ctx);
+        } else {
+            _ctxInsertNLCursors(ctx);
+        }
         return;
     }
 
     Utf8Ch buf[4];
-    size_t len = cpToUTF8Filtered_(cp, ctx->multiline, buf);
+    size_t len = _cpToUTF8Filtered(cp, ctx->multiline, buf);
     if (len == 0) {
         return;
     }
@@ -1233,15 +1307,196 @@ void ctxRemoveFwd(Ctx *ctx) {
     _ctxRemoveSelections(ctx);
 }
 
+static size_t _ctxIndentInfo(Ctx *ctx, size_t line, ptrdiff_t *outIdx) {
+    ptrdiff_t start = ctxLineStart(ctx, line);
+    ptrdiff_t end = ctxLineEnd(ctx, line);
+    size_t indent = 0;
+    ptrdiff_t i = -1;
+
+    if (start < 0 || end < 0) {
+        goto exit;
+    }
+
+    for (i = start; i < end; i++) {
+        Utf8Ch ch = *_ctxBufGet(&ctx->_buf, i);
+        if (ch != ' ' && ch != '\t') {
+            break;
+        }
+        indent += ucdCPWidth(ch, ctx->tabStop, indent);
+    }
+
+exit:
+    if (outIdx != NULL) {
+        *outIdx = i;
+    }
+    return indent;
+}
+
+static void _ctxLineSetIndent(
+    Ctx *ctx,
+    size_t indentStart,
+    size_t indentEnd,
+    size_t indent,
+    Str *indentBuf
+) {
+    if (!ctx->mergeSpaces) {
+        strRepeat(indentBuf, ' ', indent);
+    } else {
+        size_t tabs = indent / ctx->tabStop;
+        size_t spaces = indent % ctx->tabStop;
+        strRepeat(indentBuf, '\n', tabs);
+        strRepeat(indentBuf, ' ', spaces);
+    }
+    _ctxReplace(
+        ctx,
+        indentStart,
+        indentEnd,
+        indentBuf->buf,
+        indentBuf->len
+    );
+}
+
+static void _ctxLineIndent(Ctx *ctx, size_t line, Str *indentBuf) {
+    assert(ctx->indentWidth <= _maxIndentWidth);
+    strClear(indentBuf, indentBuf->cap);
+    ptrdiff_t start = ctxLineStart(ctx, line);
+    ptrdiff_t end;
+    size_t currIndent = _ctxIndentInfo(ctx, line, &end);
+    size_t indent =
+        currIndent + ctx->indentWidth - (currIndent % ctx->indentWidth);
+    _ctxLineSetIndent(ctx, start, end, indent, indentBuf);
+}
+
+static void _ctxLineDedent(Ctx *ctx, size_t line, Str *indentBuf) {
+    assert(ctx->indentWidth <= _maxIndentWidth);
+    strClear(indentBuf, indentBuf->cap);
+    ptrdiff_t start = ctxLineStart(ctx, line);
+    ptrdiff_t end;
+    size_t currIndent = _ctxIndentInfo(ctx, line, &end);
+    size_t indent;
+    if (currIndent < ctx->indentWidth) {
+        indent = 0;
+    } else {
+        indent =
+            currIndent - (ctx->indentWidth - (currIndent % ctx->indentWidth));
+    }
+    _ctxLineSetIndent(ctx, start, end, indent, indentBuf);
+}
+
+void ctxIndent(Ctx *ctx) {
+    ptrdiff_t lastLine = -1;
+    Str indentBuf = { 0 };
+
+    if (ctx->_selecting) {
+        ctxSelEnd(ctx);
+    }
+
+    if (ctx->_sels.len == 0) {
+        // Indenting may cause some cursors to merge but all lines are still
+        // correctly indented because the deleted cursor was on the same line
+        for (size_t i = 0; i < ctx->cursors.len; i++) {
+            CtxCursor *cur = &ctx->cursors.items[i];
+            size_t line;
+            ctxPosAt(ctx, cur->idx, &line, NULL);
+            if ((ptrdiff_t)line != lastLine) {
+                lastLine = line;
+                _ctxLineIndent(ctx, line, &indentBuf);
+            }
+        }
+    } else {
+        for (size_t i = 0; i < ctx->_sels.len; i++) {
+            CtxSelection sel = ctx->_sels.items[i];
+            size_t startLine;
+            size_t endLine;
+            ctxPosAt(ctx, sel.startIdx, &startLine, NULL);
+            ctxPosAt(ctx, sel.endIdx, &endLine, NULL);
+            if (lastLine != (ptrdiff_t)startLine) {
+                _ctxLineIndent(ctx, startLine, &indentBuf);
+            }
+            for (size_t line = startLine; line < endLine; line++) {
+                _ctxLineIndent(ctx, line + 1, &indentBuf);
+            }
+            lastLine = endLine;
+        }
+    }
+    strDestroy(&indentBuf);
+}
+
+void ctxDedent(Ctx *ctx) {
+    ptrdiff_t lastLine = -1;
+    Str indentBuf = { 0 };
+
+    if (ctx->_selecting) {
+        ctxSelEnd(ctx);
+    }
+
+    if (ctx->_sels.len == 0) {
+        // Indenting may cause some cursors to merge but all lines are still
+        // correctly indented because the deleted cursor was on the same line
+        for (size_t i = 0; i < ctx->cursors.len; i++) {
+            CtxCursor *cur = &ctx->cursors.items[i];
+            size_t line;
+            ctxPosAt(ctx, cur->idx, &line, NULL);
+            if ((ptrdiff_t)line != lastLine) {
+                lastLine = line;
+                _ctxLineDedent(ctx, line, &indentBuf);
+            }
+        }
+    } else {
+        for (size_t i = 0; i < ctx->_sels.len; i++) {
+            CtxSelection sel = ctx->_sels.items[i];
+            size_t startLine;
+            size_t endLine;
+            ctxPosAt(ctx, sel.startIdx, &startLine, NULL);
+            ctxPosAt(ctx, sel.endIdx, &endLine, NULL);
+            if (lastLine != (ptrdiff_t)startLine) {
+                _ctxLineDedent(ctx, startLine, &indentBuf);
+            }
+            for (size_t line = startLine; line < endLine; line++) {
+                _ctxLineDedent(ctx, line + 1, &indentBuf);
+            }
+            lastLine = endLine;
+        }
+    }
+    strDestroy(&indentBuf);
+}
+
 void ctxInsertLineAbove(Ctx *ctx) {
+    if (ctx->_selecting) {
+        ctxSelEnd(ctx);
+    }
+
+    if (ctx->_sels.len != 0) {
+        ctxInsertCP(ctx, '\n');
+        return;
+    }
+    // Guarantee one cursor per line
     ctxCurMoveToLineStart(ctx);
-    ctxInsert(ctx, (const Utf8Ch *)"\n", 1);
-    ctxCurMoveBack(ctx);
+    Str indentBuf = { 0 };
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        CtxCursor *cur = &ctx->cursors.items[i];
+        size_t line;
+        ctxPosAt(ctx, cur->idx, &line, NULL);
+        size_t indent = _ctxIndentInfo(ctx, line, NULL);
+        _ctxReplace(ctx, cur->idx, cur->idx, (Utf8Ch *)"\n", 1);
+        cur->idx--;
+        _ctxLineSetIndent(ctx, cur->idx, cur->idx, indent, &indentBuf);
+    }
+    strDestroy(&indentBuf);
 }
 
 void ctxInsertLineBelow(Ctx *ctx) {
-    ctxCurMoveToLineEnd(ctx);
-    ctxInsert(ctx, (const Utf8Ch *)"\n", 1);
+    if (ctx->_selecting) {
+        ctxSelEnd(ctx);
+    }
+
+    if (ctx->_sels.len != 0) {
+        ctxInsertCP(ctx, '\n');
+    } else {
+        ctxCurMoveToLineEnd(ctx);
+        // ctxInsertCP already adds the proper indent
+        ctxInsertCP(ctx, '\n');
+    }
 }
 
 bool ctxChInSel(const Ctx *ctx, size_t idx) {
