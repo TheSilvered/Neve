@@ -336,6 +336,12 @@ static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
     case TermKey_Delete:
         ctxRemoveFwd(ctx);
         break;
+    case TermKey_CtrlD:
+        ctxIndent(ctx);
+        break;
+    case TermKey_CtrlS:
+        ctxDedent(ctx);
+        break;
     case TermKey_CtrlW:
         ctxSelBegin(ctx);
         ctxCurMoveToPrevWordStart(ctx);
@@ -510,6 +516,12 @@ static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key) {
         } else {
             ctxSelBegin(ctx);
         }
+        break;
+    case 'd':
+        ctxIndent(ctx);
+        break;
+    case 'D':
+        ctxDedent(ctx);
         break;
     case TermKey_CtrlC:
     case TermKey_CtrlQ:

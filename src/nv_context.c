@@ -1244,6 +1244,39 @@ static void _ctxInsertNLCursors(Ctx *ctx) {
     strDestroy(&indentBuf);
 }
 
+// Get the line the cursor is on to change the indent or -1 if the cursor is in
+// the middle of the line.
+static ptrdiff_t _ctxCurIndentLine(const Ctx *ctx, CtxCursor *cur) {
+    size_t line;
+    ctxPosAt(ctx, cur->idx, &line, NULL);
+    ptrdiff_t lineStart = ctxLineStart(ctx, line);
+    assert(lineStart >= 0);
+    for (size_t i = cur->idx; i > (size_t)lineStart; i--) {
+        Utf8Ch ch = *_ctxBufGet(&ctx->_buf, i - 1);
+        if (ch != ' ' && ch != '\t') {
+            return -1;
+        }
+    }
+    return (ptrdiff_t)line;
+}
+
+static void _ctxInsertTabCursors(Ctx *ctx) {
+    CtxCursors *cursors = &ctx->cursors;
+    size_t cursorsLen = cursors->len;
+    Str indentBuf = { 0 };
+
+    for (size_t i = 0; i < cursorsLen; i++) {
+        CtxCursor *cur = &cursors->items[i];
+        ptrdiff_t line = _ctxCurIndentLine(ctx, cur);
+        if (line >= 0) {
+            _ctxLineIndent(ctx, (size_t)line, &indentBuf);
+        } else {
+            _ctxReplace(ctx, cur->idx, cur->idx, (Utf8Ch *)"\t", 1);
+        }
+    }
+    strDestroy(&indentBuf);
+}
+
 void ctxInsertCP(Ctx *ctx, UcdCP cp) {
     if (cp == 0 || (cp == '\n' && !ctx->multiline)) {
         return;
@@ -1259,6 +1292,9 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
         } else {
             _ctxInsertNLCursors(ctx);
         }
+        return;
+    } else if (cp == '\t' && ctx->_sels.len == 0) {
+        _ctxInsertTabCursors(ctx);
         return;
     }
 
@@ -1279,18 +1315,53 @@ static void _ctxRemoveSelections(Ctx *ctx) {
     arrClear(&ctx->_sels);
 }
 
+static void _ctxRemoveBackCursors(Ctx *ctx) {
+    Str indentBuf = { 0 };
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t prevLen = ctx->cursors.len;
+        CtxCursor *cur = &ctx->cursors.items[i];
+        ptrdiff_t line = _ctxCurIndentLine(ctx, cur);
+        if (line >= 0) {
+            _ctxLineDedent(ctx, (size_t)line, &indentBuf);
+        } else {
+            size_t end = cur->idx;
+            ptrdiff_t start = ctxPrev(ctx, end, NULL);
+            if (start == -1) {
+                start = 0;
+            }
+            _ctxReplace(ctx, start, end, NULL, 0);
+        }
+        // Do not advance when cursors are deleted
+        i -= prevLen - ctx->cursors.len;
+    }
+    strDestroy(&indentBuf);
+}
+
+static void _ctxRemoveFwdCursors(Ctx *ctx) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t prevLen = ctx->cursors.len;
+        CtxCursor *cur = &ctx->cursors.items[ctx->cursors.len - i - 1];
+        size_t start = cur->idx;
+        ptrdiff_t end = ctxNext(ctx, start, NULL);
+        if (end == -1) {
+            end = ctx->_buf.len;
+        }
+        _ctxReplace(ctx, start, end, NULL, 0);
+        // Do not advance when cursors are deleted
+        i -= prevLen - ctx->cursors.len;
+    }
+}
+
 void ctxRemoveBack(Ctx *ctx) {
     if (ctx->_selecting) {
         ctxSelEnd(ctx);
     }
 
-    if (ctx->_sels.len == 0) {
-        ctxSelBegin(ctx);
-        ctxCurMoveBack(ctx);
-        ctxSelEnd(ctx);
+    if (ctx->_sels.len != 0) {
+        _ctxRemoveSelections(ctx);
+    } else {
+        _ctxRemoveBackCursors(ctx);
     }
-
-    _ctxRemoveSelections(ctx);
 }
 
 void ctxRemoveFwd(Ctx *ctx) {
@@ -1298,13 +1369,11 @@ void ctxRemoveFwd(Ctx *ctx) {
         ctxSelEnd(ctx);
     }
 
-    if (ctx->_sels.len == 0) {
-        ctxSelBegin(ctx);
-        ctxCurMoveFwd(ctx);
-        ctxSelEnd(ctx);
+    if (ctx->_sels.len != 0) {
+        _ctxRemoveSelections(ctx);
+    } else {
+        _ctxRemoveFwdCursors(ctx);
     }
-
-    _ctxRemoveSelections(ctx);
 }
 
 static size_t _ctxIndentInfo(Ctx *ctx, size_t line, ptrdiff_t *outIdx) {
