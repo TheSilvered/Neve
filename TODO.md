@@ -1,6 +1,5 @@
 # Short-term goals
 
-- Fix selection rendering when starting out of bounds
 - Add tests for previous _ctxReplace bugs
 - Add tests for new indentation functions
 - Add line selection
