@@ -322,6 +322,11 @@ static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
     case TermKey_CtrlB:
         ctxCurMoveBack(ctx);
         break;
+    case TermKey_CtrlK:
+        ctxCurMoveToPrevWordStart(ctx);
+        break;
+    case TermKey_CtrlL:
+        ctxCurMoveToNextWordEnd(ctx);
     case TermKey_CtrlP:
         ctxCurMoveUp(ctx);
         break;
@@ -346,13 +351,17 @@ static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
         ctxSelBegin(ctx);
         ctxCurMoveToPrevWordStart(ctx);
         ctxSelEnd(ctx);
-        ctxRemoveBack(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
         break;
     case TermKey_CtrlR:
         ctxSelBegin(ctx);
-        ctxCurMoveToNextWordEnd(ctx);
+        ctxCurMoveToNextWordStart(ctx);
         ctxSelEnd(ctx);
-        ctxRemoveBack(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
         break;
     case TermKey_CtrlO:
         ctxInsertLineAbove(ctx);
@@ -364,13 +373,17 @@ static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
         ctxSelBegin(ctx);
         ctxCurMoveToLineStart(ctx);
         ctxSelEnd(ctx);
-        ctxRemoveBack(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
         break;
     case TermKey_CtrlY:
         ctxSelBegin(ctx);
         ctxCurMoveToLineEnd(ctx);
         ctxSelEnd(ctx);
-        ctxRemoveBack(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
         break;
     case TermKey_CtrlC:
     case TermKey_CtrlQ:

@@ -192,6 +192,8 @@ In edit mode the key bindings available are the following:
 - `[^E]` move to the end of the line
 - `[^F]` move cursor foreward
 - `[^B]` move cursor backward
+- `[^K]` move cursor to previous word
+- `[^L]` move cursor to next word
 - `[^P]` move cursor up (previous line)
 - `[^N]` move cursor down (next line)
 - `[^Z]` delete backward (backspace)
