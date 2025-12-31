@@ -912,7 +912,7 @@ static void _ctxReplace(
     ctx->edited = true;
 
     // Move all cursors inside the span to the end
-    size_t curIdx = _ctxCurAt(ctx, start) + 1;
+    size_t curIdx = _ctxCurAt(ctx, start + 1);
     if (curIdx < ctx->cursors.len) {
         while (ctx->cursors.items[curIdx].idx < end) {
             ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
@@ -1321,7 +1321,8 @@ static void _ctxRemoveBackCursors(Ctx *ctx) {
         size_t prevLen = ctx->cursors.len;
         CtxCursor *cur = &ctx->cursors.items[i];
         ptrdiff_t line = _ctxCurIndentLine(ctx, cur);
-        if (line >= 0) {
+        ptrdiff_t lineStart = ctxLineStart(ctx, line);
+        if (line >= 0 && lineStart != (ptrdiff_t)cur->idx) {
             _ctxLineDedent(ctx, (size_t)line, &indentBuf);
         } else {
             size_t end = cur->idx;
