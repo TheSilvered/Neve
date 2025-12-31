@@ -225,61 +225,85 @@ void _drawCtxSelection(
     uint8_t numColWidth,
     size_t startIdx, size_t endIdx
 ) {
-    size_t startLine, startCol;
-    size_t endLine, endCol;
+    ptrdiff_t startLine, startCol;
+    ptrdiff_t endLine, endCol;
 
-    ctxPosAt(ctx, startIdx, &startLine, &startCol);
-    ctxPosAt(ctx, endIdx, &endLine, &endCol);
+    ctxPosAt(ctx, startIdx, (size_t *)&startLine, (size_t *)&startCol);
+    ctxPosAt(ctx, endIdx, (size_t *)&endLine, (size_t *)&endCol);
 
-    if (
-        endLine < panel->scrollY
-        || startLine >= panel->scrollY + panel->elem.h
-    ) {
-        return;
-    }
-
-    ptrdiff_t absX = panel->elem.x - panel->scrollX + numColWidth;
-    ptrdiff_t absY = panel->elem.y - panel->scrollY;
     ScreenStyle selStyle = {
         .bg = screenColT16(61),
         .fg = screenColT16(68),
         .style = screenStyleNoFmt
     };
 
+    startCol  -= (ptrdiff_t)panel->scrollX;
+    endCol    -= (ptrdiff_t)panel->scrollX;
+    startLine -= (ptrdiff_t)panel->scrollY;
+    endLine   -= (ptrdiff_t)panel->scrollY;
+
+    // If the lines are not in view there is nothing to draw
+    if (endLine < 0 || startLine >= panel->elem.h) {
+        return;
+    }
+    if (startCol < 0) {
+        startCol = 0;
+    }
+    if (endCol > panel->elem.w) {
+        endCol = panel->elem.w;
+    }
+
     if (startLine == endLine) {
+        if (startCol >= panel->elem.w || endCol < 0 || startCol >= endCol) {
+            return;
+        }
         screenSetStyle(
             screen,
             selStyle,
-            (uint16_t)(startCol + absX),
-            (uint16_t)(startLine + absY),
+            (int16_t)startCol + panel->elem.x + numColWidth,
+            (int16_t)startLine + panel->elem.y,
             (uint16_t)(endCol - startCol)
         );
         return;
     }
 
-    screenSetStyle(
-        screen,
-        selStyle,
-        (uint16_t)(startCol + absX),
-        (uint16_t)(startLine + absY),
-        screen->w
-    );
-    for (size_t line = startLine + 1; line < endLine; line++) {
+    // If the selection spans multiple lines draw the first and the last
+    // separately and fully highlight the middle lines
+
+    if (startCol < panel->elem.w && startLine >= 0) {
         screenSetStyle(
             screen,
             selStyle,
-            (uint16_t)(absX),
-            (uint16_t)(line + absY),
-            screen->w
+            (int16_t)startCol + panel->elem.x + numColWidth,
+            (int16_t)startLine + panel->elem.y,
+            (uint16_t)(panel->elem.w - startCol)
         );
     }
-    screenSetStyle(
-        screen,
-        selStyle,
-        (uint16_t)(absX),
-        (uint16_t)(endLine + absY),
-        (uint16_t)(endCol)
-    );
+
+    for (
+        ptrdiff_t line = nvMax(startLine + 1, 0),
+            lastLine = nvMin(panel->elem.h, endLine);
+        line < lastLine;
+        line++
+    ) {
+        screenSetStyle(
+            screen,
+            selStyle,
+            panel->elem.x + numColWidth,
+            (int16_t)line + panel->elem.y,
+            panel->elem.w
+        );
+    }
+
+    if (endCol > 0 && endLine < panel->elem.h) {
+        screenSetStyle(
+            screen,
+            selStyle,
+            panel->elem.x + numColWidth,
+            (int16_t)endLine + panel->elem.y,
+            (uint16_t)endCol
+        );
+    }
 }
 
 static void _drawBufPanel(Screen *screen, const UIBufPanel *panel) {

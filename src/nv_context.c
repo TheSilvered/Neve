@@ -691,13 +691,13 @@ static size_t _ctxFindNextWordEnd(const Ctx *ctx, size_t idx) {
     // Skip white space
     for (; i != -1 && ucdIsCPWhiteSpace(cp); i = ctxNext(ctx, i, &cp)) { }
 
-    if (ucdIsCPAlphanumeric(cp)) {
+    if (ucdIsCPAlphanumeric(cp) && i != -1) {
         for (
             i = ctxNext(ctx, i, &cp);
             i != -1 && ucdIsCPAlphanumeric(cp);
             i = ctxNext(ctx, i, &cp)
         ) { }
-    } else {
+    } else if (i != -1) {
         for (
             i = ctxNext(ctx, i, &cp);
             i != -1 && !ucdIsCPWhiteSpace(cp) && !ucdIsCPAlphanumeric(cp);

@@ -90,14 +90,14 @@ void screenResize(Screen *screen, uint16_t w, uint16_t h);
 // Write a string to the screen.
 void screenWrite(
     Screen *screen,
-    uint16_t x, uint16_t y,
+    int16_t x, int16_t y,
     const Utf8Ch *str, size_t len
 );
 
 // Write a string to the screen using printf-style formatting.
 nvUnixFmt(4, 5) void screenWriteFmt(
     Screen *screen,
-    uint16_t x, uint16_t y,
+    int16_t x, int16_t y,
     nvWinFmt const char *fmt, ...
 );
 
@@ -105,8 +105,8 @@ nvUnixFmt(4, 5) void screenWriteFmt(
 void screenSetFg(
     Screen *screen,
     ScreenColor fg,
-    uint16_t x,
-    uint16_t y,
+    int16_t x,
+    int16_t y,
     uint16_t width
 );
 
@@ -114,8 +114,8 @@ void screenSetFg(
 void screenSetBg(
     Screen *screen,
     ScreenColor bg,
-    uint16_t x,
-    uint16_t y,
+    int16_t x,
+    int16_t y,
     uint16_t width
 );
 
@@ -123,8 +123,8 @@ void screenSetBg(
 void screenSetTextFmt(
     Screen *screen,
     ScreenTextFmt textFmt,
-    uint16_t x,
-    uint16_t y,
+    int16_t x,
+    int16_t y,
     uint16_t width
 );
 
@@ -132,8 +132,8 @@ void screenSetTextFmt(
 void screenSetStyle(
     Screen *screen,
     ScreenStyle style,
-    uint16_t x,
-    uint16_t y,
+    int16_t x,
+    int16_t y,
     uint16_t width
 );
 

@@ -93,20 +93,22 @@ void screenResize(Screen *screen, uint16_t w, uint16_t h) {
     screen->h = h;
 }
 
-static size_t cutStr(StrView *sv, size_t maxWidth, size_t w) {
+static size_t _cutStr(StrView *sv, size_t aim, size_t w, bool canOvershoot) {
     ptrdiff_t i = 0;
     uint8_t cpWidth = 0;
     UcdCP cp = 0;
     for (
         i = strViewNext(sv, -1, &cp);
-        i != -1;
+        i != -1 && w < aim;
         i = strViewNext(sv, i, &cp)
     ) {
         // Assume tabs have been filtered out
-        cpWidth = ucdCPWidth(cp, 0, w);
-        if (w + cpWidth > maxWidth) {
+        cpWidth = ucdCPWidth(cp, 1, w);
+
+        if (!canOvershoot && w + cpWidth > aim) {
             break;
         }
+
         w += cpWidth;
     }
 
@@ -118,11 +120,24 @@ static size_t cutStr(StrView *sv, size_t maxWidth, size_t w) {
 
 void screenWrite(
     Screen *screen,
-    uint16_t x, uint16_t y,
+    int16_t x, int16_t y,
     const Utf8Ch *str, size_t len
 ) {
-    if (x >= screen->w || y >= screen->h) {
+    if (x >= screen->w || y >= screen->h || y < 0) {
         return;
+    }
+
+    StrView sv = { .buf = str, .len = len };
+
+    // Make the x >= 0
+    if (x < 0) {
+        uint16_t w = _cutStr(&sv, (size_t)(-x), 0, true);
+        if (sv.len == len || w < -x) { // The whole string is out of view
+            return;
+        }
+        str = sv.buf + sv.len;
+        len = len - sv.len;
+        x += w;
     }
 
     uint16_t w = 0;
@@ -149,7 +164,7 @@ void screenWrite(
     uint16_t rowW = startIdx == -1 ? w : w + cpWidth; // Needed below
 
     // Append the part before the string to the new row
-    StrView sv = {
+    sv = (StrView){
         .buf = (Utf8Ch *)row->buf,
         .len = startIdx < 0 ? row->len : (size_t)startIdx
     };
@@ -158,9 +173,8 @@ void screenWrite(
     strRepeat(&screen->buf, ' ', x - w);
 
     // Add the string without going over the width of the screen
-    sv.buf = str;
-    sv.len = len;
-    w = (uint16_t)cutStr(&sv, screenW, w);
+    sv = (StrView) { .buf = str, .len = len };
+    w = (uint16_t)_cutStr(&sv, screenW, w, false);
     strAppend(&screen->buf, &sv);
 
     if (w == screenW || startIdx == -1) {
@@ -185,7 +199,7 @@ void screenWrite(
 
     sv.buf = (Utf8Ch *)row->buf + rowIdx;
     sv.len = row->len - rowIdx;
-    (void)cutStr(&sv, screenW, rowW);
+    (void)_cutStr(&sv, screenW, rowW, false);
     strAppend(&screen->buf, &sv);
 
 replaceRow:
@@ -196,7 +210,7 @@ replaceRow:
 
 nvUnixFmt(4, 5) void screenWriteFmt(
     Screen *screen,
-    uint16_t x, uint16_t y,
+    int16_t x, int16_t y,
     nvWinFmt const char *fmt, ...
 ) {
     char buf[2048] = { 0 };
@@ -256,8 +270,8 @@ static bool _rowChanged(Screen *screen, uint16_t idx) {
 void screenSetFg(
     Screen *screen,
     ScreenColor fg,
-    uint16_t x,
-    uint16_t y,
+    int16_t x,
+    int16_t y,
     uint16_t width
 ) {
     ScreenStyle style = {
@@ -273,8 +287,8 @@ void screenSetFg(
 void screenSetBg(
     Screen *screen,
     ScreenColor bg,
-    uint16_t x,
-    uint16_t y,
+    int16_t x,
+    int16_t y,
     uint16_t width
 ) {
     ScreenStyle style = {
@@ -290,8 +304,8 @@ void screenSetBg(
 void screenSetTextFmt(
     Screen *screen,
     ScreenTextFmt textFmt,
-    uint16_t x,
-    uint16_t y,
+    int16_t x,
+    int16_t y,
     uint16_t width
 ) {
     ScreenStyle style = {
@@ -305,13 +319,23 @@ void screenSetTextFmt(
 void screenSetStyle(
     Screen *screen,
     ScreenStyle style,
-    uint16_t x,
-    uint16_t y,
+    int16_t x,
+    int16_t y,
     uint16_t width
 ) {
-    if (y >= screen->h || x >= screen->w) {
+    if (
+        y >= (int16_t)screen->h
+        || x >= (int16_t)screen->w
+        || y < 0
+        || x + (int16_t)width < 0
+    ) {
         return;
+    } else if (x < 0) {
+        width = (uint16_t)(x + (int16_t)width);
+        x = 0;
     }
+
+    // From here x >= 0, y >= 0
 
     width = nvMin(width, screen->w - x);
 
