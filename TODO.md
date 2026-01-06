@@ -1,6 +1,5 @@
 # Short-term goals
 
-- Add tests for previous _ctxReplace bugs
 - Add tests for new indentation functions
 - Add line selection
   - ctxGetCursorSel respects kind of selection

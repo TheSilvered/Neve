@@ -191,6 +191,22 @@ void test_ctxReplaceLongerWCursors(void) {
     ctxDestroy(&ctx);
 }
 
+void test_ctxReplaceWSingleCursor(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "abcdefg";
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
+
+    ctxCurAdd(&ctx, 3);
+
+    _ctxReplace(&ctx, 2, 5, (Utf8Ch *)"rpl", 3);
+    testAssert(ctx.cursors.len == 1);
+    testAssert(ctx.cursors.items[0].idx == 5);
+    testAssert(ctx.cursors.items[0].baseCol = 5);
+
+    ctxDestroy(&ctx);
+}
+
 void test_ctxReplaceSameLenWSelCursors(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
@@ -686,6 +702,31 @@ void test_ctxReplaceCacheUpdateWithTabMuchLonger(void) {
     ctxDestroy(&ctx);
 }
 
+void test_ctxReplaceCacheUpdateAtMiddle(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "01234567abcdefgh123\t5678ijkl";
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
+
+    _ctxReplace(&ctx, 12, 12, (Utf8Ch *)"replace", 7);
+
+    testAssert(ctx._refs.len == 4);
+    testAssert(ctx._refs.items[0].idx == 8);
+    testAssert(ctx._refs.items[0].line == 0);
+    testAssert(ctx._refs.items[0].col == 8);
+    testAssert(ctx._refs.items[1].idx == 16);
+    testAssert(ctx._refs.items[1].line == 0);
+    testAssert(ctx._refs.items[1].col == 16);
+    testAssert(ctx._refs.items[2].idx == 23);
+    testAssert(ctx._refs.items[2].line == 0);
+    testAssert(ctx._refs.items[2].col == 23);
+    testAssert(ctx._refs.items[3].idx == 31);
+    testAssert(ctx._refs.items[3].line == 0);
+    testAssert(ctx._refs.items[3].col == 36);
+
+    ctxDestroy(&ctx);
+}
+
 void test_ctxReplaceCacheUpdateWithLineFeed(void) {
     Ctx ctx;
     ctxInit(&ctx, true);
@@ -719,6 +760,8 @@ testList(
     testMake(test_ctxReplaceEmptyWCursors),
     testMake(test_ctxReplaceLongerWCursors),
 
+    testMake(test_ctxReplaceWSingleCursor),
+
     testMake(test_ctxReplaceSameLenWSelCursors),
     testMake(test_ctxReplaceShorterWSelCursors),
     testMake(test_ctxReplaceEmptyWSelCursors),
@@ -741,6 +784,7 @@ testList(
     testMake(test_ctxReplaceCacheUpdateWithTabMuchShorter),
     testMake(test_ctxReplaceCacheUpdateWithTabLonger),
     testMake(test_ctxReplaceCacheUpdateWithTabMuchLonger),
+    testMake(test_ctxReplaceCacheUpdateAtMiddle),
 
     testMake(test_ctxReplaceCacheUpdateWithLineFeed)
 )
