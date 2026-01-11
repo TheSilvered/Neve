@@ -51,10 +51,6 @@ void *memChangeBytes(void *block, size_t byteCount);
 void memFree(void *block);
 
 // Debug-mode only
-#define memInit() true
-// Debug-mode only
-#define memQuit()
-// Debug-mode only
 #define memHasAllocs() false
 // Debug-mode only
 #define memPrintAllocs()
@@ -100,9 +96,6 @@ void memFree(void *block);
 // Internal function for memory tracking
 
 #include <stdint.h>
-
-bool memInit(void);
-void memQuit(void);
 
 void *_memAlloc(
     size_t objectCount,
@@ -159,16 +152,16 @@ void *_memChangeBytes(
 );
 void _memFree(void *block, uint32_t line, const char *file);
 
-// Check if there are any allocations
+// Check if there are any allocations.
 bool memHasAllocs(void);
-// Print all allocations
+// Print all allocations.
 void memPrintAllocs(void);
-// Free all allocations
+// Free all allocations.
 void memFreeAllAllocs(void);
-// Check wether an out-of-bounds write happend to a block
+// Check wether an out-of-bounds write happend to a block.
 #define memCheckBounds(block) _memCheckBounds(block, __LINE__, __FILE__)
 void _memCheckBounds(void *block, uint32_t line, const char *file);
-// Chcek if a pointer points to a heap-allocated memory block
+// Chcek if a pointer points to a heap-allocated memory block.
 bool memIsAlloc(void *block);
 
 #endif // !NV_DEBUG

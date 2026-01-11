@@ -18,7 +18,7 @@ typedef struct ThreadMutex {
 } ThreadMutex;
 
 // Statically initialize a mutex.
-#define ThreadMutexInit { ._lock = SRWLOCK_INIT, ._owner = 0 }
+#define ThreadMutexInitializer { ._lock = SRWLOCK_INIT, ._owner = 0 }
 
 #else
 
@@ -41,7 +41,7 @@ typedef struct ThreadMutex {
 } ThreadMutex;
 
 // Statically initialize a mutex.
-#define ThreadMutexInit                                                        \
+#define ThreadMutexInitializer                                                 \
     { ._mutex = PTHREAD_MUTEX_INITIALIZER, ._locked = false }
 
 #endif

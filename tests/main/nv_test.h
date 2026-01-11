@@ -51,7 +51,6 @@ bool _testFailed(void);
 // Usage: testList(testMake(myTestFunc), { myFunc, "A name" })
 #define testList(...)                                                          \
     int main(void) {                                                           \
-        memInit();                                                             \
         Test tests[] = { __VA_ARGS__ };                                        \
         size_t testCount = sizeof(tests) / sizeof(*tests);                     \
         for (size_t i = 0; i < testCount; i++) {                               \
@@ -60,7 +59,6 @@ bool _testFailed(void);
             tests[i].callback();                                               \
             _testCheckAllocs();                                                \
         }                                                                      \
-        memQuit();                                                             \
         return _testFailed() ? 1 : 0;                                          \
     }
 

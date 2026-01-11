@@ -109,8 +109,6 @@ int keyLogMode(void) {
 
 // TODO: use wmain on Windows
 int main(int argc, char **argv) {
-    memInit();
-
     int ret = 0;
     if (!logInit(NULL)) {
         printf("Failed to generate log.\n");
@@ -153,6 +151,5 @@ int main(int argc, char **argv) {
 exit:
     quitNeve();
     logQuit();
-    memQuit();
     return ret;
 }

@@ -170,8 +170,7 @@ static inline uint64_t _prngNext(PrngState *p) {
 }
 
 static MemHeader *g_memRoot = NULL;
-static ThreadMutex g_memMutex;
-static bool g_memInitialized = false;
+static ThreadMutex g_memMutex = ThreadMutexInitializer;
 
 static inline void _mhUpdateHeight(MemHeader *mh);
 static inline int32_t _mhBalanceFactor(MemHeader *mh);
@@ -409,22 +408,6 @@ static void *_memAllocFilled(
 
     g_memRoot = _mhInsert(g_memRoot, block);
     return (void *)(block + 1);
-}
-
-bool memInit(void) {
-    if (!threadMutexInit(&g_memMutex)) {
-        return false;
-    }
-    g_memInitialized = true;
-    return true;
-}
-
-void memQuit(void) {
-    if (!g_memInitialized) {
-        return;
-    }
-    g_memInitialized = false;
-    threadMutexDestroy(&g_memMutex);
 }
 
 void *_memAlloc(
