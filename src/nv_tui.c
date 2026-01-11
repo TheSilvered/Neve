@@ -327,6 +327,7 @@ static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
         break;
     case TermKey_CtrlL:
         ctxCurMoveToNextWordEnd(ctx);
+        break;
     case TermKey_CtrlP:
         ctxCurMoveUp(ctx);
         break;
