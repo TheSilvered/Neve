@@ -17,6 +17,9 @@ typedef struct ThreadMutex {
     ThreadID _owner;
 } ThreadMutex;
 
+// Statically initialize a mutex.
+#define ThreadMutexInit { ._lock = SRWLOCK_INIT, ._owner = 0 }
+
 #else
 
 #include <stdint.h>
@@ -25,7 +28,21 @@ typedef struct ThreadMutex {
 typedef pthread_t Thread;
 typedef pthread_t ThreadID;
 typedef void *ThreadRet;
-typedef pthread_mutex_t ThreadMutex;
+
+// NOTE: deadlock detection is implemented manually because
+// PTHREAD_MUTEX_INITIALIZER uses the default mutex type which leads to
+// undefined behaviour when a thread tries to lock a mutex more than once or
+// tries to unlock a mutex that is already unlocked.
+
+typedef struct ThreadMutex {
+    pthread_mutex_t _mutex;
+    ThreadID _owner;
+    volatile bool _locked;
+} ThreadMutex;
+
+// Statically initialize a mutex.
+#define ThreadMutexInit                                                        \
+    { ._mutex = PTHREAD_MUTEX_INITIALIZER, ._locked = false }
 
 #endif
 
@@ -49,25 +66,27 @@ typedef enum ThreadLockResult {
     ThreadLockResult_error
 } ThreadLockResult;
 
-// Create a thread
+// Create a thread.
 bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg);
-// Get a unique identifier for the current thread
+// Get a unique identifier for the current thread.
 ThreadID threadGetCurrID(void);
-// Wait until the thread exits
+// Check if two IDs are equal.
+bool threadIDEq(ThreadID id1, ThreadID id2);
+// Wait until the thread exits.
 bool threadJoin(Thread thread, ThreadRet *status);
-// Exit the current thread
+// Exit the current thread.
 NvNoreturn void threadExit(ThreadRet status);
 
-// Initialize a mutex
+// Initialize a mutex.
 bool threadMutexInit(ThreadMutex *mutex);
-// Deinitialize a mutex
+// Deinitialize a mutex.
 bool threadMutexDestroy(ThreadMutex *mutex);
-// Wait for the mutex to unlock and then lock it
-// Locking from the same thread again result in an error
+// Wait for the mutex to unlock and then lock it.
+// Locking from the same thread again result in an error.
 bool threadMutexLock(ThreadMutex *mutex);
 // Try locking a mutex, return `busy` immediately if it is already locked.
 ThreadLockResult threadMutexTryLock(ThreadMutex *mutex);
-// Unlock a mutex
+// Unlock a mutex.
 bool threadMutexUnlock(ThreadMutex *mutex);
 
 #endif // !NV_THREADS_H_

@@ -19,6 +19,10 @@ ThreadID threadGetCurrID(void) {
     return pthread_self();
 }
 
+bool threadIDEq(ThreadID id1, ThreadID id2) {
+    return pthread_equal(id1, id2);
+}
+
 bool threadJoin(Thread thread, ThreadRet *status) {
     int res = pthread_join(thread, status);
     if (res != 0) {
@@ -32,38 +36,51 @@ void threadExit(ThreadRet status) {
 }
 
 bool threadMutexInit(ThreadMutex *mutex) {
-    pthread_mutexattr_t attr;
-    if (pthread_mutexattr_init(&attr) != 0) {
+    if (pthread_mutex_init(&mutex->_mutex, NULL) != 0) {
         errSetErrno();
         return false;
     }
-    (void)pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-    if (pthread_mutex_init(mutex, &attr) != 0) {
-        errSetErrno();
-        return false;
-    }
-    (void)pthread_mutexattr_destroy(&attr);
+    mutex->_locked = false;
     return true;
 }
 
 bool threadMutexDestroy(ThreadMutex *mutex) {
-    if (pthread_mutex_destroy(mutex) != 0) {
+    if (pthread_mutex_destroy(&mutex->_mutex) != 0) {
         errSetErrno();
         return false;
     }
+    mutex->_locked = false;
     return true;
 }
 
 bool threadMutexLock(ThreadMutex *mutex) {
-    if (pthread_mutex_lock(mutex) != 0) {
+    ThreadID self = threadGetCurrID();
+    if (mutex->_locked && pthread_equal(self, mutex->_owner)) {
+        errno = EDEADLK;
         errSetErrno();
         return false;
     }
+
+    if (pthread_mutex_lock(&mutex->_mutex) != 0) {
+        errSetErrno();
+        return false;
+    }
+    mutex->_owner = self;
+    mutex->_locked = true;
     return true;
 }
 
 ThreadLockResult threadMutexTryLock(ThreadMutex *mutex) {
-    if (pthread_mutex_trylock(mutex) == 0) {
+    ThreadID self = threadGetCurrID();
+    if (mutex->_locked && pthread_equal(self, mutex->_owner)) {
+        errno = EDEADLK;
+        errSetErrno();
+        return ThreadLockResult_error;
+    }
+
+    if (pthread_mutex_trylock(&mutex->_mutex) == 0) {
+        mutex->_owner = self;
+        mutex->_locked = true;
         return ThreadLockResult_success;
     } else if (errno == EBUSY) {
         return ThreadLockResult_busy;
@@ -74,7 +91,13 @@ ThreadLockResult threadMutexTryLock(ThreadMutex *mutex) {
 }
 
 bool threadMutexUnlock(ThreadMutex *mutex) {
-    if (pthread_mutex_unlock(mutex) != 0) {
+    if (!mutex->_locked || !pthread_equal(threadGetCurrID(), mutex->_owner)) {
+        errno = EPERM;
+        errSetErrno();
+        return false;
+    }
+    mutex->_locked = false;
+    if (pthread_mutex_unlock(&mutex->_mutex) != 0) {
         errSetErrno();
         return false;
     }

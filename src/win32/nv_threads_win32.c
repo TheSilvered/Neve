@@ -23,6 +23,10 @@ ThreadID threadGetCurrID(void) {
     return GetCurrentThreadId();
 }
 
+bool threadIDEq(ThreadID id1, ThreadID id2) {
+    return id1 == id2;
+}
+
 bool threadJoin(Thread thread, ThreadRet *status) {
     // The only possible return values are WAIT_FAILED and WAIT_OBJECT_0,
     // WAIT_ABANDONED is impossible because it is not a mutex and
