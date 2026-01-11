@@ -1,5 +1,4 @@
 include_directories(BEFORE main)
-add_definitions(-DNV_THREADS_NO_ERROR)
 add_library(nv_test
     OBJECT
     main/nv_test.c

@@ -1,16 +1,9 @@
 #include <assert.h>
 #include "nv_threads.h"
 
-#ifdef NV_THREADS_NO_ERROR
-#define errSetErrno()
-#else
-#include "nv_error.h"
-#endif
-
 bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg) {
     HANDLE handle = CreateThread(NULL, 0, routine, arg, 0, NULL);
     if (handle == NULL) {
-        errSetErrno();
         return false;
     }
     if (thread != NULL) {
@@ -32,7 +25,6 @@ bool threadJoin(Thread thread, ThreadRet *status) {
     // WAIT_ABANDONED is impossible because it is not a mutex and
     // WAIT_TIMEOUT is impossible because an infinite time is allowed
     if (WaitForSingleObject(thread, INFINITE) == WAIT_FAILED) {
-        errSetErrno();
         return false;
     }
     if (status == NULL) {
@@ -40,7 +32,6 @@ bool threadJoin(Thread thread, ThreadRet *status) {
     }
 
     if (GetExitCodeThread(thread, status) == 0) {
-        errSetErrno();
         return false;
     }
     return true;
@@ -59,7 +50,6 @@ bool threadMutexInit(ThreadMutex *mutex) {
 bool threadMutexDestroy(ThreadMutex *mutex) {
     if (mutex->_owner != 0) {
         SetLastError(ERROR_BUSY);
-        errSetErrno();
         return false;
     }
     return true; // no destructor for SRWLOCK
@@ -69,7 +59,6 @@ bool threadMutexLock(ThreadMutex *mutex) {
     DWORD id = threadGetCurrID();
     if (mutex->_owner == id) {
         SetLastError(ERROR_POSSIBLE_DEADLOCK);
-        errSetErrno();
         return false;
     }
     AcquireSRWLockExclusive(&mutex->_lock);
@@ -81,7 +70,6 @@ ThreadLockResult threadMutexTryLock(ThreadMutex *mutex) {
     DWORD id = threadGetCurrID();
     if (mutex->_owner == id) {
         SetLastError(ERROR_POSSIBLE_DEADLOCK);
-        errSetErrno();
         return ThreadLockResult_error;
     } else if (TryAcquireSRWLockExclusive(&mutex->_lock) == TRUE) {
         mutex->_owner = id;
@@ -94,7 +82,6 @@ ThreadLockResult threadMutexTryLock(ThreadMutex *mutex) {
 bool threadMutexUnlock(ThreadMutex *mutex) {
     if (mutex->_owner != threadGetCurrID()) {
         SetLastError(ERROR_NOT_OWNER);
-        errSetErrno();
         return false;
     }
     mutex->_owner = 0;

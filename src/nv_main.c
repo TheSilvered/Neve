@@ -24,6 +24,7 @@ bool initNeve(void) {
     }
 
     if (!threadCreate(&g_inputThread, inputThreadRoutine, NULL)) {
+        errSetErrno();
         errLog("failed to create thread");
         return false;
     }

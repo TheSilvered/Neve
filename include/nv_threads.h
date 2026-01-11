@@ -67,12 +67,14 @@ typedef enum ThreadLockResult {
 } ThreadLockResult;
 
 // Create a thread.
+// On failure errno is set on POSIX and GetLastError() on Windows.
 bool threadCreate(Thread *thread, ThreadRoutine routine, void *arg);
 // Get a unique identifier for the current thread.
 ThreadID threadGetCurrID(void);
 // Check if two IDs are equal.
 bool threadIDEq(ThreadID id1, ThreadID id2);
 // Wait until the thread exits.
+// On failure errno is set on POSIX and GetLastError() on Windows.
 bool threadJoin(Thread thread, ThreadRet *status);
 // Exit the current thread.
 NvNoreturn void threadExit(ThreadRet status);
@@ -83,10 +85,14 @@ bool threadMutexInit(ThreadMutex *mutex);
 bool threadMutexDestroy(ThreadMutex *mutex);
 // Wait for the mutex to unlock and then lock it.
 // Locking from the same thread again result in an error.
+// On failure errno is set on POSIX and GetLastError() on Windows.
 bool threadMutexLock(ThreadMutex *mutex);
 // Try locking a mutex, return `busy` immediately if it is already locked.
+// On failure errno is set on POSIX and GetLastError() on Windows.
+// `ThreadLockResult_error` is not considered a failure.
 ThreadLockResult threadMutexTryLock(ThreadMutex *mutex);
 // Unlock a mutex.
+// On failure errno is set on POSIX and GetLastError() on Windows.
 bool threadMutexUnlock(ThreadMutex *mutex);
 
 #endif // !NV_THREADS_H_
