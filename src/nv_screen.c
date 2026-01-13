@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include "nv_escapes.h"
-#include "nv_mem.h"
+#include "clib_mem.h"
 #include "nv_screen.h"
 #include "nv_string.h"
 #include "nv_term.h"

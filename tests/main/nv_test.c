@@ -2,8 +2,6 @@
 #include <string.h>
 #include "nv_test.h"
 
-#include "nv_mem.h"
-
 /* ----------------------------- Test Functions ----------------------------- */
 
 static bool g_failed = false;

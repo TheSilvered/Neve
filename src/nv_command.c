@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "nv_command.h"
 #include "nv_editor.h"
-#include "nv_mem.h"
+#include "clib_mem.h"
 
 #ifdef _WIN32
 #include <direct.h>

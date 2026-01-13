@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "nv_context.h"
 #include "nv_array.h"
-#include "nv_mem.h"
+#include "clib_mem.h"
 #include "nv_string.h"
 #include "unicode/nv_utf.h"
 #include "unicode/nv_ucd.h"

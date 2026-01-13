@@ -3,7 +3,7 @@
 
 #include <string.h>
 #include <assert.h>
-#include "nv_mem.h"
+#include "clib_mem.h"
 
 // Dynamic array macros.
 // Define a dynamic array as a struct with the fields `items`, `len` and `cap`.

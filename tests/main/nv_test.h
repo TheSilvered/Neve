@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "nv_mem.h"
+#include "clib_mem.h"
 #include "nv_utils.h" // Useful inside the tests
 
 // Length of a char array

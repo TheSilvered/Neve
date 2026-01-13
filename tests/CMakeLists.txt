@@ -2,8 +2,8 @@ include_directories(BEFORE main)
 add_library(nv_test
     OBJECT
     main/nv_test.c
-    ../src/nv_mem.c
-    ../src/nv_threads.c # needed for nv_mem.c
+    ../src/clib_mem.c
+    ../src/clib_threads.c # needed for clib_mem.c
 )
 
 function(add_tests_in_directory TestsNamespace)

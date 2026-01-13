@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include "nv_mem.h"
+#include "clib_mem.h"
 #include "nv_string.h"
 
 // NOTE: The actual capacity of the string buffer is one more than Str.cap
