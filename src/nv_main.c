@@ -8,7 +8,7 @@
 #include "nv_key_queue.h"
 #include "nv_logging.h"
 #include "nv_term.h"
-#include "nv_threads.h"
+#include "clib_threads.h"
 
 static KeyQueue g_keyQ = { 0 };
 static Thread g_inputThread;

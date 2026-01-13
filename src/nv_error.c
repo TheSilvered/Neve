@@ -11,7 +11,8 @@
 #endif // !_WIN32
 
 #include "nv_error.h"
-#include "nv_threads.h"
+#include "clib_threads.h"
+#include "nv_utils.h"
 
 static ThreadLocal Err g_err = { 0 };
 
