@@ -6,6 +6,7 @@
 #include "nv_array.h"
 #include "clib_mem.h"
 #include "nv_string.h"
+#include "nv_utils.h"
 #include "unicode/nv_utf.h"
 #include "unicode/nv_ucd.h"
 
@@ -50,11 +51,8 @@ static void _ctxCurAddEx(Ctx *ctx, size_t idx, size_t col);
 static bool _ctxCurMove(Ctx *ctx, size_t old, size_t new);
 static bool _ctxCurMoveEx(Ctx *ctx, size_t old, size_t new, size_t newCol);
 
-// Join cursor selections in the _sels array
+// Join cursor selections in the sels array
 static void _ctxSelJoin(Ctx *ctx);
-
-// Get a selection from a cursor
-static CtxSelection _ctxCurToSel(CtxCursor *cur);
 
 // Get info about the indentation.
 static size_t _ctxIndentInfo(Ctx *ctx, size_t line, ptrdiff_t *outIdx);
@@ -73,8 +71,6 @@ static void _ctxLineDedent(Ctx *ctx, size_t line, Str *indentBuf);
 
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->_refs = (CtxRefs){ 0 };
-    ctx->_sels = (CtxSelections){ 0 };
-
     ctx->_buf = (CtxBuf) {
         .bytes = NULL,
         .len = 0,
@@ -83,7 +79,8 @@ void ctxInit(Ctx *ctx, bool multiline) {
     };
 
     ctx->cursors = (CtxCursors){ 0 };
-    ctx->_selecting = false;
+    ctx->sels = (CtxSelections){ 0 };
+    ctx->selKind = CtxSelection_None;
     ctx->edited = false;
     ctx->multiline = multiline;
     ctx->tabStop = 8;
@@ -93,7 +90,7 @@ void ctxInit(Ctx *ctx, bool multiline) {
 
 void ctxDestroy(Ctx *ctx) {
     arrClear(&ctx->_refs);
-    arrClear(&ctx->_sels);
+    arrClear(&ctx->sels);
     arrClear(&ctx->cursors);
 
     memFree(ctx->_buf.bytes);
@@ -780,7 +777,7 @@ static void _ctxReplaceUpdateCursors(
     size_t end,
     ptrdiff_t lenDiff
 ) {
-    bool selecting = ctx->_selecting;
+    bool selecting = ctx->selKind != CtxSelection_None;
     CtxCursor *cursors = ctx->cursors.items;
     size_t changedLine;
     ctxPosAt(ctx, end + lenDiff, &changedLine, NULL);
@@ -822,15 +819,15 @@ static void _ctxReplaceUpdateSelections(
     ptrdiff_t lenDiff
 ) {
     bool mayJoin = -lenDiff == (ptrdiff_t)(end - start);
-    for (size_t i = 0; i < ctx->_sels.len; i++) {
-        CtxSelection *sel = &ctx->_sels.items[i];
+    for (size_t i = 0; i < ctx->sels.len; i++) {
+        CtxSelection *sel = &ctx->sels.items[i];
         if (sel->endIdx <= start) {
             continue;
         } else if (sel->startIdx >= end) {
             sel->startIdx += lenDiff;
             sel->endIdx += lenDiff;
         } else if (sel->startIdx >= start && sel->endIdx <= end) {
-            arrRemove(&ctx->_sels, i);
+            arrRemove(&ctx->sels, i);
             i--;
             continue;
         } else if (sel->startIdx < start && sel->endIdx > end) {
@@ -844,9 +841,9 @@ static void _ctxReplaceUpdateSelections(
         if (!mayJoin || sel->startIdx < start) {
             continue;
         }
-        if (i > 0 && sel->startIdx == ctx->_sels.items[i - 1].endIdx) {
-            ctx->_sels.items[i - 1].endIdx = sel->endIdx;
-            arrRemove(&ctx->_sels, i);
+        if (i > 0 && sel->startIdx == ctx->sels.items[i - 1].endIdx) {
+            ctx->sels.items[i - 1].endIdx = sel->endIdx;
+            arrRemove(&ctx->sels, i);
             i--;
         }
         mayJoin = false;
@@ -1090,7 +1087,7 @@ static void _ctxInsertRepSels(
     size_t len,
     InsertLines *lines
 ) {
-    CtxSelections *sels = &ctx->_sels;
+    CtxSelections *sels = &ctx->sels;
     size_t selsLen = sels->len;
     if (selsLen == 0) {
         return;
@@ -1149,15 +1146,13 @@ static void _ctxInsertCursors(
 }
 
 void ctxInsert(Ctx *ctx, const Utf8Ch *data, size_t len) {
-    bool wasSelecting = ctx->_selecting;
-    if (ctx->_selecting) {
-        ctxSelEnd(ctx);
-    }
-    if (ctx->_sels.len == 0 && ctx->cursors.len == 0) {
+    bool wasSelecting = ctxSelIsActive(ctx);
+    ctxSelEnd(ctx);
+    if (ctx->sels.len == 0 && ctx->cursors.len == 0) {
         return;
     }
 
-    if (ctx->_sels.len == 1) {
+    if (ctx->sels.len == 1) {
         _ctxInsertRepSels(ctx, data, len, NULL);
         return;
     } else if (ctx->cursors.len == 1 && !wasSelecting) {
@@ -1177,7 +1172,7 @@ void ctxInsert(Ctx *ctx, const Utf8Ch *data, size_t len) {
     if (lines.len == 0 || lines.items[lines.len - 1] != p) {
         arrAppend(&lines, end + 1);
     }
-    if (ctx->_sels.len != 0 || wasSelecting) {
+    if (ctx->sels.len != 0 || wasSelecting) {
         _ctxInsertRepSels(ctx, data, len, &lines);
     } else {
         _ctxInsertCursors(ctx, data, len, &lines);
@@ -1204,7 +1199,7 @@ static size_t _cpToUTF8Filtered(UcdCP cp, bool allowLF, Utf8Ch *outBuf) {
 }
 
 static void _ctxInsertNLRepSels(Ctx *ctx) {
-    CtxSelections *sels = &ctx->_sels;
+    CtxSelections *sels = &ctx->sels;
     size_t selsLen = sels->len;
     Str indentBuf = { 0 };
 
@@ -1282,18 +1277,16 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
         return;
     }
 
-    if (ctx->_selecting) {
-        ctxSelEnd(ctx);
-    }
+    ctxSelEnd(ctx);
 
     if (cp == '\n') {
-        if (ctx->_sels.len != 0) {
+        if (ctx->sels.len != 0) {
             _ctxInsertNLRepSels(ctx);
         } else {
             _ctxInsertNLCursors(ctx);
         }
         return;
-    } else if (cp == '\t' && ctx->_sels.len == 0) {
+    } else if (cp == '\t' && ctx->sels.len == 0) {
         _ctxInsertTabCursors(ctx);
         return;
     }
@@ -1308,11 +1301,11 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
 }
 
 static void _ctxRemoveSelections(Ctx *ctx) {
-    for (size_t i = ctx->_sels.len; i > 0; i--) {
-        CtxSelection sel = ctx->_sels.items[i - 1];
+    for (size_t i = ctx->sels.len; i > 0; i--) {
+        CtxSelection sel = ctx->sels.items[i - 1];
         _ctxReplace(ctx, sel.startIdx, sel.endIdx, NULL, 0);
     }
-    arrClear(&ctx->_sels);
+    arrClear(&ctx->sels);
 }
 
 static void _ctxRemoveBackCursors(Ctx *ctx) {
@@ -1354,11 +1347,9 @@ static void _ctxRemoveFwdCursors(Ctx *ctx) {
 }
 
 void ctxRemoveBack(Ctx *ctx) {
-    if (ctx->_selecting) {
-        ctxSelEnd(ctx);
-    }
+    ctxSelEnd(ctx);
 
-    if (ctx->_sels.len != 0) {
+    if (ctx->sels.len != 0) {
         _ctxRemoveSelections(ctx);
     } else {
         _ctxRemoveBackCursors(ctx);
@@ -1366,11 +1357,9 @@ void ctxRemoveBack(Ctx *ctx) {
 }
 
 void ctxRemoveFwd(Ctx *ctx) {
-    if (ctx->_selecting) {
-        ctxSelEnd(ctx);
-    }
+    ctxSelEnd(ctx);
 
-    if (ctx->_sels.len != 0) {
+    if (ctx->sels.len != 0) {
         _ctxRemoveSelections(ctx);
     } else {
         _ctxRemoveFwdCursors(ctx);
@@ -1457,11 +1446,9 @@ void ctxIndent(Ctx *ctx) {
     ptrdiff_t lastLine = -1;
     Str indentBuf = { 0 };
 
-    if (ctx->_selecting) {
-        ctxSelEnd(ctx);
-    }
+    ctxSelEnd(ctx);
 
-    if (ctx->_sels.len == 0) {
+    if (ctx->sels.len == 0) {
         // Indenting may cause some cursors to merge but all lines are still
         // correctly indented because the deleted cursor was on the same line
         for (size_t i = 0; i < ctx->cursors.len; i++) {
@@ -1474,8 +1461,8 @@ void ctxIndent(Ctx *ctx) {
             }
         }
     } else {
-        for (size_t i = 0; i < ctx->_sels.len; i++) {
-            CtxSelection sel = ctx->_sels.items[i];
+        for (size_t i = 0; i < ctx->sels.len; i++) {
+            CtxSelection sel = ctx->sels.items[i];
             size_t startLine;
             size_t endLine;
             ctxPosAt(ctx, sel.startIdx, &startLine, NULL);
@@ -1495,12 +1482,9 @@ void ctxIndent(Ctx *ctx) {
 void ctxDedent(Ctx *ctx) {
     ptrdiff_t lastLine = -1;
     Str indentBuf = { 0 };
+    ctxSelEnd(ctx);
 
-    if (ctx->_selecting) {
-        ctxSelEnd(ctx);
-    }
-
-    if (ctx->_sels.len == 0) {
+    if (ctx->sels.len == 0) {
         // Indenting may cause some cursors to merge but all lines are still
         // correctly indented because the deleted cursor was on the same line
         for (size_t i = 0; i < ctx->cursors.len; i++) {
@@ -1513,8 +1497,8 @@ void ctxDedent(Ctx *ctx) {
             }
         }
     } else {
-        for (size_t i = 0; i < ctx->_sels.len; i++) {
-            CtxSelection sel = ctx->_sels.items[i];
+        for (size_t i = 0; i < ctx->sels.len; i++) {
+            CtxSelection sel = ctx->sels.items[i];
             size_t startLine;
             size_t endLine;
             ctxPosAt(ctx, sel.startIdx, &startLine, NULL);
@@ -1532,11 +1516,9 @@ void ctxDedent(Ctx *ctx) {
 }
 
 void ctxInsertLineAbove(Ctx *ctx) {
-    if (ctx->_selecting) {
-        ctxSelEnd(ctx);
-    }
+    ctxSelEnd(ctx);
 
-    if (ctx->_sels.len != 0) {
+    if (ctx->sels.len != 0) {
         ctxInsertCP(ctx, '\n');
         return;
     }
@@ -1556,11 +1538,9 @@ void ctxInsertLineAbove(Ctx *ctx) {
 }
 
 void ctxInsertLineBelow(Ctx *ctx) {
-    if (ctx->_selecting) {
-        ctxSelEnd(ctx);
-    }
+    ctxSelEnd(ctx);
 
-    if (ctx->_sels.len != 0) {
+    if (ctx->sels.len != 0) {
         ctxInsertCP(ctx, '\n');
     } else {
         ctxCurMoveToLineEnd(ctx);
@@ -1570,20 +1550,20 @@ void ctxInsertLineBelow(Ctx *ctx) {
 }
 
 bool ctxChInSel(const Ctx *ctx, size_t idx) {
-    for (size_t i = 0; i < ctx->_sels.len; i++) {
-        CtxSelection sel = ctx->_sels.items[i];
+    for (size_t i = 0; i < ctx->sels.len; i++) {
+        CtxSelection sel = ctx->sels.items[i];
         if (idx >= sel.startIdx && idx < sel.endIdx) {
             return true;
         }
     }
 
-    if (!ctx->_selecting) {
+    if (!ctxSelIsActive(ctx)) {
         return false;
     }
 
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor *cur = &ctx->cursors.items[i];
-        CtxSelection sel = _ctxCurToSel(cur);
+        CtxSelection sel = ctxCurToSel(ctx, cur);
         if (idx >= sel.startIdx && idx < sel.endIdx) {
             return true;
         }
@@ -1989,66 +1969,86 @@ static void _ctxSelJoin(Ctx *ctx) {
     // Append non-empty selections
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         CtxCursor *cursor = &ctx->cursors.items[i];
-        CtxSelection sel = _ctxCurToSel(cursor);
+        CtxSelection sel = ctxCurToSel(ctx, cursor);
         if (sel.startIdx == sel.endIdx) {
             continue;
         }
-        arrAppend(&ctx->_sels, sel);
+        arrAppend(&ctx->sels, sel);
     }
 
     // Sort the selection based on the starting index
-    qsort(ctx->_sels.items, ctx->_sels.len, sizeof(*ctx->_sels.items), _selCmp);
+    qsort(ctx->sels.items, ctx->sels.len, sizeof(*ctx->sels.items), _selCmp);
 
     // Join all overlapping or adjacent selections
-    for (size_t i = 1; i < ctx->_sels.len; i++) {
-        if (ctx->_sels.items[i - 1].endIdx < ctx->_sels.items[i].startIdx) {
+    for (size_t i = 1; i < ctx->sels.len; i++) {
+        if (ctx->sels.items[i - 1].endIdx < ctx->sels.items[i].startIdx) {
             continue;
         }
-        if (ctx->_sels.items[i - 1].endIdx < ctx->_sels.items[i].endIdx) {
-            ctx->_sels.items[i - 1].endIdx = ctx->_sels.items[i].endIdx;
+        if (ctx->sels.items[i - 1].endIdx < ctx->sels.items[i].endIdx) {
+            ctx->sels.items[i - 1].endIdx = ctx->sels.items[i].endIdx;
         }
-        arrRemove(&ctx->_sels, i);
+        arrRemove(&ctx->sels, i);
         i--;
     }
 }
 
-static CtxSelection _ctxCurToSel(CtxCursor *cur) {
-    if (cur->idx < cur->_selStart) {
+CtxSelection ctxCurToSel(const Ctx *ctx, CtxCursor *cur) {
+    size_t idx1 = cur->idx;
+    size_t idx2 = cur->_selStart;
+    if (idx1 > idx2) {
+        size_t temp = idx2;
+        idx2 = idx1;
+        idx1 = temp;
+    }
+
+    switch (ctx->selKind) {
+    case CtxSelection_None:
+        return (CtxSelection) { .startIdx = 0, .endIdx = 0 };
+    case CtxSelection_Char:
+        return (CtxSelection) { .startIdx = idx1, .endIdx = idx2 };
+    case CtxSelection_Line: {
+        size_t lineStart, lineEnd;
+        (void)ctxPosAt(ctx, idx1, &lineStart, NULL);
+        (void)ctxPosAt(ctx, idx2, &lineEnd, NULL);
         return (CtxSelection) {
-            .startIdx = cur->idx,
-            .endIdx = cur->_selStart
+            .startIdx = ctxLineStart(ctx, lineStart),
+            .endIdx = ctxLineEnd(ctx, lineEnd)
         };
-    } else {
-        return (CtxSelection) {
-            .startIdx = cur->_selStart,
-            .endIdx = cur->idx
-        };
+    }
+    default:
+        nvUnreachable;
     }
 }
 
-void ctxSelBegin(Ctx *ctx) {
+void ctxSelBegin(Ctx *ctx, bool lineSelection) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         ctx->cursors.items[i]._selStart = ctx->cursors.items[i].idx;
     }
-    ctx->_selecting = true;
+    if (lineSelection) {
+        ctx->selKind = CtxSelection_Line;
+    } else {
+        ctx->selKind = CtxSelection_Char;
+    }
 }
 
 void ctxSelEnd(Ctx *ctx) {
-    ctx->_selecting = false;
-    _ctxSelJoin(ctx);
+    if (ctxSelIsActive(ctx)) {
+        _ctxSelJoin(ctx);
+        ctx->selKind = CtxSelection_None;
+    }
 }
 
 void ctxSelCancel(Ctx *ctx) {
-    ctx->_selecting = false;
-    arrClear(&ctx->_sels);
+    ctx->selKind = CtxSelection_None;
+    arrClear(&ctx->sels);
 }
 
 bool ctxSelIsActive(const Ctx *ctx) {
-    return ctx->_selecting;
+    return ctx->selKind != CtxSelection_None;
 }
 
 bool ctxSelHas(const Ctx *ctx) {
-    return ctx->_selecting || ctx->_sels.len > 0;
+    return ctx->selKind != CtxSelection_None || ctx->sels.len > 0;
 }
 
 static void _strAppendBufSpan(
@@ -2069,15 +2069,13 @@ static void _strAppendBufSpan(
 }
 
 Str *ctxSelText(Ctx *ctx) {
-    if (ctx->_selecting) {
-        ctxSelEnd(ctx);
-    }
+    ctxSelEnd(ctx);
 
     Str *ret = strNew(0);
-    for (size_t i = 0; i < ctx->_sels.len; i++) {
-        CtxSelection sel = ctx->_sels.items[i];
+    for (size_t i = 0; i < ctx->sels.len; i++) {
+        CtxSelection sel = ctx->sels.items[i];
         _strAppendBufSpan(&ctx->_buf, ret, sel.startIdx, sel.endIdx);
-        if (i + 1 != ctx->_sels.len) {
+        if (i + 1 != ctx->sels.len) {
             strAppendC(ret, "\n");
         }
     }

@@ -218,7 +218,7 @@ void test_ctxReplaceSameLenWSelCursors(void) {
     ctxCurAdd(&ctx, 3);
     ctxCurAdd(&ctx, 4);
 
-    ctxSelBegin(&ctx);
+    ctxSelBegin(&ctx, false);
 
     ctxCurMove(&ctx, 1, 6);
     ctxCurMove(&ctx, 7, 1);
@@ -250,7 +250,7 @@ void test_ctxReplaceShorterWSelCursors(void) {
     ctxCurAdd(&ctx, 3);
     ctxCurAdd(&ctx, 4);
 
-    ctxSelBegin(&ctx);
+    ctxSelBegin(&ctx, false);
 
     ctxCurMove(&ctx, 1, 6);
     ctxCurMove(&ctx, 7, 1);
@@ -282,7 +282,7 @@ void test_ctxReplaceEmptyWSelCursors(void) {
     ctxCurAdd(&ctx, 3);
     ctxCurAdd(&ctx, 4);
 
-    ctxSelBegin(&ctx);
+    ctxSelBegin(&ctx, false);
 
     ctxCurMove(&ctx, 1, 6);
     ctxCurMove(&ctx, 7, 1);
@@ -314,7 +314,7 @@ void test_ctxReplaceLongerWSelCursors(void) {
     ctxCurAdd(&ctx, 3);
     ctxCurAdd(&ctx, 4);
 
-    ctxSelBegin(&ctx);
+    ctxSelBegin(&ctx, false);
 
     ctxCurMove(&ctx, 1, 6);
     ctxCurMove(&ctx, 7, 1);
@@ -342,26 +342,26 @@ void test_ctxReplaceSameLenWSelections(void) {
     ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     // They are not normalized but _ctxReplace does not care
-    arrAppend(&ctx._sels, (CtxSelection){ 0, 2 }); // fully before
-    arrAppend(&ctx._sels, (CtxSelection){ 1, 3 }); // ends inside
-    arrAppend(&ctx._sels, (CtxSelection){ 1, 6 }); // surrounds
-    arrAppend(&ctx._sels, (CtxSelection){ 2, 5 }); // matches
-    arrAppend(&ctx._sels, (CtxSelection){ 3, 4 }); // fully inside
-    arrAppend(&ctx._sels, (CtxSelection){ 4, 6 }); // starts inside
-    arrAppend(&ctx._sels, (CtxSelection){ 5, 7 }); // fully after
+    arrAppend(&ctx.sels, (CtxSelection){ 0, 2 }); // fully before
+    arrAppend(&ctx.sels, (CtxSelection){ 1, 3 }); // ends inside
+    arrAppend(&ctx.sels, (CtxSelection){ 1, 6 }); // surrounds
+    arrAppend(&ctx.sels, (CtxSelection){ 2, 5 }); // matches
+    arrAppend(&ctx.sels, (CtxSelection){ 3, 4 }); // fully inside
+    arrAppend(&ctx.sels, (CtxSelection){ 4, 6 }); // starts inside
+    arrAppend(&ctx.sels, (CtxSelection){ 5, 7 }); // fully after
 
     _ctxReplace(&ctx, 2, 5, (Utf8Ch *)"rpl", 3);
-    testAssert(ctx._sels.len == 5);
-    testAssert(ctx._sels.items[0].startIdx == 0);
-    testAssert(ctx._sels.items[0].endIdx == 2);
-    testAssert(ctx._sels.items[1].startIdx == 1);
-    testAssert(ctx._sels.items[1].endIdx == 2);
-    testAssert(ctx._sels.items[2].startIdx == 1);
-    testAssert(ctx._sels.items[2].endIdx == 6);
-    testAssert(ctx._sels.items[3].startIdx == 5);
-    testAssert(ctx._sels.items[3].endIdx == 6);
-    testAssert(ctx._sels.items[4].startIdx == 5);
-    testAssert(ctx._sels.items[4].endIdx == 7);
+    testAssert(ctx.sels.len == 5);
+    testAssert(ctx.sels.items[0].startIdx == 0);
+    testAssert(ctx.sels.items[0].endIdx == 2);
+    testAssert(ctx.sels.items[1].startIdx == 1);
+    testAssert(ctx.sels.items[1].endIdx == 2);
+    testAssert(ctx.sels.items[2].startIdx == 1);
+    testAssert(ctx.sels.items[2].endIdx == 6);
+    testAssert(ctx.sels.items[3].startIdx == 5);
+    testAssert(ctx.sels.items[3].endIdx == 6);
+    testAssert(ctx.sels.items[4].startIdx == 5);
+    testAssert(ctx.sels.items[4].endIdx == 7);
 
     ctxDestroy(&ctx);
 }
@@ -373,26 +373,26 @@ void test_ctxReplaceShorterWSelections(void) {
     ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     // They are not normalized but _ctxReplace does not care
-    arrAppend(&ctx._sels, (CtxSelection){ 0, 2 }); // fully before
-    arrAppend(&ctx._sels, (CtxSelection){ 1, 3 }); // ends inside
-    arrAppend(&ctx._sels, (CtxSelection){ 1, 6 }); // surrounds
-    arrAppend(&ctx._sels, (CtxSelection){ 2, 5 }); // matches
-    arrAppend(&ctx._sels, (CtxSelection){ 3, 4 }); // fully inside
-    arrAppend(&ctx._sels, (CtxSelection){ 4, 6 }); // starts inside
-    arrAppend(&ctx._sels, (CtxSelection){ 5, 7 }); // fully after
+    arrAppend(&ctx.sels, (CtxSelection){ 0, 2 }); // fully before
+    arrAppend(&ctx.sels, (CtxSelection){ 1, 3 }); // ends inside
+    arrAppend(&ctx.sels, (CtxSelection){ 1, 6 }); // surrounds
+    arrAppend(&ctx.sels, (CtxSelection){ 2, 5 }); // matches
+    arrAppend(&ctx.sels, (CtxSelection){ 3, 4 }); // fully inside
+    arrAppend(&ctx.sels, (CtxSelection){ 4, 6 }); // starts inside
+    arrAppend(&ctx.sels, (CtxSelection){ 5, 7 }); // fully after
 
     _ctxReplace(&ctx, 2, 5, (Utf8Ch *)"rp", 2);
-    testAssert(ctx._sels.len == 5);
-    testAssert(ctx._sels.items[0].startIdx == 0);
-    testAssert(ctx._sels.items[0].endIdx == 2);
-    testAssert(ctx._sels.items[1].startIdx == 1);
-    testAssert(ctx._sels.items[1].endIdx == 2);
-    testAssert(ctx._sels.items[2].startIdx == 1);
-    testAssert(ctx._sels.items[2].endIdx == 5);
-    testAssert(ctx._sels.items[3].startIdx == 4);
-    testAssert(ctx._sels.items[3].endIdx == 5);
-    testAssert(ctx._sels.items[4].startIdx == 4);
-    testAssert(ctx._sels.items[4].endIdx == 6);
+    testAssert(ctx.sels.len == 5);
+    testAssert(ctx.sels.items[0].startIdx == 0);
+    testAssert(ctx.sels.items[0].endIdx == 2);
+    testAssert(ctx.sels.items[1].startIdx == 1);
+    testAssert(ctx.sels.items[1].endIdx == 2);
+    testAssert(ctx.sels.items[2].startIdx == 1);
+    testAssert(ctx.sels.items[2].endIdx == 5);
+    testAssert(ctx.sels.items[3].startIdx == 4);
+    testAssert(ctx.sels.items[3].endIdx == 5);
+    testAssert(ctx.sels.items[4].startIdx == 4);
+    testAssert(ctx.sels.items[4].endIdx == 6);
 
     ctxDestroy(&ctx);
 }
@@ -404,26 +404,26 @@ void test_ctxReplaceEmptyWSelections(void) {
     ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     // They are not normalized but _ctxReplace does not care
-    arrAppend(&ctx._sels, (CtxSelection){ 0, 2 }); // fully before
-    arrAppend(&ctx._sels, (CtxSelection){ 1, 3 }); // ends inside
-    arrAppend(&ctx._sels, (CtxSelection){ 1, 6 }); // surrounds
-    arrAppend(&ctx._sels, (CtxSelection){ 2, 5 }); // matches
-    arrAppend(&ctx._sels, (CtxSelection){ 3, 4 }); // fully inside
-    arrAppend(&ctx._sels, (CtxSelection){ 4, 6 }); // starts inside
-    arrAppend(&ctx._sels, (CtxSelection){ 5, 7 }); // fully after
+    arrAppend(&ctx.sels, (CtxSelection){ 0, 2 }); // fully before
+    arrAppend(&ctx.sels, (CtxSelection){ 1, 3 }); // ends inside
+    arrAppend(&ctx.sels, (CtxSelection){ 1, 6 }); // surrounds
+    arrAppend(&ctx.sels, (CtxSelection){ 2, 5 }); // matches
+    arrAppend(&ctx.sels, (CtxSelection){ 3, 4 }); // fully inside
+    arrAppend(&ctx.sels, (CtxSelection){ 4, 6 }); // starts inside
+    arrAppend(&ctx.sels, (CtxSelection){ 5, 7 }); // fully after
 
     _ctxReplace(&ctx, 2, 5, NULL, 0);
-    testAssert(ctx._sels.len == 5);
-    testAssert(ctx._sels.items[0].startIdx == 0);
-    testAssert(ctx._sels.items[0].endIdx == 2);
-    testAssert(ctx._sels.items[1].startIdx == 1);
-    testAssert(ctx._sels.items[1].endIdx == 2);
-    testAssert(ctx._sels.items[2].startIdx == 1);
-    testAssert(ctx._sels.items[2].endIdx == 3);
-    testAssert(ctx._sels.items[3].startIdx == 2);
-    testAssert(ctx._sels.items[3].endIdx == 3);
-    testAssert(ctx._sels.items[4].startIdx == 2);
-    testAssert(ctx._sels.items[4].endIdx == 4);
+    testAssert(ctx.sels.len == 5);
+    testAssert(ctx.sels.items[0].startIdx == 0);
+    testAssert(ctx.sels.items[0].endIdx == 2);
+    testAssert(ctx.sels.items[1].startIdx == 1);
+    testAssert(ctx.sels.items[1].endIdx == 2);
+    testAssert(ctx.sels.items[2].startIdx == 1);
+    testAssert(ctx.sels.items[2].endIdx == 3);
+    testAssert(ctx.sels.items[3].startIdx == 2);
+    testAssert(ctx.sels.items[3].endIdx == 3);
+    testAssert(ctx.sels.items[4].startIdx == 2);
+    testAssert(ctx.sels.items[4].endIdx == 4);
 
     ctxDestroy(&ctx);
 }
@@ -434,13 +434,13 @@ void test_ctxReplaceEmptyJoinSelections(void) {
     const char s[] = "abcdefg";
     ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
-    arrAppend(&ctx._sels, (CtxSelection){ 1, 3 });
-    arrAppend(&ctx._sels, (CtxSelection){ 4, 6 });
+    arrAppend(&ctx.sels, (CtxSelection){ 1, 3 });
+    arrAppend(&ctx.sels, (CtxSelection){ 4, 6 });
 
     _ctxReplace(&ctx, 2, 5, NULL, 0);
-    testAssert(ctx._sels.len == 1);
-    testAssert(ctx._sels.items[0].startIdx == 1);
-    testAssert(ctx._sels.items[0].endIdx == 3);
+    testAssert(ctx.sels.len == 1);
+    testAssert(ctx.sels.items[0].startIdx == 1);
+    testAssert(ctx.sels.items[0].endIdx == 3);
 
     ctxDestroy(&ctx);
 }
@@ -452,26 +452,26 @@ void test_ctxReplaceLongerWSelections(void) {
     ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
 
     // They are not normalized but _ctxReplace does not care
-    arrAppend(&ctx._sels, (CtxSelection){ 0, 2 }); // fully before
-    arrAppend(&ctx._sels, (CtxSelection){ 1, 3 }); // ends inside
-    arrAppend(&ctx._sels, (CtxSelection){ 1, 6 }); // surrounds
-    arrAppend(&ctx._sels, (CtxSelection){ 2, 5 }); // matches
-    arrAppend(&ctx._sels, (CtxSelection){ 3, 4 }); // fully inside
-    arrAppend(&ctx._sels, (CtxSelection){ 4, 6 }); // starts inside
-    arrAppend(&ctx._sels, (CtxSelection){ 5, 7 }); // fully after
+    arrAppend(&ctx.sels, (CtxSelection){ 0, 2 }); // fully before
+    arrAppend(&ctx.sels, (CtxSelection){ 1, 3 }); // ends inside
+    arrAppend(&ctx.sels, (CtxSelection){ 1, 6 }); // surrounds
+    arrAppend(&ctx.sels, (CtxSelection){ 2, 5 }); // matches
+    arrAppend(&ctx.sels, (CtxSelection){ 3, 4 }); // fully inside
+    arrAppend(&ctx.sels, (CtxSelection){ 4, 6 }); // starts inside
+    arrAppend(&ctx.sels, (CtxSelection){ 5, 7 }); // fully after
 
     _ctxReplace(&ctx, 2, 5, (Utf8Ch *)"rplx", 4);
-    testAssert(ctx._sels.len == 5);
-    testAssert(ctx._sels.items[0].startIdx == 0);
-    testAssert(ctx._sels.items[0].endIdx == 2);
-    testAssert(ctx._sels.items[1].startIdx == 1);
-    testAssert(ctx._sels.items[1].endIdx == 2);
-    testAssert(ctx._sels.items[2].startIdx == 1);
-    testAssert(ctx._sels.items[2].endIdx == 7);
-    testAssert(ctx._sels.items[3].startIdx == 6);
-    testAssert(ctx._sels.items[3].endIdx == 7);
-    testAssert(ctx._sels.items[4].startIdx == 6);
-    testAssert(ctx._sels.items[4].endIdx == 8);
+    testAssert(ctx.sels.len == 5);
+    testAssert(ctx.sels.items[0].startIdx == 0);
+    testAssert(ctx.sels.items[0].endIdx == 2);
+    testAssert(ctx.sels.items[1].startIdx == 1);
+    testAssert(ctx.sels.items[1].endIdx == 2);
+    testAssert(ctx.sels.items[2].startIdx == 1);
+    testAssert(ctx.sels.items[2].endIdx == 7);
+    testAssert(ctx.sels.items[3].startIdx == 6);
+    testAssert(ctx.sels.items[3].endIdx == 7);
+    testAssert(ctx.sels.items[4].startIdx == 6);
+    testAssert(ctx.sels.items[4].endIdx == 8);
 
     ctxDestroy(&ctx);
 }

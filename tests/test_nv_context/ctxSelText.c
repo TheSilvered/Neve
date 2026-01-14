@@ -12,7 +12,7 @@ void test_ctxSelText(void) {
     ctxCurAdd(&ctx, 7);
     ctxCurAdd(&ctx, 9);
 
-    ctxSelBegin(&ctx);
+    ctxSelBegin(&ctx, false);
     ctxCurMoveToNextWordEnd(&ctx);
     ctxSelEnd(&ctx);
 

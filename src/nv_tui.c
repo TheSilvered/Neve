@@ -349,7 +349,7 @@ static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
         ctxDedent(ctx);
         break;
     case TermKey_CtrlW:
-        ctxSelBegin(ctx);
+        ctxSelBegin(ctx, false);
         ctxCurMoveToPrevWordStart(ctx);
         ctxSelEnd(ctx);
         if (ctxSelHas(ctx)) {
@@ -357,7 +357,7 @@ static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
         }
         break;
     case TermKey_CtrlR:
-        ctxSelBegin(ctx);
+        ctxSelBegin(ctx, false);
         ctxCurMoveToNextWordStart(ctx);
         ctxSelEnd(ctx);
         if (ctxSelHas(ctx)) {
@@ -371,7 +371,7 @@ static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
         ctxInsertLineBelow(ctx);
         break;
     case TermKey_CtrlT:
-        ctxSelBegin(ctx);
+        ctxSelBegin(ctx, false);
         ctxCurMoveToLineStart(ctx);
         ctxSelEnd(ctx);
         if (ctxSelHas(ctx)) {
@@ -379,7 +379,7 @@ static bool _uiHandleEditMode(Ctx *ctx, int32_t key) {
         }
         break;
     case TermKey_CtrlY:
-        ctxSelBegin(ctx);
+        ctxSelBegin(ctx, false);
         ctxCurMoveToLineEnd(ctx);
         ctxSelEnd(ctx);
         if (ctxSelHas(ctx)) {
@@ -430,20 +430,22 @@ static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
         panel->mode = UIBufMode_Edit;
         break;
     case 's':
-        ctxSelBegin(ctx);
+        ctxSelBegin(ctx, false);
+        panel->mode = UIBufMode_Selection;
+        break;
+    case 'S':
+        ctxSelBegin(ctx, true);
         panel->mode = UIBufMode_Selection;
         break;
     case 'Y':
-        ctxCurMoveToLineStart(ctx);
-        ctxSelBegin(ctx);
-        ctxCurMoveToLineEnd(ctx);
+        ctxSelBegin(ctx, true);
         ctxSelEnd(ctx);
         if (ctxSelHas(ctx)) {
             ctxRemoveBack(ctx);
         }
         break;
     case TermKey_CtrlY:
-        ctxSelBegin(ctx);
+        ctxSelBegin(ctx, false);
         ctxCurMoveToLineEnd(ctx);
         ctxSelEnd(ctx);
         if (ctxSelHas(ctx)) {
@@ -463,9 +465,7 @@ static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
         ctxDedent(ctx);
         break;
     case 'R':
-        ctxCurMoveToLineStart(ctx);
-        ctxSelBegin(ctx);
-        ctxCurMoveToLineEnd(ctx);
+        ctxSelBegin(ctx, true);
         ctxSelEnd(ctx);
         if (ctxSelHas(ctx)) {
             ctxRemoveBack(ctx);
@@ -473,7 +473,7 @@ static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
         panel->mode = UIBufMode_Edit;
         break;
     case TermKey_CtrlR:
-        ctxSelBegin(ctx);
+        ctxSelBegin(ctx, false);
         ctxCurMoveToLineEnd(ctx);
         ctxSelEnd(ctx);
         if (ctxSelHas(ctx)) {
@@ -528,7 +528,14 @@ static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key) {
         if (ctxSelIsActive(ctx)) {
             ctxSelEnd(ctx);
         } else {
-            ctxSelBegin(ctx);
+            ctxSelBegin(ctx, false);
+        }
+        break;
+    case 'H':
+        if (ctxSelIsActive(ctx)) {
+            ctxSelEnd(ctx);
+        } else {
+            ctxSelBegin(ctx, true);
         }
         break;
     case 'd':

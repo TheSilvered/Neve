@@ -17,6 +17,12 @@ typedef struct CtxSelection {
     size_t startIdx, endIdx;
 } CtxSelection;
 
+typedef enum CtxSelectionKind {
+    CtxSelection_None,
+    CtxSelection_Char,
+    CtxSelection_Line
+} CtxSelectionKind;
+
 typedef Arr(CtxRef) CtxRefs;
 typedef Arr(CtxCursor) CtxCursors;
 typedef Arr(CtxSelection) CtxSelections;
@@ -31,15 +37,15 @@ typedef struct CtxBuf {
 // Editing context.
 typedef struct Ctx {
     CtxRefs _refs;
-    CtxSelections _sels;
     CtxBuf _buf;
+    CtxSelections sels;
     CtxCursors cursors;
-    uint8_t _selecting : 1;
+    uint8_t selKind;
+    uint8_t tabStop;
+    uint8_t indentWidth;
     uint8_t edited : 1;
     uint8_t multiline : 1;
     uint8_t mergeSpaces : 1;
-    uint8_t tabStop;
-    uint8_t indentWidth;
 } Ctx;
 
 /******************** Initialization and deinitialization *********************/
@@ -94,10 +100,13 @@ void ctxCurMoveToNextParagraph(Ctx *ctx);
 // Move to the previous blank line.
 void ctxCurMoveToPrevParagraph(Ctx *ctx);
 
+// Get a selection from a cursor
+CtxSelection ctxCurToSel(const Ctx *ctx, CtxCursor *cur);
+
 /********************************* Selecting **********************************/
 
 // Begin a selection at the position of each cursor.
-void ctxSelBegin(Ctx *ctx);
+void ctxSelBegin(Ctx *ctx, bool lineSelection);
 // Stops selecting.
 void ctxSelEnd(Ctx *ctx);
 // Stop selecting and remove all selections

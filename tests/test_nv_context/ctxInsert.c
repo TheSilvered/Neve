@@ -24,7 +24,7 @@ void test_ctxInsertFromEmptyActiveSel(void) {
     ctxAppend(&ctx, sLen("abcd"));
 
     ctxCurAdd(&ctx, 2);
-    ctxSelBegin(&ctx);
+    ctxSelBegin(&ctx, false);
 
     ctxInsert(&ctx, sLen("xyz"));
 
@@ -61,22 +61,22 @@ void test_ctxInsertMultipleSelections(void) {
     ctxCurAdd(&ctx, 1);
     ctxCurAdd(&ctx, 3);
 
-    ctxSelBegin(&ctx);
+    ctxSelBegin(&ctx, false);
     ctxCurMoveFwd(&ctx);
     ctxSelEnd(&ctx);
 
     ctxInsert(&ctx, sLen("xyz"));
     testAssert(eqStrViewCStr(ctxGetContent(&ctx), "axyzcxyze"));
-    testAssert(ctx._sels.len == 0);
+    testAssert(ctx.sels.len == 0);
 
-    ctxSelBegin(&ctx);
+    ctxSelBegin(&ctx, false);
     ctxCurMoveBack(&ctx);
     ctxSelEnd(&ctx);
 
     ctxInsert(&ctx, sLen("12\n34"));
     testAssert(eqStrViewCStr(ctxGetContent(&ctx), "axy12cxy34e"));
 
-    ctxSelBegin(&ctx);
+    ctxSelBegin(&ctx, false);
     ctxCurMoveBack(&ctx);
     ctxSelEnd(&ctx);
 

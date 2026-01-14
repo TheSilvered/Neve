@@ -223,13 +223,13 @@ void _drawCtxSelection(
     const Ctx *ctx,
     const UIBufPanel *panel,
     uint8_t numColWidth,
-    size_t startIdx, size_t endIdx
+    CtxSelection sel
 ) {
     ptrdiff_t startLine, startCol;
     ptrdiff_t endLine, endCol;
 
-    ctxPosAt(ctx, startIdx, (size_t *)&startLine, (size_t *)&startCol);
-    ctxPosAt(ctx, endIdx, (size_t *)&endLine, (size_t *)&endCol);
+    ctxPosAt(ctx, sel.startIdx, (size_t *)&startLine, (size_t *)&startCol);
+    ctxPosAt(ctx, sel.endIdx, (size_t *)&endLine, (size_t *)&endCol);
 
     ScreenStyle selStyle = {
         .bg = screenColT16(61),
@@ -344,15 +344,14 @@ static void _drawBufPanel(Screen *screen, const UIBufPanel *panel) {
         );
     }
 
-    for (size_t i = 0; i < ctx->_sels.len; i++) {
-        CtxSelection *sel = &ctx->_sels.items[i];
+    for (size_t i = 0; i < ctx->sels.len; i++) {
+        CtxSelection sel = ctx->sels.items[i];
         _drawCtxSelection(
             screen,
             ctx,
             panel,
             numColWidth,
-            sel->startIdx,
-            sel->endIdx
+            sel
         );
     }
 
@@ -362,14 +361,13 @@ static void _drawBufPanel(Screen *screen, const UIBufPanel *panel) {
         ctxPosAt(ctx, cursor->idx, &line, &col);
 
         if (ctxSelIsActive(ctx)) {
-            size_t selStart = nvMin(cursor->idx, cursor->_selStart);
-            size_t selEnd = nvMax(cursor->idx, cursor->_selStart);
+            CtxSelection sel = ctxCurToSel(ctx, cursor);
             _drawCtxSelection(
                 screen,
                 ctx,
                 panel,
                 numColWidth,
-                selStart, selEnd
+                sel
             );
         }
 
