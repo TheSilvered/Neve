@@ -771,130 +771,53 @@ static size_t _ctxFindPrevWordEnd(const Ctx *ctx, size_t idx) {
     return i;
 }
 
-static void _ctxReplaceUpdateCursors(
+// Minimize the changed span by removing common prefixes/suffixes
+static inline void _ctxReplace_MinimizeSpan(
+    Ctx *ctx,
+    size_t *inoutStart,
+    size_t *inoutEnd,
+    const Utf8Ch **inoutData,
+    size_t *inoutLen
+);
+
+// Move all the cursors inside the changed span to the end
+static inline void _ctxReplace_MoveCursorsOutOfSpan(
+    Ctx *ctx,
+    size_t start,
+    size_t end
+);
+
+// Update the cache to match the new text
+static inline void _ctxReplace_UpdateRefCache(
+    Ctx *ctx,
+    size_t firstInvalidRefBlock,
+    ptrdiff_t lenDiff,
+    ptrdiff_t lineDiff,
+    ptrdiff_t colDiff,
+    size_t changedSpanEndIdx,
+    size_t lastChangedLine
+);
+
+// Add/remove cache entries after the edited text to keep the distance more or
+// less uniform
+static inline void _ctxReplace_BalanceRefBlocks(Ctx *ctx, size_t refBlock);
+
+// Update the position & selection (if active) of the cursors
+static inline void _ctxReplace_UpdateCursors(
     Ctx *ctx,
     size_t start,
     size_t end,
     ptrdiff_t lenDiff
-) {
-    bool selecting = ctx->selKind != CtxSelection_None;
-    CtxCursor *cursors = ctx->cursors.items;
-    size_t changedLine;
-    ctxPosAt(ctx, end + lenDiff, &changedLine, NULL);
-    size_t lastBaseIdxCalc = ctxLineEnd(ctx, changedLine);
+);
 
-    // Move the active selections, if selecting
-    // When not selecting the value of _selStart is assumed to be invalid
-    for (size_t i = 0; i < ctx->cursors.len; i++) {
-        CtxCursor *cur = &cursors[i];
-        if (cur->idx == end && i > 0 && cursors[i - 1].idx == end + lenDiff) {
-            arrRemove(&ctx->cursors, i);
-            i--;
-            continue;
-        }
-
-        if (cur->idx >= end) {
-            cur->idx += lenDiff;
-            if (cur->idx <= lastBaseIdxCalc) {
-                ctxPosAt(ctx, cur->idx, NULL, &cur->baseCol);
-            }
-        }
-        if (!selecting || cur->_selStart <= start) {
-            continue;
-        } else if (cur->_selStart >= end) {
-            cur->_selStart += lenDiff;
-        // From here we know that _selStart was inside the span
-        } else if (cur->idx <= start) {
-            cur->_selStart = start;
-        } else {
-            cur->_selStart = end + lenDiff;
-        }
-    }
-}
-
-static void _ctxReplaceUpdateSelections(
+// Update the indices of the selections
+static inline void _ctxReplace_UpdateSelections(
     Ctx *ctx,
     size_t start,
     size_t end,
     ptrdiff_t lenDiff
-) {
-    bool mayJoin = -lenDiff == (ptrdiff_t)(end - start);
-    for (size_t i = 0; i < ctx->sels.len; i++) {
-        CtxSelection *sel = &ctx->sels.items[i];
-        if (sel->endIdx <= start) {
-            continue;
-        } else if (sel->startIdx >= end) {
-            sel->startIdx += lenDiff;
-            sel->endIdx += lenDiff;
-        } else if (sel->startIdx >= start && sel->endIdx <= end) {
-            arrRemove(&ctx->sels, i);
-            i--;
-            continue;
-        } else if (sel->startIdx < start && sel->endIdx > end) {
-            sel->endIdx += lenDiff;
-        } else if (sel->startIdx < start) {
-            sel->endIdx = start;
-        } else {
-            sel->startIdx = end + lenDiff;
-            sel->endIdx += lenDiff;
-        }
-        if (!mayJoin || sel->startIdx < start) {
-            continue;
-        }
-        if (i > 0 && sel->startIdx == ctx->sels.items[i - 1].endIdx) {
-            ctx->sels.items[i - 1].endIdx = sel->endIdx;
-            arrRemove(&ctx->sels, i);
-            i--;
-        }
-        mayJoin = false;
-    }
-}
+);
 
-// Make the span of the block from [refBlock - 1, refBlock] reasonable
-void _ctxReplaceBalanceRefBlocks(Ctx *ctx, size_t refBlock) {
-    const size_t minWidth = _lineRefMaxGap / 2;
-    const size_t maxWidth = _lineRefMaxGap + minWidth;
-
-    size_t blockStart = refBlock > 0 ? ctx->_refs.items[refBlock - 1].idx : 0;
-    size_t blockEnd = refBlock < ctx->_refs.len
-        ? ctx->_refs.items[refBlock].idx
-        : ctx->_buf.len;
-    size_t nextBlockEnd = refBlock + 1 < ctx->_refs.len
-        ? ctx->_refs.items[refBlock + 1].idx
-        : ctx->_buf.len;
-    bool isLastBlock = refBlock >= ctx->_refs.len;
-
-    size_t width = blockEnd - blockStart;
-    size_t fullWidth = nextBlockEnd - blockStart;
-
-    if (width >= minWidth && width <= maxWidth) {
-        return;
-    }
-
-    if (
-        width > maxWidth
-        && (isLastBlock || fullWidth > 2 * _lineRefMaxGap)
-    ) {
-        // Divide both to avoid overflow
-        size_t newIdx = blockStart / 2 + blockEnd / 2;
-        size_t line, col;
-        ctxPosAt(ctx, newIdx, &line, &col);
-        arrInsert(
-            &ctx->_refs,
-            refBlock,
-            (CtxRef){ .idx = newIdx, .line = line, .col = col }
-        );
-    } else if (!isLastBlock && fullWidth <= maxWidth) {
-        arrRemove(&ctx->_refs, refBlock);
-    } else if (!isLastBlock) {
-        size_t newIdx = blockStart / 2 + nextBlockEnd / 2;
-        size_t line, col;
-        ctxPosAt(ctx, newIdx, &line, &col);
-        ctx->_refs.items[refBlock].idx = newIdx;
-        ctx->_refs.items[refBlock].line = line;
-        ctx->_refs.items[refBlock].col = col;
-    }
-}
 
 static void _ctxReplace(
     Ctx *ctx,
@@ -905,19 +828,10 @@ static void _ctxReplace(
 ) {
     assert(start <= end);
     assert(end <= ctx->_buf.len);
+    assert(utf8Check(data, len));
 
-    ctx->edited = true;
-
-    // Move all cursors inside the span to the end
-    size_t curIdx = _ctxCurAt(ctx, start + 1);
-    if (curIdx < ctx->cursors.len) {
-        while (ctx->cursors.items[curIdx].idx < end) {
-            ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
-        }
-    }
-
-    // Ref blocks are inserted while copying the text, any gaps too small or
-    // too large at the end are fixed later
+    _ctxReplace_MinimizeSpan(ctx, &start, &end, &data, &len);
+    _ctxReplace_MoveCursorsOutOfSpan(ctx, start, end);
 
     size_t spanStart = 0;
     uint8_t tabStop = ctx->tabStop;
@@ -986,34 +900,133 @@ static void _ctxReplace(
         _ctxBufInsert(buf, &data[spanStart], len - spanStart);
     }
 
-    // Remove all blocks that were inside the modified span
+    _ctxReplace_UpdateRefCache(
+        ctx,
+        (size_t)refBlock,
+        lenDiff,
+        line - prevLine,
+        col - prevCol,
+        end + lenDiff,
+        line
+    );
+    _ctxReplace_UpdateSelections(ctx, start, end, lenDiff);
+    _ctxReplace_UpdateCursors(ctx, start, end, lenDiff);
+}
+
+static inline void _ctxReplace_MinimizeSpan(
+    Ctx *ctx,
+    size_t *inoutStart,
+    size_t *inoutEnd,
+    const Utf8Ch **inoutData,
+    size_t *inoutLen
+) {
+    size_t start = *inoutStart;
+    size_t end = *inoutEnd;
+    const Utf8Ch *data = *inoutData;
+    size_t len = *inoutLen;
+
+    // Find common prefix
     while (
-        (size_t)refBlock < refs->len
-        && refs->items[refBlock].idx < end
+        len > 0
+        && start < end
+        && data[0] == *_ctxBufGet(&ctx->_buf, start)
     ) {
-        arrRemove(refs, refBlock);
+        start++;
+        data++;
+        len--;
     }
 
-    ptrdiff_t lineDiff = line - prevLine;
-    for (size_t i = refBlock, n = refs->len; i < n; i++) {
-        refs->items[i].idx += lenDiff;
-        refs->items[i].line += lineDiff;
+    if (len == 0) {
+        goto finish;
     }
 
-    ptrdiff_t colDiff = col - prevCol;
-    size_t tabIdx = buf->len;
-    ptrdiff_t lineEnd = ctxLineEnd(ctx, line);
+    // Backtrack to the start of a codepoint
+    while (!utf8ChIsStart(*data)) {
+        start--;
+        data--;
+        len++;
+    }
+
+    // Find a common suffix
+    while (
+        len > 0
+        && start < end
+        && data[len - 1] == *_ctxBufGet(&ctx->_buf, end - 1)
+    ) {
+        end--;
+        len--;
+    }
+
+    if (len == 0) {
+        goto finish;
+    }
+
+    // Go foreward until the end of the codepoint
+    do {
+        end++;
+        len++;
+    }
+    while (len < *inoutLen && !utf8ChIsStart(data[len - 1]));
+    end--;
+    len--;
+
+finish:
+    *inoutStart = start;
+    *inoutEnd = end;
+    *inoutData = data;
+    *inoutLen = len;
+}
+
+static inline void _ctxReplace_MoveCursorsOutOfSpan(
+    Ctx *ctx,
+    size_t start,
+    size_t end
+) {
+    size_t curIdx = _ctxCurAt(ctx, start + 1);
+    if (curIdx < ctx->cursors.len) {
+        while (ctx->cursors.items[curIdx].idx < end) {
+            ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
+        }
+    }
+}
+
+static inline void _ctxReplace_UpdateRefCache(
+    Ctx *ctx,
+    size_t firstInvalidRefBlock,
+    ptrdiff_t lenDiff,
+    ptrdiff_t lineDiff,
+    ptrdiff_t colDiff,
+    size_t changedSpanEndIdx,
+    size_t lastChangedLine
+) {
+    // Update line and index of the invalidated blocks
+    for (size_t i = firstInvalidRefBlock, n = ctx->_refs.len; i < n; i++) {
+        ctx->_refs.items[i].idx += lenDiff;
+        ctx->_refs.items[i].line += lineDiff;
+    }
+
+    // Update the columns until the end of the last changed line
+    // If there is a tab before the end of the line subsequent columns may
+    // change by a different amount, in that case change by colDiff until the
+    // tab and then recalculate colDiff
+    uint8_t tabStop = ctx->tabStop;
+    size_t tabIdx = ctx->_buf.len;
+    ptrdiff_t lineEnd = ctxLineEnd(ctx, lastChangedLine);
     assert(lineEnd >= 0);
-    if (tabStop != 0 && colDiff % tabStop != 0 && end + lenDiff < buf->len) {
-        Utf8Ch *s = _ctxBufGet(buf, end + lenDiff);
-        Utf8Ch *p = memchr(s, '\t', lineEnd - end - lenDiff);
-        if (p != NULL) {
-            tabIdx = p - s + end + lenDiff;
+    if (
+        tabStop != 0
+        && colDiff % tabStop != 0
+        && changedSpanEndIdx < ctx->_buf.len
+    ) {
+        Utf8Ch *endPtr = _ctxBufGet(&ctx->_buf, changedSpanEndIdx);
+        Utf8Ch *tabPtr = memchr(endPtr, '\t', lineEnd - changedSpanEndIdx);
+        if (tabPtr != NULL) {
+            tabIdx = tabPtr - endPtr + changedSpanEndIdx;
         }
     }
 
-    for (size_t i = refBlock, n = refs->len; i < n; i++) {
-        CtxRef *ref = &refs->items[i];
+    for (size_t i = firstInvalidRefBlock, n = ctx->_refs.len; i < n; i++) {
+        CtxRef *ref = &ctx->_refs.items[i];
         if (colDiff == 0 || ref->idx > (size_t)lineEnd) {
             break;
         } else if (ref->idx <= tabIdx) {
@@ -1024,12 +1037,134 @@ static void _ctxReplace(
         ctxPosAt(ctx, tabIdx, NULL, &width);
         colDiff += ((width - colDiff) % tabStop) - (width % tabStop);
         ref->col += colDiff;
-        tabIdx = buf->len;
+        tabIdx = ctx->_buf.len;
     }
 
-    _ctxReplaceBalanceRefBlocks(ctx, refBlock);
-    _ctxReplaceUpdateSelections(ctx, start, end, lenDiff);
-    _ctxReplaceUpdateCursors(ctx, start, end, lenDiff);
+    _ctxReplace_BalanceRefBlocks(ctx, firstInvalidRefBlock);
+}
+
+static inline void _ctxReplace_BalanceRefBlocks(Ctx *ctx, size_t refBlock) {
+    const size_t minWidth = _lineRefMaxGap / 2;
+    const size_t maxWidth = _lineRefMaxGap + minWidth;
+
+    size_t blockStart = refBlock > 0 ? ctx->_refs.items[refBlock - 1].idx : 0;
+    size_t blockEnd = refBlock < ctx->_refs.len
+        ? ctx->_refs.items[refBlock].idx
+        : ctx->_buf.len;
+    size_t nextBlockEnd = refBlock + 1 < ctx->_refs.len
+        ? ctx->_refs.items[refBlock + 1].idx
+        : ctx->_buf.len;
+    bool isLastBlock = refBlock >= ctx->_refs.len;
+
+    size_t width = blockEnd - blockStart;
+    size_t fullWidth = nextBlockEnd - blockStart;
+
+    if (width >= minWidth && width <= maxWidth) {
+        return;
+    }
+
+    if (
+        width > maxWidth
+        && (isLastBlock || fullWidth > 2 * _lineRefMaxGap)
+    ) {
+        // Divide both to avoid overflow
+        size_t newIdx = blockStart / 2 + blockEnd / 2;
+        size_t line, col;
+        ctxPosAt(ctx, newIdx, &line, &col);
+        arrInsert(
+            &ctx->_refs,
+            refBlock,
+            (CtxRef){ .idx = newIdx, .line = line, .col = col }
+        );
+    } else if (!isLastBlock && fullWidth <= maxWidth) {
+        arrRemove(&ctx->_refs, refBlock);
+    } else if (!isLastBlock) {
+        size_t newIdx = blockStart / 2 + nextBlockEnd / 2;
+        size_t line, col;
+        ctxPosAt(ctx, newIdx, &line, &col);
+        ctx->_refs.items[refBlock].idx = newIdx;
+        ctx->_refs.items[refBlock].line = line;
+        ctx->_refs.items[refBlock].col = col;
+    }
+}
+
+static void _ctxReplace_UpdateCursors(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    ptrdiff_t lenDiff
+) {
+    bool selecting = ctx->selKind != CtxSelection_None;
+    CtxCursor *cursors = ctx->cursors.items;
+    size_t changedLine;
+    ctxPosAt(ctx, end + lenDiff, &changedLine, NULL);
+    size_t lastBaseIdxCalc = ctxLineEnd(ctx, changedLine);
+
+    // Move the active selections, if selecting
+    // When not selecting the value of _selStart is assumed to be invalid
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        CtxCursor *cur = &cursors[i];
+        if (cur->idx == end && i > 0 && cursors[i - 1].idx == end + lenDiff) {
+            arrRemove(&ctx->cursors, i);
+            i--;
+            continue;
+        }
+
+        if (cur->idx >= end) {
+            cur->idx += lenDiff;
+            if (cur->idx <= lastBaseIdxCalc) {
+                ctxPosAt(ctx, cur->idx, NULL, &cur->baseCol);
+            }
+        }
+        if (!selecting || cur->_selStart <= start) {
+            continue;
+        } else if (cur->_selStart >= end) {
+            cur->_selStart += lenDiff;
+        // From here we know that _selStart was inside the span
+        } else if (cur->idx <= start) {
+            cur->_selStart = start;
+        } else {
+            cur->_selStart = end + lenDiff;
+        }
+    }
+}
+
+static inline void _ctxReplace_UpdateSelections(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    ptrdiff_t lenDiff
+) {
+    bool mayJoin = -lenDiff == (ptrdiff_t)(end - start);
+    for (size_t i = 0; i < ctx->sels.len; i++) {
+        CtxSelection *sel = &ctx->sels.items[i];
+        if (sel->endIdx <= start) {
+            continue;
+        } else if (sel->startIdx >= end) {
+            sel->startIdx += lenDiff;
+            sel->endIdx += lenDiff;
+        } else if (sel->startIdx >= start && sel->endIdx <= end) {
+            arrRemove(&ctx->sels, i);
+            i--;
+            continue;
+        } else if (sel->startIdx < start && sel->endIdx > end) {
+            sel->endIdx += lenDiff;
+        } else if (sel->startIdx < start) {
+            sel->endIdx = start;
+        } else {
+            sel->startIdx = end + lenDiff;
+            sel->endIdx += lenDiff;
+        }
+        if (!mayJoin || sel->startIdx < start) {
+            continue;
+        }
+        if (i > 0 && sel->startIdx == ctx->sels.items[i - 1].endIdx) {
+            ctx->sels.items[i - 1].endIdx = sel->endIdx;
+            arrRemove(&ctx->sels, i);
+            i--;
+        }
+        mayJoin = false;
+    }
 }
 
 void ctxAppend(Ctx *ctx, const Utf8Ch *data, size_t len) {

@@ -1,10 +1,7 @@
 # Short-term goals
 
 - Add tests for new indentation functions
-- Add line selection
-  - ctxGetCursorSel respects kind of selection
 - Add undo history (save _ctxReplace changes)
-  - improve _ctxReplace by replacing the smallest different continuous substring
 - Add multiple cursors mode to Ctx (ctxCurMove instead duplicates)
 - Improve control sequence reading
 - Improve key events & harmonies

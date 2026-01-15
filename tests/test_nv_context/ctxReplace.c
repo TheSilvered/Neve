@@ -746,6 +746,26 @@ void test_ctxReplaceCacheUpdateWithLineFeed(void) {
     ctxDestroy(&ctx);
 }
 
+void test_ctxReplaceMinReplace(void) {
+    Ctx ctx;
+    ctxInit(&ctx, true);
+    const char s[] = "hello everyone";
+    ctxAppend(&ctx, (Utf8Ch *)s, chArrLen(s));
+
+    ctxCurAdd(&ctx, 3);
+    ctxCurAdd(&ctx, 7);
+    ctxCurAdd(&ctx, 13);
+
+    _ctxReplace(&ctx, 0, 14, (Utf8Ch *)"hello to no one", 15);
+
+    testAssert(ctx.cursors.len == 3);
+    testAssert(ctx.cursors.items[0].idx == 3);
+    testAssert(ctx.cursors.items[1].idx == 12);
+    testAssert(ctx.cursors.items[2].idx == 14);
+
+    ctxDestroy(&ctx);
+}
+
 testList(
     testMake(test_ctxReplaceSameLen),
     testMake(test_ctxReplaceShorter),
@@ -786,5 +806,6 @@ testList(
     testMake(test_ctxReplaceCacheUpdateWithTabMuchLonger),
     testMake(test_ctxReplaceCacheUpdateAtMiddle),
 
-    testMake(test_ctxReplaceCacheUpdateWithLineFeed)
+    testMake(test_ctxReplaceCacheUpdateWithLineFeed),
+    testMake(test_ctxReplaceMinReplace)
 )
