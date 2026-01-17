@@ -142,8 +142,20 @@ void strPop(Str *str, size_t count) {
 
     // Shrink the buffer by half if the string is less than a quarter full
     if (str->len < str->cap / 4) {
-        str->buf = memShrink(str->buf, str->cap / 2, sizeof(*str->buf));
-        str->cap /= 2;
+        str->buf = memShrink(str->buf, str->len * 2 + 1, sizeof(*str->buf));
+        str->cap = str->len * 2;
+    }
+}
+
+void strCut(Str *str, size_t len) {
+    if (len >= str->len) {
+        return;
+    }
+    str->len = len;
+    str->buf[str->len] = '\0';
+    if (str->len < str->cap / 4) {
+        str->buf = memShrink(str->buf, str->len * 2 + 1, sizeof(*str->buf));
+        str->cap = str->len * 2;
     }
 }
 

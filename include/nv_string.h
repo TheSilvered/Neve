@@ -62,6 +62,8 @@ void strAppendRaw(Str *str, const Utf8Ch *buf, size_t len);
 void strRepeat(Str *str, char ch, size_t count);
 // Pop a number of characters from the end of a string.
 void strPop(Str *str, size_t count);
+// Cut the string to a specific length. UTF-8 boundaries are ignored.
+void strCut(Str *str, size_t len);
 // Clear the contents of a string and keep a capacity of `reserve`.
 void strClear(Str *str, size_t reserve);
 // Get the contents of a string as a NUL terminated string.

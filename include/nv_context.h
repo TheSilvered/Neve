@@ -23,9 +23,18 @@ typedef enum CtxSelectionKind {
     CtxSelection_Line
 } CtxSelectionKind;
 
+typedef struct CtxEdit {
+    size_t oldTextIdx;
+    size_t oldLen;
+    size_t newTextIdx;
+    size_t newLen;
+    size_t start;
+} CtxEdit;
+
 typedef Arr(CtxRef) CtxRefs;
 typedef Arr(CtxCursor) CtxCursors;
 typedef Arr(CtxSelection) CtxSelections;
+typedef Arr(CtxEdit) CtxEdits;
 
 typedef struct CtxBuf {
     Utf8Ch *bytes;
@@ -36,16 +45,21 @@ typedef struct CtxBuf {
 
 // Editing context.
 typedef struct Ctx {
-    CtxRefs _refs;
-    CtxBuf _buf;
-    CtxSelections sels;
-    CtxCursors cursors;
-    uint8_t selKind;
-    uint8_t tabStop;
-    uint8_t indentWidth;
-    uint8_t edited : 1;
-    uint8_t multiline : 1;
-    uint8_t mergeSpaces : 1;
+    CtxRefs _refs;        // Cache of line/column numbers, internal usage.
+    CtxBuf _buf;          // Text buffer, do not access directly.
+    CtxEdits _edits;      // Undo history.
+    Str _editsBuf;        // Text replaced by undo.
+    size_t _editIdx;      // Current edit in the history.
+    ptrdiff_t _editCount; // Keep track of edits to add restore points.
+    CtxSelections sels;   // Static selections.
+    CtxCursors cursors;   // Cursors + active selections.
+    uint8_t selKind;      // Kind of selection.
+    uint8_t tabStop;      // Max width of a tab.
+    uint8_t indentWidth;  // How much to indent.
+    uint8_t edited : 1;   // Whether the buffer has been edited.
+    uint8_t multiline : 1; // Whether the buffer is multiline.
+    uint8_t mergeSpaces : 1; // Whether to merge spaces to tabs.
+    uint8_t _cpPending : 1; // Whether an undo checkpoint needs to be added.
 } Ctx;
 
 /******************** Initialization and deinitialization *********************/
@@ -122,6 +136,7 @@ Str *ctxSelText(Ctx *ctx);
 /********************************** Editing ***********************************/
 
 // Append to a context, does not change the cursor position.
+// Appending to a context is not reflected in the undo history.
 void ctxAppend(Ctx *ctx, const Utf8Ch *data, size_t len);
 // Write in a context.
 void ctxInsert(Ctx *ctx, const Utf8Ch *data, size_t len);
@@ -139,6 +154,12 @@ void ctxDedent(Ctx *ctx);
 void ctxInsertLineAbove(Ctx *ctx);
 // Create a new line below and move the cursor(s) to it.
 void ctxInsertLineBelow(Ctx *ctx);
+// Undo last change.
+void ctxUndo(Ctx *ctx);
+// Redo last undone change.
+void ctxRedo(Ctx *ctx);
+// Add an undo checkpoint.
+void ctxAddUndoCheckpoint(Ctx *ctx);
 
 /*********************************** Other ************************************/
 

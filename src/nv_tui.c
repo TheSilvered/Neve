@@ -480,6 +480,12 @@ static bool _uiBufHandleNormalMode(UIBufPanel *panel, int32_t key) {
             ctxRemoveBack(ctx);
         }
         break;
+    case 'z':
+        ctxUndo(ctx);
+        break;
+    case 'Z':
+        ctxRedo(ctx);
+        break;
     default:
         return false;
     }
@@ -495,6 +501,7 @@ static bool _uiBufHandleEditMode(UIBufPanel *panel, int32_t key) {
     Ctx *ctx = &buf->ctx;
     if (!_uiHandleEditMode(ctx, key)) {
         panel->mode = UIBufMode_Normal;
+        ctxAddUndoCheckpoint(ctx);
     }
     return true;
 }

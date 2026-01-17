@@ -15,6 +15,8 @@
 #endif // !_lineRefMaxGap
 
 #define _maxIndentWidth 32
+// Number of characters added/deleted before a checkpoint is added.
+#define _editsForCheckpoint 20
 
 // Get from the gap buffer
 static inline Utf8Ch *_ctxBufGet(const CtxBuf *buf, size_t idx);
@@ -69,6 +71,8 @@ static void _ctxLineIndent(Ctx *ctx, size_t line, Str *indentBuf);
 // Dedent a line.
 static void _ctxLineDedent(Ctx *ctx, size_t line, Str *indentBuf);
 
+static bool _ctxEditIsCheckpoint(CtxEdit *edit);
+
 void ctxInit(Ctx *ctx, bool multiline) {
     ctx->_refs = (CtxRefs){ 0 };
     ctx->_buf = (CtxBuf) {
@@ -77,6 +81,12 @@ void ctxInit(Ctx *ctx, bool multiline) {
         .cap = 0,
         .gapIdx = 0
     };
+    ctx->_edits = (CtxEdits){ 0 };
+    strInit(&ctx->_editsBuf, 0);
+    ctx->_editIdx = 0;
+    // _editCount > 0 -> additions
+    // _editCount < 0 -> deletions
+    ctx->_editCount = 0;
 
     ctx->cursors = (CtxCursors){ 0 };
     ctx->sels = (CtxSelections){ 0 };
@@ -86,6 +96,7 @@ void ctxInit(Ctx *ctx, bool multiline) {
     ctx->tabStop = 8;
     ctx->indentWidth = 4;
     ctx->mergeSpaces = false;
+    ctx->_cpPending = false;
 }
 
 void ctxDestroy(Ctx *ctx) {
@@ -94,6 +105,9 @@ void ctxDestroy(Ctx *ctx) {
     arrClear(&ctx->cursors);
 
     memFree(ctx->_buf.bytes);
+
+    arrClear(&ctx->_edits);
+    strClear(&ctx->_editsBuf, 0);
 
     // Keep the context in a valid state after deletion
     ctxInit(ctx, ctx->multiline);
@@ -780,6 +794,24 @@ static inline void _ctxReplace_MinimizeSpan(
     size_t *inoutLen
 );
 
+// Add an edit to the edits array
+static inline void _ctxReplace_StoreEdit(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    const Utf8Ch *data,
+    size_t len
+);
+
+// Replace the text that has already been checked & the edit has been added
+static inline void _ctxReplace_Raw(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    const Utf8Ch *data,
+    size_t len
+);
+
 // Move all the cursors inside the changed span to the end
 static inline void _ctxReplace_MoveCursorsOutOfSpan(
     Ctx *ctx,
@@ -818,7 +850,6 @@ static inline void _ctxReplace_UpdateSelections(
     ptrdiff_t lenDiff
 );
 
-
 static void _ctxReplace(
     Ctx *ctx,
     size_t start,
@@ -830,8 +861,25 @@ static void _ctxReplace(
     assert(end <= ctx->_buf.len);
     assert(utf8Check(data, len));
 
+    if (len == 0 && start == end) {
+        return;
+    }
+
+    _ctxReplace_StoreEdit(ctx, start, end, data, len);
+    _ctxReplace_Raw(ctx, start, end, data, len);
+}
+
+static inline void _ctxReplace_Raw(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    const Utf8Ch *data,
+    size_t len
+) {
     _ctxReplace_MinimizeSpan(ctx, &start, &end, &data, &len);
     _ctxReplace_MoveCursorsOutOfSpan(ctx, start, end);
+
+    ctx->edited = true;
 
     size_t spanStart = 0;
     uint8_t tabStop = ctx->tabStop;
@@ -975,6 +1023,55 @@ finish:
     *inoutEnd = end;
     *inoutData = data;
     *inoutLen = len;
+}
+
+static inline void _ctxReplace_StoreEdit(
+    Ctx *ctx,
+    size_t start,
+    size_t end,
+    const Utf8Ch *data,
+    size_t len
+) {
+    if (ctx->_editIdx == 0) {
+        ctx->_cpPending = false;
+    }
+    if (ctx->_editIdx < ctx->_edits.len && ctx->_editIdx != 0) {
+        assert(_ctxEditIsCheckpoint(&ctx->_edits.items[ctx->_editIdx]));
+        ctx->_editIdx++;
+        ctx->_cpPending = false;
+    }
+    if (ctx->_editIdx < ctx->_edits.len) {
+        // remove all edits after _editIdx
+        assert(!_ctxEditIsCheckpoint(&ctx->_edits.items[ctx->_editIdx]));
+        strCut(&ctx->_editsBuf, ctx->_edits.items[ctx->_editIdx].oldTextIdx);
+        ctx->_edits.len = ctx->_editIdx;
+    }
+    if (ctx->_cpPending) {
+        ctx->_cpPending = false;
+        arrAppend(&ctx->_edits, (CtxEdit){ .oldLen = 0, .newLen = 0 });
+        ctx->_editIdx++;
+    }
+
+    size_t oldLen = end - start;
+    _ctxBufSetGapIdx(&ctx->_buf, end);
+    size_t oldIdx = ctx->_editsBuf.len;
+    if (start < ctx->_buf.len) {
+        strAppendRaw(&ctx->_editsBuf, _ctxBufGet(&ctx->_buf, start), oldLen);
+    }
+    size_t newIdx = ctx->_editsBuf.len;
+    strAppendRaw(&ctx->_editsBuf, data, len);
+
+    ctx->_editIdx++;
+    arrAppend(
+        &ctx->_edits,
+        (CtxEdit){
+            .oldTextIdx = oldIdx,
+            .oldLen = oldLen,
+            .newTextIdx = newIdx,
+            .newLen = len,
+            .start = start
+        }
+    );
 }
 
 static inline void _ctxReplace_MoveCursorsOutOfSpan(
@@ -1227,6 +1324,7 @@ static void _ctxInsertRepSels(
     if (selsLen == 0) {
         return;
     }
+    ctxAddUndoCheckpoint(ctx);
 
     bool useLines = lines != NULL && lines->len == selsLen + 1;
     for (size_t i = 0; i < selsLen; i++) {
@@ -1281,6 +1379,11 @@ static void _ctxInsertCursors(
 }
 
 void ctxInsert(Ctx *ctx, const Utf8Ch *data, size_t len) {
+    if (ctx->_editCount < 0 || ctx->_editCount >= _editsForCheckpoint) {
+        ctxAddUndoCheckpoint(ctx);
+    }
+    ctx->_editCount += len;
+
     bool wasSelecting = ctxSelIsActive(ctx);
     ctxSelEnd(ctx);
     if (ctx->sels.len == 0 && ctx->cursors.len == 0) {
@@ -1415,6 +1518,7 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
     ctxSelEnd(ctx);
 
     if (cp == '\n') {
+        ctxAddUndoCheckpoint(ctx);
         if (ctx->sels.len != 0) {
             _ctxInsertNLRepSels(ctx);
         } else {
@@ -1422,6 +1526,7 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
         }
         return;
     } else if (cp == '\t' && ctx->sels.len == 0) {
+        ctxAddUndoCheckpoint(ctx);
         _ctxInsertTabCursors(ctx);
         return;
     }
@@ -1436,6 +1541,7 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp) {
 }
 
 static void _ctxRemoveSelections(Ctx *ctx) {
+    ctxAddUndoCheckpoint(ctx);
     for (size_t i = ctx->sels.len; i > 0; i--) {
         CtxSelection sel = ctx->sels.items[i - 1];
         _ctxReplace(ctx, sel.startIdx, sel.endIdx, NULL, 0);
@@ -1482,22 +1588,30 @@ static void _ctxRemoveFwdCursors(Ctx *ctx) {
 }
 
 void ctxRemoveBack(Ctx *ctx) {
+    if (ctx->_editCount > 0 || (-ctx->_editCount) >= _editsForCheckpoint) {
+        ctxAddUndoCheckpoint(ctx);
+    }
     ctxSelEnd(ctx);
 
     if (ctx->sels.len != 0) {
         _ctxRemoveSelections(ctx);
     } else {
         _ctxRemoveBackCursors(ctx);
+        ctx->_editCount--;
     }
 }
 
 void ctxRemoveFwd(Ctx *ctx) {
+    if (ctx->_editCount > 0 || (-ctx->_editCount) >= _editsForCheckpoint) {
+        ctxAddUndoCheckpoint(ctx);
+    }
     ctxSelEnd(ctx);
 
     if (ctx->sels.len != 0) {
         _ctxRemoveSelections(ctx);
     } else {
         _ctxRemoveFwdCursors(ctx);
+        ctx->_editCount--;
     }
 }
 
@@ -1578,6 +1692,7 @@ static void _ctxLineDedent(Ctx *ctx, size_t line, Str *indentBuf) {
 }
 
 void ctxIndent(Ctx *ctx) {
+    ctxAddUndoCheckpoint(ctx);
     ptrdiff_t lastLine = -1;
     Str indentBuf = { 0 };
 
@@ -1615,6 +1730,7 @@ void ctxIndent(Ctx *ctx) {
 }
 
 void ctxDedent(Ctx *ctx) {
+    ctxAddUndoCheckpoint(ctx);
     ptrdiff_t lastLine = -1;
     Str indentBuf = { 0 };
     ctxSelEnd(ctx);
@@ -1651,6 +1767,7 @@ void ctxDedent(Ctx *ctx) {
 }
 
 void ctxInsertLineAbove(Ctx *ctx) {
+    ctxAddUndoCheckpoint(ctx);
     ctxSelEnd(ctx);
 
     if (ctx->sels.len != 0) {
@@ -1673,6 +1790,7 @@ void ctxInsertLineAbove(Ctx *ctx) {
 }
 
 void ctxInsertLineBelow(Ctx *ctx) {
+    ctxAddUndoCheckpoint(ctx);
     ctxSelEnd(ctx);
 
     if (ctx->sels.len != 0) {
@@ -1682,6 +1800,51 @@ void ctxInsertLineBelow(Ctx *ctx) {
         // ctxInsertCP already adds the proper indent
         ctxInsertCP(ctx, '\n');
     }
+}
+
+static bool _ctxEditIsCheckpoint(CtxEdit *edit) {
+    return edit->oldLen == 0 && edit->newLen == 0;
+}
+
+void ctxAddUndoCheckpoint(Ctx *ctx) {
+    ctx->_editCount = 0;
+    ctx->_cpPending = true;
+}
+
+void ctxUndo(Ctx *ctx) {
+    while (ctx->_editIdx > 0) {
+        CtxEdit *edit = &ctx->_edits.items[--ctx->_editIdx];
+        if (_ctxEditIsCheckpoint(edit)) {
+            break;
+        }
+        _ctxReplace_Raw(
+            ctx,
+            edit->start,
+            edit->start + edit->newLen,
+            &ctx->_editsBuf.buf[edit->oldTextIdx],
+            edit->oldLen
+        );
+    }
+}
+
+void ctxRedo(Ctx *ctx) {
+    if (ctx->_editIdx == ctx->_edits.len) {
+        return;
+    }
+    CtxEdit *edit = &ctx->_edits.items[ctx->_editIdx];
+    do {
+        _ctxReplace_Raw(
+            ctx,
+            edit->start,
+            edit->start + edit->oldLen,
+            &ctx->_editsBuf.buf[edit->newTextIdx],
+            edit->newLen
+        );
+        if (++ctx->_editIdx == ctx->_edits.len) {
+            return;
+        }
+        edit = &ctx->_edits.items[ctx->_editIdx];
+    } while (!_ctxEditIsCheckpoint(edit));
 }
 
 bool ctxChInSel(const Ctx *ctx, size_t idx) {
