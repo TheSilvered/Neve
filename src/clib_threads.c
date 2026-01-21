@@ -45,6 +45,7 @@ bool threadMutexInit(ThreadMutex *mutex) {
 }
 
 bool threadMutexDestroy(ThreadMutex *mutex) {
+    (void)mutex;
     return true; // no destructor for SRWLOCK
 }
 

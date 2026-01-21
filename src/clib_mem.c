@@ -1,6 +1,10 @@
 #include <stdlib.h>
 #include "clib_mem.h"
 
+#ifdef _MSC_VER
+#pragma warning(disable : 4702) // unreachable code
+#endif // !_MSC_VER
+
 #ifndef memLog
 #include <stdio.h>
 #define memLog(...) fprintf(stderr, __VA_ARGS__)

@@ -93,7 +93,7 @@ void screenResize(Screen *screen, uint16_t w, uint16_t h) {
     screen->h = h;
 }
 
-static size_t _cutStr(StrView *sv, size_t aim, size_t w, bool canOvershoot) {
+static uint16_t _cutStr(StrView *sv, size_t aim, uint16_t w, bool canOvershoot) {
     ptrdiff_t i = 0;
     uint8_t cpWidth = 0;
     UcdCP cp = 0;
