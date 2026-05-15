@@ -57,7 +57,9 @@ typedef enum TermKey {
     TermKey_F12,
     TermKey_Home,
     TermKey_End,
-    TermKey_Delete
+    TermKey_Delete,
+
+    TermKey_MAX
 } TermKey;
 
 /******************** Initialization and deinitialization *********************/

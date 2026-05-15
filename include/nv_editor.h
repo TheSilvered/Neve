@@ -1,7 +1,6 @@
 #ifndef NV_EDITOR_H_
 #define NV_EDITOR_H_
 
-#include "nv_array.h"
 #include "nv_buffer.h"
 #include "nv_command.h"
 #include "nv_screen.h"
