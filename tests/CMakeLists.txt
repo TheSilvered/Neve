@@ -1,4 +1,7 @@
 include_directories(BEFORE main)
+set(UtilsHeader "")
+file(REAL_PATH "main/nv_test_utils.h" UtilsHeader)
+add_compile_definitions(USR_UTILS_HEADER="${UtilsHeader}")
 add_library(nv_test
     OBJECT
     main/nv_test.c
@@ -31,8 +34,10 @@ function(add_tests_in_directory TestsNamespace)
     endforeach()
 endfunction()
 
+# add_subdirectory(test_dummy)
 add_subdirectory(test_nv_array)
 add_subdirectory(test_nv_buffer)
 add_subdirectory(test_nv_context)
+add_subdirectory(test_nv_pool)
 add_subdirectory(test_nv_string)
 add_subdirectory(test_nv_unicode)

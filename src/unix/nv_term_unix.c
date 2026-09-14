@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -178,8 +177,8 @@ bool termCursorGetPos(uint16_t *outX, uint16_t *outY) {
     if (x <= 0) {
         goto failure_msg;
     }
-    assert(x <= escNumMax);
-    assert(y <= escNumMax);
+    nvAssertExpr(x <= escNumMax);
+    nvAssertExpr(y <= escNumMax);
 
     if (outX != NULL) {
         *outX = (uint16_t)(x - 1);

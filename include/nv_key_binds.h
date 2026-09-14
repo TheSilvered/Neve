@@ -7,10 +7,9 @@
 
 #define BindAnyKey (TermKey_MAX + 1)
 
-// An array of keys to match agains the given command.
-// All keys are matched exactly except `TermKey_BindAny` that allows all keys
-// and `TermKey_BindSelection` that expects an immediate selection.
-typedef Arr(TermKey) BindSequence;
+// An array of keys to match against the given command, use `BindAnyKey` to
+// allow for any key.
+typedef Arr(int32_t) BindSequence;
 
 typedef void (*BindCallback)(
     void *user,
@@ -18,19 +17,36 @@ typedef void (*BindCallback)(
     CtxSelection selection
 );
 
-typedef struct KeyBind {
-    BindSequence sequence;
+typedef struct BindMapNode {
+    TermKey value;
     BindCallback callback;
     void *userData;
+    bool hasSelection;
+
+    uint32_t cap;
+    uint32_t len;
+    struct BindMapNode *nodes;
+} BindMapNode;
+
+typedef struct KeyBind {
+    BindSequence sequence; // Sequence of keys to match.
+    BindCallback callback; // Action to take when the bind is matched.
+    void *userData;        // Additional data to pass to the callback.
+    bool hasSelection;     // Whether the callback expects a selection.
 } KeyBind;
 
 typedef Arr(KeyBind) KeyBinds;
 
 typedef struct BindMatch {
-    bool ambiguous;
-    KeyBind *bind;
+    bool ambiguous; // *Not used yet*
+    KeyBind *bind;  // The matched key bind, may be `NULL`
 } BindMatch;
 
+// Find the best matching key bind. If a keybind that matches the 
 BindMatch bindMatch(KeyBinds binds, BindSequence sequence);
+
+KeyBinds bindsMakeNormalMode(void);
+KeyBinds bindsMakeSelectionMode(void);
+KeyBinds bindsMakeEditMode(void);
 
 #endif // !NV_KEY_BINDS_H_

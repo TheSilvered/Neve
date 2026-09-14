@@ -1,5 +1,3 @@
-#include <assert.h>
-
 #include "unicode/nv_utf.h"
 #include "unicode/nv_ucd.h"
 #include "nv_utils.h"

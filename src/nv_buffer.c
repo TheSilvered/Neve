@@ -1,7 +1,7 @@
-#include <assert.h>
 #include <string.h>
 #include "nv_buffer.h"
 #include "nv_file.h"
+#include "nv_utils.h"
 
 #define _mapMinCap 4
 
@@ -125,7 +125,7 @@ size_t _bufGetUTF8Part(Utf8Ch *buf, size_t len) {
 
 BufResult bufInitFromFile(BufMap *map, File *file, BufHandle *outHandle) {
     // TODO: skip BOM
-    assert(outHandle != NULL);
+    nvAssertExpr(outHandle != NULL);
 
     Ctx ctx;
     ctxInit(&ctx, true);

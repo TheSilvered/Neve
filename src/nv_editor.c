@@ -202,3 +202,23 @@ void editorOpenCommandPalette(void) {
         g_ed.cmdResult = NULL;
     }
 }
+
+UIBufPanel *editorActivePanel(void) {
+    return g_ed.runningCommand ? NULL : &g_ed.ui.bufPanel;
+}
+
+BufHandle editorActiveBuffer(void) {
+    if (g_ed.runningCommand) {
+        return bufInvalidHandle;
+    } else {
+        return g_ed.ui.bufPanel.bufHd;
+    }
+}
+
+Ctx *editorActiveContext(void) {
+    if (g_ed.runningCommand) {
+        return &g_ed.ui.cmdInput.ctx;
+    } else {
+        return &bufRef(&g_ed.buffers, g_ed.ui.bufPanel.bufHd)->ctx;
+    }
+}

@@ -1,4 +1,4 @@
-#include <assert.h>
+#include "nv_utils.h"
 #include "nv_term.h"
 
 #if (defined(NV_TERM_W) && !defined(NV_TERM_H))                                \
@@ -38,7 +38,7 @@ static UcdCP _getKey(void) {
 // Is an already parsed arguent (the numbers are already integers instead of
 // being strings of digit characters).
 static size_t _readEscapeSeq(int32_t *outBuf, size_t bufSize) {
-    assert(bufSize >= 3);
+    nvAssertExpr(bufSize >= 3);
     UcdCP key = _getKey();
     if (key == TermKey_None) {
         return 0;
@@ -153,7 +153,7 @@ int32_t termGetKey(void) {
         default: return 0;
         }
     }
-    assert(seq[0] == '[');
+    nvAssertExpr(seq[0] == '[');
     switch (seq[seqLen - 1]) {
     case 'A': return TermKey_ArrowUp;
     case 'B': return TermKey_ArrowDown;

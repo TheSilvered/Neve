@@ -2,7 +2,7 @@
 #define NV_ARRAY_H_
 
 #include <string.h>
-#include <assert.h>
+#include "nv_utils.h"
 #include "clib_mem.h"
 
 // Dynamic array macros.
@@ -59,9 +59,16 @@
         (arr)->items[(arr)->len++] = (__VA_ARGS__);                            \
     } while (0)
 
+#define arrAppendMany(arr, ptr, count)                                         \
+    do {                                                                       \
+        arrReserve((arr), (count));                                            \
+        memcpy(&(arr)->items[(arr)->len], (ptr), (count) * sizeof(*ptr));      \
+        (arr)->len += (count);                                                 \
+    } while (0)
+
 #define arrInsert(arr, idx, ...)                                               \
     do {                                                                       \
-        assert((size_t)(idx) < (arr)->len);                                    \
+        nvAssertExpr((size_t)(idx) < (arr)->len);                              \
         arrReserve((arr), 1);                                                  \
         memmove(                                                               \
             &(arr)->items[(idx) + 1],                                          \
@@ -74,7 +81,7 @@
 
 #define arrRemove(arr, idx)                                                    \
     do {                                                                       \
-        assert((size_t)(idx) < (arr)->len);                                    \
+        nvAssertExpr((size_t)(idx) < (arr)->len);                              \
         memmove(                                                               \
             &(arr)->items[(idx)],                                              \
             &(arr)->items[(idx) + 1],                                          \
@@ -86,7 +93,7 @@
         }                                                                      \
     } while (0)
 
-#define arrClear(arr)                                                        \
+#define arrClear(arr)                                                          \
     do {                                                                       \
         memFree((arr)->items);                                                 \
         (arr)->items = NULL;                                                   \

@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <stdio.h>
+
+#include "clib_mem.h"
 #include "nv_context.h"
 #include "nv_array.h"
-#include "clib_mem.h"
 #include "nv_string.h"
 #include "nv_utils.h"
 #include "unicode/nv_utf.h"
@@ -114,7 +114,7 @@ void ctxDestroy(Ctx *ctx) {
 }
 
 static inline Utf8Ch *_ctxBufGet(const CtxBuf *buf, size_t idx) {
-    assert(idx < buf->len);
+    nvAssertExpr(idx < buf->len);
     if (idx >= buf->gapIdx) {
         size_t gapSize = buf->cap - buf->len;
         idx += gapSize;
@@ -183,7 +183,7 @@ static void _ctxBufRemove(CtxBuf *buf, size_t len) {
     buf->gapIdx -= len;
     buf->len -= len;
 
-    assert(
+    nvAssertExpr(
         buf->gapIdx == buf->len
         || utf8ChIsStart(*_ctxBufGet(buf, buf->gapIdx))
     );
@@ -192,8 +192,8 @@ static void _ctxBufRemove(CtxBuf *buf, size_t len) {
 }
 
 static void _ctxBufSetGapIdx(CtxBuf *buf, size_t gapIdx) {
-    assert(gapIdx <= buf->len);
-    assert(
+    nvAssertExpr(gapIdx <= buf->len);
+    nvAssertExpr(
         gapIdx == buf->len
         || utf8ChIsStart(*_ctxBufGet(buf, gapIdx))
     );
@@ -344,7 +344,7 @@ ptrdiff_t ctxLineEnd(const Ctx *ctx, size_t lineNo) {
 }
 
 void ctxPosAt(const Ctx *ctx, size_t idx, size_t *outLine, size_t *outCol) {
-    assert(idx <= ctx->_buf.len);
+    nvAssertExpr(idx <= ctx->_buf.len);
 
     CtxRef *refs = ctx->_refs.items;
 
@@ -857,9 +857,9 @@ static void _ctxReplace(
     const Utf8Ch *data,
     size_t len
 ) {
-    assert(start <= end);
-    assert(end <= ctx->_buf.len);
-    assert(utf8Check(data, len));
+    nvAssertExpr(start <= end);
+    nvAssertExpr(end <= ctx->_buf.len);
+    nvAssertExpr(utf8Check(data, len));
 
     if (len == 0 && start == end) {
         return;
@@ -1036,13 +1036,13 @@ static inline void _ctxReplace_StoreEdit(
         ctx->_cpPending = false;
     }
     if (ctx->_editIdx < ctx->_edits.len && ctx->_editIdx != 0) {
-        assert(_ctxEditIsCheckpoint(&ctx->_edits.items[ctx->_editIdx]));
+        nvAssertExpr(_ctxEditIsCheckpoint(&ctx->_edits.items[ctx->_editIdx]));
         ctx->_editIdx++;
         ctx->_cpPending = false;
     }
     if (ctx->_editIdx < ctx->_edits.len) {
         // remove all edits after _editIdx
-        assert(!_ctxEditIsCheckpoint(&ctx->_edits.items[ctx->_editIdx]));
+        nvAssertExpr(!_ctxEditIsCheckpoint(&ctx->_edits.items[ctx->_editIdx]));
         strCut(&ctx->_editsBuf, ctx->_edits.items[ctx->_editIdx].oldTextIdx);
         ctx->_edits.len = ctx->_editIdx;
     }
@@ -1109,7 +1109,7 @@ static inline void _ctxReplace_UpdateRefCache(
     uint8_t tabStop = ctx->tabStop;
     size_t tabIdx = ctx->_buf.len;
     ptrdiff_t lineEnd = ctxLineEnd(ctx, lastChangedLine);
-    assert(lineEnd >= 0);
+    nvAssertExpr(lineEnd >= 0);
     if (
         tabStop != 0
         && colDiff % tabStop != 0
@@ -1483,7 +1483,7 @@ static ptrdiff_t _ctxCurIndentLine(const Ctx *ctx, CtxCursor *cur) {
     size_t line;
     ctxPosAt(ctx, cur->idx, &line, NULL);
     ptrdiff_t lineStart = ctxLineStart(ctx, line);
-    assert(lineStart >= 0);
+    nvAssertExpr(lineStart >= 0);
     for (size_t i = cur->idx; i > (size_t)lineStart; i--) {
         Utf8Ch ch = *_ctxBufGet(&ctx->_buf, i - 1);
         if (ch != ' ' && ch != '\t') {
@@ -1665,7 +1665,7 @@ static void _ctxLineSetIndent(
 }
 
 static void _ctxLineIndent(Ctx *ctx, size_t line, Str *indentBuf) {
-    assert(ctx->indentWidth <= _maxIndentWidth);
+    nvAssertExpr(ctx->indentWidth <= _maxIndentWidth);
     strClear(indentBuf, indentBuf->cap);
     ptrdiff_t start = ctxLineStart(ctx, line);
     ptrdiff_t end;
@@ -1676,7 +1676,7 @@ static void _ctxLineIndent(Ctx *ctx, size_t line, Str *indentBuf) {
 }
 
 static void _ctxLineDedent(Ctx *ctx, size_t line, Str *indentBuf) {
-    assert(ctx->indentWidth <= _maxIndentWidth);
+    nvAssertExpr(ctx->indentWidth <= _maxIndentWidth);
     strClear(indentBuf, indentBuf->cap);
     ptrdiff_t start = ctxLineStart(ctx, line);
     ptrdiff_t end;
@@ -2198,7 +2198,7 @@ void ctxCurMoveToNextParagraph(Ctx *ctx) {
                 break;
             }
             newCur = ctxLineEnd(ctx, lineNo);
-            assert(newCur >= 0);
+            nvAssertExpr(newCur >= 0);
             if (newCur - lineStart != 0) {
                 skippedBlankLines = true;
             } else if (skippedBlankLines) {
@@ -2211,7 +2211,7 @@ void ctxCurMoveToNextParagraph(Ctx *ctx) {
             }
         }
 
-        assert(newCur >= 0);
+        nvAssertExpr(newCur >= 0);
         if (_ctxCurMove(ctx, oldCur, (size_t)newCur)) {
             i--;
         }
@@ -2231,7 +2231,7 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx) {
                 break;
             }
             newCur = ctxLineStart(ctx, lineNo);
-            assert(newCur >= 0);
+            nvAssertExpr(newCur >= 0);
             if (lineEnd - newCur != 0) {
                 skippedBlankLines = true;
             } else if (skippedBlankLines) {
@@ -2243,7 +2243,7 @@ void ctxCurMoveToPrevParagraph(Ctx *ctx) {
             lineNo--;
         }
 
-        assert(newCur >= 0);
+        nvAssertExpr(newCur >= 0);
         if (_ctxCurMove(ctx, oldCur, newCur)) {
             i--;
         }

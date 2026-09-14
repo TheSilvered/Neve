@@ -4,6 +4,12 @@
 
 /* ----------------------------- Test Functions ----------------------------- */
 
+jmp_buf g_testJmpBuf;
+int g_testAssertLine;
+const char *g_testAssertFile;
+const char *g_testAssertExpr;
+const char *g_testAssertMsg;
+
 static bool g_failed = false;
 
 void _testAssert(bool expr, const char *exprStr, const char *file, int line) {
@@ -58,6 +64,24 @@ void _testCheckAllocs(void) {
         memFreeAllAllocs();
         g_failed = true;
     }
+}
+
+void _testHandleAbort(int status, bool expectedFailure) {
+    if (status == 0) return;
+    if (expectedFailure) {
+        memFreeAllAllocs();
+        return;
+    }
+    printf(
+        "  %s:%d[assertion failed]: %s (%s)\n",
+        g_testAssertFile,
+        g_testAssertLine,
+        status == 1 ? "" : g_testAssertMsg,
+        g_testAssertExpr
+    );
+    memPrintAllocs();
+    memFreeAllAllocs();
+    g_failed = true;
 }
 
 bool _testFailed(void) {

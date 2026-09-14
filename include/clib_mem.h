@@ -7,10 +7,10 @@ Macros:
 - define `CLIB_MEM_STDLIB_FUNCS` to add macros that replace standard `malloc`,
   `calloc`, `realloc` and `free` with their equivalent in the library.
 - define `CLIB_MEM_TRACE_ALLOCS` to trace all allocations. In this mode the
-  library depends by default on `clib_threads` to be thread-safe but this can be
-  disabled.
+  library depends, by default, on `clib_threads` to be thread-safe but this can
+  be disabled.
 - define `CLIB_MEM_NO_THREADS` to remove dependency on `clib_threads`. However
-  the library is no longer thread-safe.
+  the library will no longer be thread-safe.
 - define `CLIB_MEM_ABORT_ON_FAIL` to log "Out of memory." and abort the program
   if a memory allocation fails.
 
@@ -24,22 +24,24 @@ Function macros:
 - define `memLog(...)` to change the logging function.
   The arguments are passed as if it were `printf`.
   By default it uses `fprintf` and prints to `stderr`.
-- define `memAssert` to change assertions. By default it is the standard
-  `assert`.
+- define `memAssert` to change assertions. By default the standard `assert` is
+  used.
 */
-
-#define CLIB_MEM_ABORT_ON_FAIL
-#ifdef NV_DEBUG
-#define CLIB_MEM_TRACE_ALLOCS
-#endif
 
 #ifndef CLIB_MEM_H_
 #define CLIB_MEM_H_
+
+#include "nv_mem_options.h"
 
 #include <stddef.h>
 #include <stdbool.h>
 
 #ifdef CLIB_MEM_STDLIB_FUNCS
+
+#if defined(malloc) || defined(calloc) || defined(realloc) || defined(free)
+#error "Macros that replace `malloc`, `calloc`, `realloc` or `free` are defined"
+#endif
+
 #define malloc memAllocBytes
 #define calloc memAllocZeroed
 #define realloc memChangeBytes
@@ -49,17 +51,23 @@ Function macros:
 #ifndef CLIB_MEM_TRACE_ALLOCS
 
 // Allocate a new chunk of memory.
+// If the total size is 0, the behaviour is undefined.
 void *memAlloc(size_t objectCount, size_t objectSize);
 // Allocate a new chunk of memory given the size in bytes.
+// If the total size is 0, the behaviour is undefined.
 void *memAllocBytes(size_t byteCount);
 // Allocate a new chunk of memory that is zeroed.
+// If the total size is 0, the behaviour is undefined.
 void *memAllocZeroed(size_t objectCount, size_t objectSize);
 // Allocate a new chunk of memory that is zeroed.
+// If the total size is 0, the behaviour is undefined.
 void *memAllocZeroedBytes(size_t byteCount);
 
 // Increase the size of a memory block.
+// If `block` is NULL, new memory is allocated.
 void *memExpand(void *block, size_t newObjectCount, size_t objectSize);
 // Increase the size of a memory block given the new size in bytes.
+// If `block` is NULL, new memory is allocated.
 void *memExpandBytes(void *block, size_t newByteCount);
 
 // Decrease the size of a memory block.
@@ -72,19 +80,22 @@ void *memShrink(void *block, size_t newObjectCount, size_t objectSize);
 void *memShrinkBytes(void *block, size_t newByteCount);
 
 // Change the state of `block` depending on `objectCount`.
-// If `block == NULL` new memory will be allocated.
-// If `block != NULL` and `objectCount == 0` the block will be freed.
+// If `block` is NULL new memory will be allocated.
+// If the total size is 0 the block will be freed.
 // Otherwise the block is reallocated.
 void *memChange(void *block, size_t objectCount, size_t objectSize);
 
 // Change the state of `block` depending on `byteCount`.
-// If `block == NULL` new memory will be allocated.
-// If `block != NULL` and `byteCount == 0` the block will be freed.
+// If `block` is NULL new memory will be allocated.
+// If the total size is 0 the block will be freed.
 // Otherwise the block is reallocated.
 void *memChangeBytes(void *block, size_t byteCount);
 
-// Free a block of memory. Do nothing if `block == NULL`
+// Free a block of memory. Do nothing if `block` is NULL
 void memFree(void *block);
+
+// The following functions only work when in debug-mode. When in release mode
+// they either do not do anything or assume that the operation is successfull.
 
 // Debug-mode only
 #define memHasAllocs() false
@@ -96,6 +107,8 @@ void memFree(void *block);
 #define memCheckBounds(...)
 // Debug-mode only
 #define memIsAlloc(...) true
+// Debug-mode only
+#define memIsInAlloc(...) true
 
 #else
 
@@ -202,6 +215,8 @@ void memFreeAllAllocs(void);
 void _memCheckBounds(void *block, uint32_t line, const char *file);
 // Check if a pointer points to a heap-allocated memory block.
 bool memIsAlloc(void *block);
+// Check if a memory region is contained in the allocated memory of the program.
+bool memIsInAlloc(void *start, size_t size);
 
 #endif // !CLIB_MEM_TRACE_ALLOCS
 

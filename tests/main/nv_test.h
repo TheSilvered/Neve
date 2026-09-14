@@ -4,8 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "clib_mem.h"
+
 #include "nv_utils.h" // Useful inside the tests
+#include "clib_mem.h"
 
 // Length of a char array
 #define chArrLen(s) (sizeof(s)/sizeof(*(s)) - 1)
@@ -15,11 +16,24 @@
 typedef struct Test {
     const char *name;
     void (*callback)(void);
+    bool expectFailure;
 } Test;
 
 // Initialize a test using `func` as the callback and the name
-#define testMake(func) { .callback = (func), .name = #func }
+#define testMake(func) {                                                       \
+        .callback = (func),                                                    \
+        .name = #func,                                                         \
+        .expectFailure = false                                              \
+    }
 
+// Initialize a test using `func` as the callback and the name, additionally
+// the test succeeds only if an internal assertion (with nvAssert or
+// nvAssertExpr) fails.
+#define testMakeFail(func) {                                                   \
+        .callback = (func),                                                    \
+        .name = #func,                                                         \
+        .expectFailure = true                                               \
+    }
 // Assert that `expr` is true
 #define testAssert(expr) _testAssert((expr), #expr, __FILE__, __LINE__)
 // Assert that `expr` is true
@@ -45,19 +59,25 @@ bool _testAssertRequire(
     int line
 );
 void _testCheckAllocs(void);
+void _testHandleAbort(int status, bool expectedFailure);
 bool _testFailed(void);
 
 // Put the initializers of the tests defined in the file
-// Usage: testList(testMake(myTestFunc), { myFunc, "A name" })
+// Usage: testList(testMake(myTestFunc), { myFunc, "A name", false })
 #define testList(...)                                                          \
     int main(void) {                                                           \
         Test tests[] = { __VA_ARGS__ };                                        \
         size_t testCount = sizeof(tests) / sizeof(*tests);                     \
         for (size_t i = 0; i < testCount; i++) {                               \
-            printf("running test %s...\n", tests[i].name);                     \
-            fflush(stdout);                                                    \
-            tests[i].callback();                                               \
-            _testCheckAllocs();                                                \
+            int status = setjmp(g_testJmpBuf);                                 \
+            if (status == 0) {                                                 \
+                printf("running test %s...\n", tests[i].name);                 \
+                fflush(stdout);                                                \
+                tests[i].callback();                                           \
+                _testCheckAllocs();                                            \
+            } else {                                                           \
+                _testHandleAbort(status, tests[i].expectFailure);              \
+            }                                                                  \
         }                                                                      \
         return _testFailed() ? 1 : 0;                                          \
     }

@@ -45,4 +45,11 @@ void editorNewBuf(void);
 // Open the command palette.
 void editorOpenCommandPalette(void);
 
+// Get the current active panel, it may be NULL.
+UIBufPanel *editorActivePanel(void);
+// Get the current active buffer, it may be NULL.
+BufHandle editorActiveBuffer(void);
+// Get the current active context, it may be NULL.
+Ctx *editorActiveContext(void);
+
 #endif // !NV_EDITOR_H_

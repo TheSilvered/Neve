@@ -1,4 +1,3 @@
-#include <assert.h>
 #include "unicode/nv_ucd.h"
 #include "nv_utils.h"
 
@@ -6,8 +5,8 @@
 #define _blockIdxMask ((1<<_ucdShift) - 1)
 
 UcdCPInfo ucdGetCPInfo(UcdCP cp) {
-    assert(cp <= ucdCPMax);
-    assert(cp >= 0);
+    nvAssertExpr(cp <= ucdCPMax);
+    nvAssertExpr(cp >= 0);
     if (cp < 0 || cp > ucdCPMax) {
         cp = 0;
     }
