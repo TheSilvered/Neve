@@ -107,7 +107,8 @@ void poolFree(Pool *p, void *block) {
     if (p->freePages != NULL) {
         PoolPage *page = p->freePages;
         while (page) {
-            if (tryPageFree(p, page, block)) break;
+            if (tryPageFree(p, page, block)) return;
+            page = page->next;
         }
     }
     nvAssert(false, "attempted to free a non-existent block from a pool");
