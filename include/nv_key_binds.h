@@ -16,8 +16,8 @@ typedef struct KeyBind {
 } KeyBind;
 
 typedef struct BindMap {
-    KeyBind *keybind;
-    uint32_t value;
+    KeyBind *value;
+    int32_t key;
 
     uint16_t cap;
     uint16_t len;
@@ -55,17 +55,20 @@ void bindQuit(void);
 
 // In the following functions, the sequence array must end with `BindEnd`.
 
-// Add a root map for the bindings
-uint32_t bindAddRootMap(void);
+// Add a root map for the bindings and return its ID.
+int32_t bindAddRootMap(void);
+// Check if a root map exists. Using other functions with a non-existent root
+// will silently fail.
+bool bindRootMapExists(int32_t id);
 
 // Add a key bind, override the existing one if present.
-void bindAdd(uint32_t roodID, int32_t seq[], KeyBind keyBind);
+void bindAdd(int32_t rood, int32_t seq[], KeyBind keyBind);
 // Remove a key bind, return `true` if a key bind was removed and `false` if no
 // action was taken. `BindAnyKey` is matched only to itself.
-bool bindRemove(uint32_t root, int32_t seq[]);
+bool bindRemove(int32_t root, int32_t seq[]);
 // Check if a bind exists.
-bool bindExists(uint32_t root, int32_t seq[]);
+bool bindExists(int32_t root, int32_t seq[]);
 // Find the best-match for a sequence.
-BindMatchResult bindMatch(uint32_t root, int32_t seq[], KeyBind *outBind);
+BindMatchResult bindMatch(int32_t root, int32_t seq[], KeyBind *outBind);
 
 #endif // !NV_KEY_BINDS_H_

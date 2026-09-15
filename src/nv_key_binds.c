@@ -3,22 +3,51 @@
 #include "nv_editor.h"
 #include "nv_term.h"
 
-typedef BindMatchResult BMR;
+BindMap g_bindRoots;
 
-BindMap *g_bindRoots;
+static void bindMapInsert(BindMap *map, BindMap value);
+static BindMap *bindMapGet(BindMap *map, int32_t value);
+static bool bindMapRemove(BindMap *map, int32_t value);
+static BindMatchResult bindMatchRec(
+    BindMap *map,
+    int32_t *seq,
+    KeyBind *outBind
+);
 
-void bindMapInsert(BindMap *map, BindMap value);
-BindMap *bindMapGet(BindMap *map, int32_t value);
-bool bindMapRemove(BindMap *map, int32_t value);
+int32_t bindAddRootMap(void) {
+    BindMap map = { .key = g_bindRoots.len };
+    bindMapInsert(&g_bindRoots, map);
+    return map.key;
+}
 
-uint32_t bindAddRootMap(void);
+bool bindRootMapExists(int32_t id) {
+    return bindMapGet(&g_bindRoots, id) != NULL;
+}
 
-void bindAdd(uint32_t roodID, int32_t seq[], KeyBind keyBind);
-bool bindRemove(uint32_t root, int32_t seq[]);
-bool bindExists(uint32_t root, int32_t seq[]);
-BindMatchResult bindMatch(uint32_t root, int32_t seq[], KeyBind *outBind);
+void bindAdd(int32_t roodID, int32_t seq[], KeyBind keyBind);
 
-static BMR bindMatchRec(BindMap *map, int32_t *seq, KeyBind *outBind) {
+bool bindRemove(int32_t root, int32_t seq[]);
+
+bool bindExists(int32_t root, int32_t seq[]) {
+    BindMap *map = bindMapGet(&g_bindRoots, root);
+    while (*seq != BindEnd && map != NULL) {
+        map = bindMapGet(map, *seq);
+        seq++;
+    }
+    return map != NULL && map->value != NULL;
+}
+
+BindMatchResult bindMatch(int32_t root, int32_t seq[], KeyBind *outBind) {
+    BindMap *rootMap = bindMapGet(&g_bindRoots, root);
+    if (rootMap == NULL) return BindMatch_NotFound;
+    return bindMatchRec(rootMap, seq, outBind);
+}
+
+static BindMatchResult bindMatchRec(
+    BindMap *map,
+    int32_t *seq,
+    KeyBind *outBind
+) {
     // This should not happen but just in case.
     if (seq[0] == BindEnd) return BindMatch_NotFound;
     bool isLast = seq[1] == BindEnd;
@@ -31,11 +60,11 @@ static BMR bindMatchRec(BindMap *map, int32_t *seq, KeyBind *outBind) {
     } else if (isLast) {
         // specific = whichever matched, favouring the specific one
         if (!specific) specific = wildcard;
-        if (specific->keybind == NULL) {
+        if (specific->value == NULL) {
             nvAssert(specific->len != 0, "all leaves must have a binding");
             return BindMatch_Incomplete;
         }
-        *outBind = *specific->keybind;
+        *outBind = *specific->value;
         return specific->len == 0 ? BindMatch_Found : BindMatch_Partial;
     } else if ((wildcard && !specific) || (!wildcard && specific)) {
         return bindMatchRec(wildcard ? wildcard : specific, seq + 1, outBind);
@@ -65,8 +94,8 @@ static BMR bindMatchRec(BindMap *map, int32_t *seq, KeyBind *outBind) {
     KeyBind wildBind = { 0 };
     KeyBind specBind = { 0 };
 
-    BMR wildRes = bindMatchRec(wildcard, seq + 1, &wildBind);
-    BMR specRes = bindMatchRec(specific, seq + 1, &specBind);
+    BindMatchResult wildRes = bindMatchRec(wildcard, seq + 1, &wildBind);
+    BindMatchResult specRes = bindMatchRec(specific, seq + 1, &specBind);
 
     *outBind = specRes >= BindMatch_Partial ? specBind : wildBind;
     // If the values lie in the diagonal
@@ -261,14 +290,14 @@ void insertTextCallback(void *user, int32_t *keys, CtxSelection sel) {
 #define mkBind(map, cb, ...)                                                   \
     bindAdd(                                                                   \
         map,                                                                   \
-        (int32_t[]){__VA_ARGS__, BindEnd},                                     \
+        (int32_t[]){__VA_ARGS__, BindEnd },                                    \
         (KeyBind) { .callback = (cb) }                                         \
     )
 
 #define mkSelBind(map, cb, ...)                                                \
     bindAdd(                                                                   \
         map,                                                                   \
-        (int32_t[]){__VA_ARGS__},                                              \
+        (int32_t[]){__VA_ARGS__, BindEnd },                                    \
         (KeyBind){ .callback = (cb), .hasSel = true }                          \
     )
 
