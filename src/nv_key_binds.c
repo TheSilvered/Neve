@@ -3,53 +3,85 @@
 #include "nv_editor.h"
 #include "nv_term.h"
 
-static int32_t getScore(KeyBind *bind, BindSequence seq, bool *ambiguous);
+typedef BindMatchResult BMR;
 
-BindMatch bindMatch(KeyBinds binds, BindSequence sequence) {
-    KeyBind *best = NULL;
-    // Number of 'any' characters matched
-    int32_t bestAnyCount = sequence.len;
-    bool ambiguous = false;
+BindMap *g_bindRoots;
 
-    for (size_t i = 0; i < binds.len; i++) {
-        int32_t anyCount = getScore(&binds.items[i], sequence, &ambiguous);
-        if (anyCount >= 0 && anyCount <= bestAnyCount) {
-            best = &binds.items[i];
-            bestAnyCount = anyCount;
+void bindMapInsert(BindMap *map, BindMap value);
+BindMap *bindMapGet(BindMap *map, int32_t value);
+bool bindMapRemove(BindMap *map, int32_t value);
+
+uint32_t bindAddRootMap(void);
+
+void bindAdd(uint32_t roodID, int32_t seq[], KeyBind keyBind);
+bool bindRemove(uint32_t root, int32_t seq[]);
+bool bindExists(uint32_t root, int32_t seq[]);
+BindMatchResult bindMatch(uint32_t root, int32_t seq[], KeyBind *outBind);
+
+static BMR bindMatchRec(BindMap *map, int32_t *seq, KeyBind *outBind) {
+    // This should not happen but just in case.
+    if (seq[0] == BindEnd) return BindMatch_NotFound;
+    bool isLast = seq[1] == BindEnd;
+
+    BindMap *wildcard = bindMapGet(map, BindAnyKey);
+    BindMap *specific = bindMapGet(map, seq[0]);
+
+    if (!wildcard && !specific) {
+        return BindMatch_NotFound;
+    } else if (isLast) {
+        // specific = whichever matched, favouring the specific one
+        if (!specific) specific = wildcard;
+        if (specific->keybind == NULL) {
+            nvAssert(specific->len != 0, "all leaves must have a binding");
+            return BindMatch_Incomplete;
         }
+        *outBind = *specific->keybind;
+        return specific->len == 0 ? BindMatch_Found : BindMatch_Partial;
+    } else if ((wildcard && !specific) || (!wildcard && specific)) {
+        return bindMatchRec(wildcard ? wildcard : specific, seq + 1, outBind);
     }
-    return (BindMatch) {
-        .bind = best,
-        .ambiguous = best == NULL ? false : ambiguous
-    };
+
+    // At this point we know that we are not at the end of the sequence and
+    // need to explore both branches.
+
+    /*
+     * A table that shows the outcome based on the result of exploring the two
+     * possible branches. In parenthesis is the key bind taken where it applies.
+     *
+     *                               Specific
+     *                Not F.     Incom.     Found      Part.
+     *              +----------+----------+----------+----------+
+     *   W   Not F. | Not F.   | Incom.   | Found(S) | Part.(S) |
+     *   i          +----------+----------+----------+----------+
+     *   l   Incom. | Incom.   | Incom.   | Part.(S) | Part.(S) |
+     *   d          +----------+----------+----------+----------+
+     *   c   Found  | Found(W) | Part.(W) | Found(S) | Part.(S) |
+     *   a          +----------+----------+----------+----------+
+     *   r   Part.  | Part.(W) | Part.(W) | Part.(S) | Part.(S) |
+     *   d          +----------+----------+----------+----------+
+     *
+     */
+
+    KeyBind wildBind = { 0 };
+    KeyBind specBind = { 0 };
+
+    BMR wildRes = bindMatchRec(wildcard, seq + 1, &wildBind);
+    BMR specRes = bindMatchRec(specific, seq + 1, &specBind);
+
+    *outBind = specRes >= BindMatch_Partial ? specBind : wildBind;
+    // If the values lie in the diagonal
+    if (wildRes + specRes == BindMatch_Partial) {
+        return BindMatch_Partial;
+    }
+    return nvMax(wildRes, specRes);
 }
 
-static int32_t getScore(KeyBind *bind, BindSequence seq, bool *ambiguous) {
-    if (
-        bind->sequence.len < seq.len
-        || (*ambiguous && bind->sequence.len != seq.len)
-    ) {
-        return -1;
-    }
-
-    int32_t anyCount = 0;
-    for (size_t i = 0; i < seq.len; i++) {
-        int32_t bindKey = bind->sequence.items[i];
-        if (bindKey == BindAnyKey) {
-            anyCount++;
-        } else if (bindKey != seq.items[i]) {
-            return -1;
-        }
-    }
-    return anyCount;
-}
-
-void moveCallback(void *user, BindSequence seq, CtxSelection sel) {
+void moveCallback(void *user, int32_t *keys, CtxSelection sel) {
     (void)user;
     (void)sel;
     Ctx *ctx = editorActiveContext();
 
-    switch (seq.items[0]) {
+    switch (keys[0]) {
     case 'i':
     case TermKey_ArrowUp:
         ctxCurMoveUp(ctx);
@@ -117,12 +149,12 @@ void moveCallback(void *user, BindSequence seq, CtxSelection sel) {
     }
 }
 
-void editModeCallback(void *user, BindSequence seq, CtxSelection sel) {
+void editModeCallback(void *user, int32_t *keys, CtxSelection sel) {
     (void)user;
     (void)sel;
     Ctx *ctx = editorActiveContext();
 
-    switch (seq.items[0]) {
+    switch (keys[0]) {
     case TermKey_CtrlA:
         ctxCurMoveToLineStart(ctx);
         break;
@@ -210,14 +242,14 @@ void editModeCallback(void *user, BindSequence seq, CtxSelection sel) {
     }
 }
 
-void insertTextCallback(void *user, BindSequence seq, CtxSelection sel) {
+void insertTextCallback(void *user, int32_t *keys, CtxSelection sel) {
     (void)user;
     (void)sel;
 
     Ctx *ctx = editorActiveContext();
     if (ctx == NULL) return;
 
-    int32_t cp = seq.items[0];
+    int32_t cp = keys[0];
     if (cp == '\r') {
         cp = '\n';
     }
@@ -226,104 +258,75 @@ void insertTextCallback(void *user, BindSequence seq, CtxSelection sel) {
     }
 }
 
-static void addBind(
-    KeyBinds *binds,
-    BindCallback callback,
-    int32_t *seq,
-    size_t count,
-    bool hasSel
-) {
-    BindSequence seqArr = { 0 };
-    arrAppendMany(&seqArr, seq, count);
-    arrAppend(binds, (KeyBind){
-        .sequence = seqArr,
-        .callback = callback,
-        .hasSelection = hasSel,
-        .userData = NULL
-    });
-}
-
-#define mkBind(binds, callback, ...)                                           \
-    addBind(                                                                   \
-        (binds),                                                               \
-        (callback),                                                            \
-        (int32_t[]){__VA_ARGS__},                                              \
-        sizeof((int32_t[]){__VA_ARGS__}) / sizeof(TermKey),                    \
-        false                                                                  \
-    )
-#define mkSelBind(binds, callback, ...) \
-    addBind(                                                                   \
-        (binds),                                                               \
-        (callback),                                                            \
-        (int32_t[]){__VA_ARGS__},                                              \
-        sizeof((int32_t[]){__VA_ARGS__}) / sizeof(TermKey),                    \
-        true                                                                   \
+#define mkBind(map, cb, ...)                                                   \
+    bindAdd(                                                                   \
+        map,                                                                   \
+        (int32_t[]){__VA_ARGS__, BindEnd},                                     \
+        (KeyBind) { .callback = (cb) }                                         \
     )
 
-static void addNormalMovement(KeyBinds *binds) {
-    mkBind(binds, moveCallback, 'i');
-    mkBind(binds, moveCallback, 'I');
-    mkBind(binds, moveCallback, 'j');
-    mkBind(binds, moveCallback, 'J');
-    mkBind(binds, moveCallback, 'k');
-    mkBind(binds, moveCallback, 'K');
-    mkBind(binds, moveCallback, 'l');
-    mkBind(binds, moveCallback, 'L');
-    mkBind(binds, moveCallback, 'u');
-    mkBind(binds, moveCallback, 'U');
-    mkBind(binds, moveCallback, 'o');
-    mkBind(binds, moveCallback, 'O');
+#define mkSelBind(map, cb, ...)                                                \
+    bindAdd(                                                                   \
+        map,                                                                   \
+        (int32_t[]){__VA_ARGS__},                                              \
+        (KeyBind){ .callback = (cb), .hasSel = true }                          \
+    )
+
+static void addNormalMovement(int32_t map) {
+    mkBind(map, moveCallback, 'i');
+    mkBind(map, moveCallback, 'I');
+    mkBind(map, moveCallback, 'j');
+    mkBind(map, moveCallback, 'J');
+    mkBind(map, moveCallback, 'k');
+    mkBind(map, moveCallback, 'K');
+    mkBind(map, moveCallback, 'l');
+    mkBind(map, moveCallback, 'L');
+    mkBind(map, moveCallback, 'u');
+    mkBind(map, moveCallback, 'U');
+    mkBind(map, moveCallback, 'o');
+    mkBind(map, moveCallback, 'O');
 }
 
-static void addArrowKeys(KeyBinds *binds) {
-    mkBind(binds, moveCallback, TermKey_ArrowLeft);
-    mkBind(binds, moveCallback, TermKey_ArrowRight);
-    mkBind(binds, moveCallback, TermKey_ArrowUp);
-    mkBind(binds, moveCallback, TermKey_ArrowDown);
+static void addArrowKeys(int32_t map) {
+    mkBind(map, moveCallback, TermKey_ArrowLeft);
+    mkBind(map, moveCallback, TermKey_ArrowRight);
+    mkBind(map, moveCallback, TermKey_ArrowUp);
+    mkBind(map, moveCallback, TermKey_ArrowDown);
 }
 
-KeyBinds bindsMakeNormalMode(void) {
-    KeyBinds binds = { 0 };
-    addNormalMovement(&binds);
-    addArrowKeys(&binds);
-
-    return binds;
+static void bindsMakeNormalMode(void) {
+    addNormalMovement(BindMap_Normal);
+    addArrowKeys(BindMap_Normal);
 }
 
-KeyBinds bindsMakeSelectionMode(void) {
-    KeyBinds binds = { 0 };
-    addNormalMovement(&binds);
-    addArrowKeys(&binds);
-
-    return binds;
+static void bindsMakeSelectionMode(void) {
+    addNormalMovement(BindMap_Selection);
+    addArrowKeys(BindMap_Selection);
 }
 
-KeyBinds bindsMakeEditMode(void) {
-    KeyBinds binds = { 0 };
-    addArrowKeys(&binds);
+static void bindsMakeEditMode(void) {
+    addArrowKeys(BindMap_Edit);
 
-    mkBind(&binds, editModeCallback, TermKey_CtrlA);
-    mkBind(&binds, editModeCallback, TermKey_CtrlE);
-    mkBind(&binds, editModeCallback, TermKey_CtrlF);
-    mkBind(&binds, editModeCallback, TermKey_CtrlB);
-    mkBind(&binds, editModeCallback, TermKey_CtrlK);
-    mkBind(&binds, editModeCallback, TermKey_CtrlL);
-    mkBind(&binds, editModeCallback, TermKey_CtrlP);
-    mkBind(&binds, editModeCallback, TermKey_CtrlN);
-    mkBind(&binds, editModeCallback, TermKey_CtrlZ);
-    mkBind(&binds, editModeCallback, TermKey_CtrlX);
-    mkBind(&binds, editModeCallback, TermKey_CtrlD);
-    mkBind(&binds, editModeCallback, TermKey_CtrlS);
-    mkBind(&binds, editModeCallback, TermKey_CtrlW);
-    mkBind(&binds, editModeCallback, TermKey_CtrlR);
-    mkBind(&binds, editModeCallback, TermKey_CtrlO);
-    mkBind(&binds, editModeCallback, TermKey_CtrlU);
-    mkBind(&binds, editModeCallback, TermKey_CtrlT);
-    mkBind(&binds, editModeCallback, TermKey_CtrlY);
-    mkBind(&binds, editModeCallback, TermKey_CtrlC);
-    mkBind(&binds, editModeCallback, TermKey_CtrlQ);
-    mkBind(&binds, editModeCallback, TermKey_Escape);
-    mkBind(&binds, insertTextCallback, BindAnyKey);
-
-    return binds;
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlA);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlE);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlF);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlB);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlK);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlL);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlP);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlN);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlZ);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlX);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlD);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlS);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlW);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlR);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlO);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlU);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlT);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlY);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlC);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlQ);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_Escape);
+    mkBind(BindMap_Edit, insertTextCallback, BindAnyKey);
 }

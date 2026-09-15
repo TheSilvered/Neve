@@ -1,52 +1,71 @@
 #ifndef NV_KEY_BINDS_H_
 #define NV_KEY_BINDS_H_
 
-#include "nv_array.h"
 #include "nv_context.h"
 #include "nv_term.h"
 
 #define BindAnyKey (TermKey_MAX + 1)
+#define BindEnd (TermKey_MAX + 100)
 
-// An array of keys to match against the given command, use `BindAnyKey` to
-// allow for any key.
-typedef Arr(int32_t) BindSequence;
+typedef void (*BindCallback)(void *user, int32_t *keys, CtxSelection selection);
 
-typedef void (*BindCallback)(
-    void *user,
-    BindSequence seq,
-    CtxSelection selection
-);
-
-typedef struct BindMapNode {
-    TermKey value;
+typedef struct KeyBind {
     BindCallback callback;
     void *userData;
     bool hasSelection;
-
-    uint32_t cap;
-    uint32_t len;
-    struct BindMapNode *nodes;
-} BindMapNode;
-
-typedef struct KeyBind {
-    BindSequence sequence; // Sequence of keys to match.
-    BindCallback callback; // Action to take when the bind is matched.
-    void *userData;        // Additional data to pass to the callback.
-    bool hasSelection;     // Whether the callback expects a selection.
 } KeyBind;
 
-typedef Arr(KeyBind) KeyBinds;
+typedef struct BindMap {
+    KeyBind *keybind;
+    uint32_t value;
 
-typedef struct BindMatch {
-    bool ambiguous; // *Not used yet*
-    KeyBind *bind;  // The matched key bind, may be `NULL`
-} BindMatch;
+    uint16_t cap;
+    uint16_t len;
+    struct BindMap *nodes;
+} BindMap;
 
-// Find the best matching key bind. If a keybind that matches the 
-BindMatch bindMatch(KeyBinds binds, BindSequence sequence);
+// WARNING: do not change the order of BindMatchResult
 
-KeyBinds bindsMakeNormalMode(void);
-KeyBinds bindsMakeSelectionMode(void);
-KeyBinds bindsMakeEditMode(void);
+typedef enum BindMatchResult {
+    // No sequence matches this binding.
+    BindMatch_NotFound,
+    // The sequence can continue but it currently leads to no binding.
+    BindMatch_Incomplete,
+    // The sequence unambiguously matches a binding.
+    BindMatch_Found,
+    // The sequence can continue but it is already a valid binding.
+    BindMatch_Partial
+} BindMatchResult;
+
+// Note that if two sequences are only distinguished by a wildcard, the one
+// without BindAnyKey takes precedence and is reported as found. For example
+// say that:
+// x,y triggers A
+// x,BindAnyKey triggers B
+// The sequence x,y will find result in BindMatch_Found with A as the action.
+
+enum BindMapID {
+    BindMap_Normal,
+    BindMap_Selection,
+    BindMap_Edit
+};
+
+void bindInit(void);
+void bindQuit(void);
+
+// In the following functions, the sequence array must end with `BindEnd`.
+
+// Add a root map for the bindings
+uint32_t bindAddRootMap(void);
+
+// Add a key bind, override the existing one if present.
+void bindAdd(uint32_t roodID, int32_t seq[], KeyBind keyBind);
+// Remove a key bind, return `true` if a key bind was removed and `false` if no
+// action was taken. `BindAnyKey` is matched only to itself.
+bool bindRemove(uint32_t root, int32_t seq[]);
+// Check if a bind exists.
+bool bindExists(uint32_t root, int32_t seq[]);
+// Find the best-match for a sequence.
+BindMatchResult bindMatch(uint32_t root, int32_t seq[], KeyBind *outBind);
 
 #endif // !NV_KEY_BINDS_H_
