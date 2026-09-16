@@ -7,7 +7,10 @@
 #define BindAnyKey (TermKey_MAX + 1)
 #define BindEnd (TermKey_MAX + 100)
 
-typedef void (*BindCallback)(void *user, int32_t *keys, CtxSelection selection);
+#define BindSeq(...) ((BindKeys){ __VA_ARGS__, BindEnd })
+
+typedef int32_t BindKeys[];
+typedef void (*BindCallback)(void *user, BindKeys keys, CtxSelection selection);
 
 typedef struct KeyBind {
     BindCallback callback;
@@ -62,13 +65,13 @@ int32_t bindAddRootMap(void);
 bool bindRootMapExists(int32_t id);
 
 // Add a key bind, override the existing one if present.
-void bindAdd(int32_t rood, int32_t seq[], KeyBind keyBind);
+void bindAdd(int32_t rood, BindKeys seq, KeyBind keyBind);
 // Remove a key bind, return `true` if a key bind was removed and `false` if no
 // action was taken. `BindAnyKey` is matched only to itself.
-bool bindRemove(int32_t root, int32_t seq[]);
+bool bindRemove(int32_t root, BindKeys seq);
 // Check if a bind exists.
-bool bindExists(int32_t root, int32_t seq[]);
+bool bindExists(int32_t root, BindKeys seq);
 // Find the best-match for a sequence.
-BindMatchResult bindMatch(int32_t root, int32_t seq[], KeyBind *outBind);
+BindMatchResult bindMatch(int32_t root, BindKeys seq, KeyBind *outBind);
 
 #endif // !NV_KEY_BINDS_H_
