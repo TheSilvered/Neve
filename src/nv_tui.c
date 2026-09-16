@@ -1,6 +1,7 @@
 #include <math.h>
 #include "nv_editor.h"
 #include "nv_tui.h"
+#include "nv_key_binds.h"
 
 static void _uiElemInit(
     UIElement *elem,
@@ -24,6 +25,10 @@ static bool _uiHandleArrowKeys(Ctx *ctx, int32_t key);
 
 static void _uiCmdInputUpdater(UICmdInput *cmdInput);
 static bool _uiCmdInputKeyHandler(UICmdInput *cmdInput, int32_t key);
+
+static void _addNormalMode(void);
+static void _addEditMode(void);
+static void _addSelectionMode(void);
 
 static void _uiElemInit(
     UIElement *elem,
@@ -59,6 +64,10 @@ void uiInit(UI *ui) {
     _uiElemInit(&ui->statusBar, NULL, NULL);
     uiBufPanelInit(&ui->bufPanel);
     uiCmdInputInit(&ui->cmdInput);
+
+    _addNormalMode();
+    _addEditMode();
+    _addSelectionMode();
 }
 
 void uiResize(UI *ui, uint16_t w, uint16_t h) {
@@ -561,4 +570,257 @@ static bool _uiBufHandleSelectionMode(UIBufPanel *panel, int32_t key) {
         return false;
     }
     return true;
+}
+
+// -------------------------- New key binds. -------------------------------- //
+
+void moveCallback(void *user, int32_t *keys, CtxSelection sel) {
+    (void)user;
+    (void)sel;
+    Ctx *ctx = editorActiveContext();
+
+    switch (keys[0]) {
+    case 'i':
+    case TermKey_ArrowUp:
+        ctxCurMoveUp(ctx);
+        break;
+    case 'I':
+        ctxCurMoveToPrevParagraph(ctx);
+        break;
+    case TermKey_CtrlI: {
+        UIBufPanel *panel = editorActivePanel();
+        for (uint16_t i = 0; i < panel->elem.h / 2; i++) {
+            ctxCurMoveUp(ctx);
+        }
+        break;
+    }
+    case 'k':
+    case TermKey_ArrowDown:
+        ctxCurMoveDown(ctx);
+        break;
+    case 'K':
+        ctxCurMoveToNextParagraph(ctx);
+        break;
+    case TermKey_CtrlK: {
+        UIBufPanel *panel = editorActivePanel();
+        for (uint16_t i = 0; i < panel->elem.h / 2; i++) {
+            ctxCurMoveDown(ctx);
+        }
+        break;
+    }
+    case 'j':
+        ctxCurMoveLeft(ctx);
+        break;
+    case 'J':
+        ctxCurMoveToPrevWordStart(ctx);
+        break;
+    case TermKey_CtrlJ:
+        ctxCurMoveToPrevWordEnd(ctx);
+        break;
+    case 'l':
+        ctxCurMoveRight(ctx);
+        break;
+    case 'L':
+        ctxCurMoveToNextWordEnd(ctx);
+        break;
+    case TermKey_CtrlL:
+        ctxCurMoveToNextWordStart(ctx);
+        break;
+    case 'u':
+        ctxCurMoveToLineStart(ctx);
+        break;
+    case 'U':
+        ctxCurMoveToTextStart(ctx);
+        break;
+    case 'o':
+        ctxCurMoveToLineEnd(ctx);
+        break;
+    case 'O':
+        ctxCurMoveToTextEnd(ctx);
+        break;
+    case TermKey_ArrowLeft:
+        ctxCurMoveBack(ctx);
+        break;
+    case TermKey_ArrowRight:
+        ctxCurMoveFwd(ctx);
+        break;
+    }
+}
+
+void editModeCallback(void *user, int32_t *keys, CtxSelection sel) {
+    (void)user;
+    (void)sel;
+    Ctx *ctx = editorActiveContext();
+
+    switch (keys[0]) {
+    case TermKey_CtrlA:
+        ctxCurMoveToLineStart(ctx);
+        break;
+    case TermKey_CtrlE:
+        ctxCurMoveToLineEnd(ctx);
+        break;
+    case TermKey_CtrlF:
+        ctxCurMoveFwd(ctx);
+        break;
+    case TermKey_CtrlB:
+        ctxCurMoveBack(ctx);
+        break;
+    case TermKey_CtrlK:
+        ctxCurMoveToPrevWordStart(ctx);
+        break;
+    case TermKey_CtrlL:
+        ctxCurMoveToNextWordEnd(ctx);
+        break;
+    case TermKey_CtrlP:
+        ctxCurMoveUp(ctx);
+        break;
+    case TermKey_CtrlN:
+        ctxCurMoveDown(ctx);
+        break;
+    case TermKey_CtrlZ:
+    case TermKey_Backspace:
+        ctxRemoveBack(ctx);
+        break;
+    case TermKey_CtrlX:
+    case TermKey_Delete:
+        ctxRemoveFwd(ctx);
+        break;
+    case TermKey_CtrlD:
+        ctxIndent(ctx);
+        break;
+    case TermKey_CtrlS:
+        ctxDedent(ctx);
+        break;
+    case TermKey_CtrlW:
+        ctxSelBegin(ctx, false);
+        ctxCurMoveToPrevWordStart(ctx);
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
+        break;
+    case TermKey_CtrlR:
+        ctxSelBegin(ctx, false);
+        ctxCurMoveToNextWordStart(ctx);
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
+        break;
+    case TermKey_CtrlO:
+        ctxInsertLineAbove(ctx);
+        break;
+    case TermKey_CtrlU:
+        ctxInsertLineBelow(ctx);
+        break;
+    case TermKey_CtrlT:
+        ctxSelBegin(ctx, false);
+        ctxCurMoveToLineStart(ctx);
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
+        break;
+    case TermKey_CtrlY:
+        ctxSelBegin(ctx, false);
+        ctxCurMoveToLineEnd(ctx);
+        ctxSelEnd(ctx);
+        if (ctxSelHas(ctx)) {
+            ctxRemoveBack(ctx);
+        }
+        break;
+    case TermKey_CtrlC:
+    case TermKey_CtrlQ:
+    case TermKey_Escape: {
+        UIBufPanel *panel = editorActivePanel();
+        if (panel != NULL) {
+            panel->mode = UIBufMode_Normal;
+        }
+    }
+    }
+}
+
+void insertTextCallback(void *user, int32_t *keys, CtxSelection sel) {
+    (void)user;
+    (void)sel;
+
+    Ctx *ctx = editorActiveContext();
+    if (ctx == NULL) return;
+
+    int32_t cp = keys[0];
+    if (cp == '\r') {
+        cp = '\n';
+    }
+    if (cp != '\n' || ctx->multiline) {
+        ctxInsertCP(ctx, (UcdCP)cp);
+    }
+}
+
+#define mkBind(map, cb, ...)                                                   \
+    bindAdd(map, BindSeq(__VA_ARGS__), (KeyBind) { .callback = (cb) })
+
+#define mkSelBind(map, cb, ...)                                                \
+    bindAdd(                                                                   \
+        map,                                                                   \
+        BindSeq(__VA_ARGS__),                                                  \
+        (KeyBind){ .callback = (cb), .hasSel = true }                          \
+    )
+
+static void addNormalMovement(int32_t map) {
+    mkBind(map, moveCallback, 'i');
+    mkBind(map, moveCallback, 'I');
+    mkBind(map, moveCallback, 'j');
+    mkBind(map, moveCallback, 'J');
+    mkBind(map, moveCallback, 'k');
+    mkBind(map, moveCallback, 'K');
+    mkBind(map, moveCallback, 'l');
+    mkBind(map, moveCallback, 'L');
+    mkBind(map, moveCallback, 'u');
+    mkBind(map, moveCallback, 'U');
+    mkBind(map, moveCallback, 'o');
+    mkBind(map, moveCallback, 'O');
+}
+
+static void addArrowKeys(int32_t map) {
+    mkBind(map, moveCallback, TermKey_ArrowLeft);
+    mkBind(map, moveCallback, TermKey_ArrowRight);
+    mkBind(map, moveCallback, TermKey_ArrowUp);
+    mkBind(map, moveCallback, TermKey_ArrowDown);
+}
+
+static void _addNormalMode(void) {
+    addNormalMovement(BindMap_Normal);
+    addArrowKeys(BindMap_Normal);
+}
+
+static void _addSelectionMode(void) {
+    addNormalMovement(BindMap_Selection);
+    addArrowKeys(BindMap_Selection);
+}
+
+static void _addEditMode(void) {
+    addArrowKeys(BindMap_Edit);
+
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlA);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlE);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlF);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlB);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlK);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlL);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlP);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlN);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlZ);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlX);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlD);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlS);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlW);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlR);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlO);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlU);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlT);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlY);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlC);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlQ);
+    mkBind(BindMap_Edit, editModeCallback, TermKey_Escape);
+    mkBind(BindMap_Edit, insertTextCallback, BindAnyKey);
 }
