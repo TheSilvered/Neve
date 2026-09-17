@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "nv_key_binds.h"
 #include "nv_pool.h"
 #include "nv_term.h"
@@ -34,6 +35,30 @@ int32_t bindAddRootMap(void) {
 
 bool bindRootMapExists(int32_t id) {
     return _mapGet(&g_bindRoots, id) != NULL;
+}
+
+void _printMap(BindMap *map, uint32_t indent) {
+    printf(
+        "%*s[%d] %x: %p\n",
+        indent * 2, "",
+        map->len,
+        map->key,
+        (void *)map->value
+    );
+    for (uint16_t i = 0; i < map->cap; i++) {
+        if (map->nodes[i].key != TermKey_None) {
+            _printMap(&map->nodes[i], indent + 1);
+        }
+    }
+}
+
+void bindPrintRoot(int32_t root) {
+    BindMap *map = _mapGet(&g_bindRoots, root);
+    if (map == NULL) {
+        printf("NULL\n");
+        return;
+    }
+    _printMap(map, 0);
 }
 
 void bindAdd(int32_t root, BindKeys seq, KeyBind keyBind) {
@@ -229,6 +254,7 @@ static BindMap *_mapInsert(BindMap *map, BindMap entry) {
 }
 
 static BindMap *_mapGet(BindMap *map, int32_t key) {
+    if (map->len == 0) return NULL;
     uint16_t idx = _mapIdx(map->nodes, map->cap, key);
     return map->nodes[idx].key == TermKey_None ? NULL : &map->nodes[idx];
 }

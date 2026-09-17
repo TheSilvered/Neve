@@ -75,4 +75,7 @@ bool bindExists(int32_t root, BindKeys seq);
 // Find the best-match for a sequence.
 BindMatchResult bindMatch(int32_t root, BindKeys seq, KeyBind *outBind);
 
+// Print a root tree. Useful for debugging.
+void bindPrintRoot(int32_t root);
+
 #endif // !NV_KEY_BINDS_H_
