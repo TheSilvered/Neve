@@ -12,6 +12,7 @@
  */
 
 BindMap g_bindRoots = { 0 };
+bool g_bindInit = false;
 
 Pool g_bindPool = {
     .blockSize = sizeof(KeyBind),
@@ -278,13 +279,17 @@ static bool _mapRemove(BindMap *map, int32_t key) {
 }
 
 void bindInit(void) {
+    if (g_bindInit) return;
     bindAddRootMap(); // BindMap_Normal
     bindAddRootMap(); // BindMap_Selection
     bindAddRootMap(); // BindMap_Edit
+    g_bindInit = true;
 }
 
 void bindQuit(void) {
+    if (!g_bindInit) return;
     _mapDestroy(&g_bindRoots);
     g_bindRoots = (BindMap){ 0 };
     poolDestroy(&g_bindPool);
+    g_bindInit = false;
 }

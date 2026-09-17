@@ -66,7 +66,7 @@ int32_t bindAddRootMap(void);
 bool bindRootMapExists(int32_t id);
 
 // Add a key bind, override the existing one if present.
-void bindAdd(int32_t rood, BindKeys seq, KeyBind keyBind);
+void bindAdd(int32_t root, BindKeys seq, KeyBind keyBind);
 // Remove a key bind, return `true` if a key bind was removed and `false` if no
 // action was taken. `BindAnyKey` is matched only to itself.
 bool bindRemove(int32_t root, BindKeys seq);

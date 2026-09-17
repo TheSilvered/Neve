@@ -1,6 +1,7 @@
 #include "nv_test.h"
 #include "nv_pool.h"
 
+#ifdef NV_DEBUG
 void test_poolFreeFromEmpty(void) {
     Pool p = poolMake(48);
     poolFree(&p, NULL);
@@ -18,6 +19,7 @@ void test_poolFreeMisalignedFree(void) {
     uint8_t *block = poolAlloc(&p);
     poolFree(&p, block + 1);
 }
+#endif // !NV_DEBUG
 
 void test_poolFreeFromFirstPage(void) {
     Pool p = poolMake(48);
@@ -52,9 +54,11 @@ void test_poolFreeFromPartialPage(void) {
 }
 
 testList(
+#ifdef NV_DEBUG
     testMakeFail(test_poolFreeFromEmpty),
     testMakeFail(test_poolFreeDoubleFree),
     testMakeFail(test_poolFreeMisalignedFree),
+#endif // !NV_DEBUG
     testMake(test_poolFreeFromFirstPage),
     testMake(test_poolFreeFromFullPage),
     testMake(test_poolFreeFromPartialPage),
