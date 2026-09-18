@@ -5,14 +5,7 @@
 
 #define _minMapCap 4
 
-/* The key bindings are stored in a trie data structure, the only invariant is
- * that any leaf that is not the root of the tree must have a key binding
- * associated with it, this is to simplfiy key bind matching and to avoid
- * having dead branches.
- */
-
 BindMap g_bindRoots = { 0 };
-bool g_bindInit = false;
 
 Pool g_bindPool = {
     .blockSize = sizeof(KeyBind),
@@ -127,7 +120,7 @@ bool bindExists(int32_t root, BindKeys seq) {
     return map != NULL && map->value != NULL;
 }
 
-BindMatchResult bindMatch(int32_t root, int32_t seq[], KeyBind *outBind) {
+BindMatchResult bindMatch(int32_t root, BindKeys seq, KeyBind *outBind) {
     BindMap *rootMap = _mapGet(&g_bindRoots, root);
     if (rootMap == NULL) return BindMatch_NotFound;
     return _bindMatchRec(rootMap, seq, outBind);
@@ -138,24 +131,20 @@ static BindMatchResult _bindMatchRec(
     int32_t *seq,
     KeyBind *outBind
 ) {
-    // This should not happen but just in case.
-    if (seq[0] == BindEnd) return BindMatch_NotFound;
-    bool isLast = seq[1] == BindEnd;
+    if (seq[0] == BindEnd) {
+        if (map->value == NULL) {
+            return map->len == 0 ? BindMatch_NotFound : BindMatch_Incomplete;
+        } else {
+            *outBind = *map->value;
+            return map->len == 0 ? BindMatch_Found : BindMatch_Partial;
+        }
+    }
 
-    BindMap *wildcard = _mapGet(map, BindAnyKey);
+    BindMap *wildcard = _mapGet(map, BindAny);
     BindMap *specific = _mapGet(map, seq[0]);
 
     if (!wildcard && !specific) {
         return BindMatch_NotFound;
-    } else if (isLast) {
-        // specific = whichever matched, favouring the specific one
-        if (!specific) specific = wildcard;
-        if (specific->value == NULL) {
-            nvAssert(specific->len != 0, "all leaves must have a binding");
-            return BindMatch_Incomplete;
-        }
-        *outBind = *specific->value;
-        return specific->len == 0 ? BindMatch_Found : BindMatch_Partial;
     } else if ((wildcard && !specific) || (!wildcard && specific)) {
         return _bindMatchRec(wildcard ? wildcard : specific, seq + 1, outBind);
     }
@@ -279,17 +268,13 @@ static bool _mapRemove(BindMap *map, int32_t key) {
 }
 
 void bindInit(void) {
-    if (g_bindInit) return;
     bindAddRootMap(); // BindMap_Normal
     bindAddRootMap(); // BindMap_Selection
     bindAddRootMap(); // BindMap_Edit
-    g_bindInit = true;
 }
 
 void bindQuit(void) {
-    if (!g_bindInit) return;
     _mapDestroy(&g_bindRoots);
     g_bindRoots = (BindMap){ 0 };
     poolDestroy(&g_bindPool);
-    g_bindInit = false;
 }

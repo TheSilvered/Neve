@@ -7,10 +7,10 @@ void test_bindAddToRoot(void) {
     bindInit();
     bindAdd(BindMap_Normal, BindSeq('a'), emptyBind);
     bindAdd(BindMap_Normal, BindSeq('b'), emptyBind);
-    bindAdd(BindMap_Normal, BindSeq(BindAnyKey), emptyBind);
+    bindAdd(BindMap_Normal, BindSeq(BindAny), emptyBind);
     testAssert(bindExists(BindMap_Normal, BindSeq('a')));
     testAssert(bindExists(BindMap_Normal, BindSeq('b')));
-    testAssert(bindExists(BindMap_Normal, BindSeq(BindAnyKey)));
+    testAssert(bindExists(BindMap_Normal, BindSeq(BindAny)));
     bindQuit();
 }
 

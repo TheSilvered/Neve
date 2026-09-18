@@ -822,5 +822,5 @@ static void _addEditMode(void) {
     mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlC);
     mkBind(BindMap_Edit, editModeCallback, TermKey_CtrlQ);
     mkBind(BindMap_Edit, editModeCallback, TermKey_Escape);
-    mkBind(BindMap_Edit, insertTextCallback, BindAnyKey);
+    mkBind(BindMap_Edit, insertTextCallback, BindAny);
 }

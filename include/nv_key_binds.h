@@ -4,7 +4,7 @@
 #include "nv_context.h"
 #include "nv_term.h"
 
-#define BindAnyKey (TermKey_MAX + 1)
+#define BindAny (TermKey_MAX + 1)
 #define BindEnd (TermKey_MAX + 100)
 
 #define BindSeq(...) ((BindKeys){ __VA_ARGS__, BindEnd })
@@ -41,10 +41,10 @@ typedef enum BindMatchResult {
 } BindMatchResult;
 
 // Note that if two sequences are only distinguished by a wildcard, the one
-// without BindAnyKey takes precedence and is reported as found. For example
+// without 'BindAny' takes precedence and is reported as found. For example
 // say that:
 // x,y triggers A
-// x,BindAnyKey triggers B
+// x,BindAny triggers B
 // The sequence x,y will find result in BindMatch_Found with A as the action.
 
 // Default bind roots, added with `bindInit`.
@@ -68,7 +68,7 @@ bool bindRootMapExists(int32_t id);
 // Add a key bind, override the existing one if present.
 void bindAdd(int32_t root, BindKeys seq, KeyBind keyBind);
 // Remove a key bind, return `true` if a key bind was removed and `false` if no
-// action was taken. `BindAnyKey` is matched only to itself.
+// action was taken. `BindAny` is matched only to itself.
 bool bindRemove(int32_t root, BindKeys seq);
 // Check if a bind exists.
 bool bindExists(int32_t root, BindKeys seq);
