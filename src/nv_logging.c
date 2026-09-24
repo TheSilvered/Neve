@@ -56,4 +56,5 @@ nvUnixFmt(1, 2) void logFmt(nvWinFmt const char *fmt, ...) {
     va_start(args, fmt);
     (void)vfprintf(logFile.fp, fmt, args);
     va_end(args);
+    fflush(logFile.fp);
 }

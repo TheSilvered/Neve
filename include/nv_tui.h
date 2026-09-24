@@ -35,13 +35,11 @@
 
 typedef struct UIElement UIElement;
 
-typedef bool (*UIKeyHandler)(UIElement *panel, int32_t key);
 typedef void (*UIUpdater)(UIElement *panel);
 
 struct UIElement {
     int16_t x, y;
     uint16_t w, h;
-    UIKeyHandler keyHandler;
     UIUpdater updater;
 };
 
@@ -82,9 +80,11 @@ void uiInit(UI *ui);
 void uiResize(UI *ui, uint16_t w, uint16_t h);
 
 void uiUpdate(UIElement *elem);
-bool uiHandleKey(UIElement *elem, int32_t key);
 
 void uiBufPanelInit(UIBufPanel *panel);
 void uiCmdInputInit(UICmdInput *cmdInput);
+
+void uiBufPanelMoveHalfUp(UIBufPanel *panel);
+void uiBufPanelMoveHalfDown(UIBufPanel *panel);
 
 #endif // !NV_TUI_H_

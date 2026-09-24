@@ -47,15 +47,6 @@ typedef enum BindMatchResult {
 // x,BindAny triggers B
 // The sequence x,y will find result in BindMatch_Found with A as the action.
 
-// Default bind roots, added with `bindInit`.
-enum BindMapID {
-    BindMap_Normal = 1,
-    BindMap_Selection,
-    BindMap_Edit
-};
-
-// Add the default roots.
-void bindInit(void);
 // Free all memory used by the key bindings.
 void bindQuit(void);
 

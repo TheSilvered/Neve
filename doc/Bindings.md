@@ -182,7 +182,7 @@ after the first command, you can use `[h]` to remain in selection mode and
 perform multiple commands and then press `[h]` again to exit and apply the
 action.
 
-In immediate selection text object still work.
+In immediate selection text objects still work.
 
 ## Edit mode
 

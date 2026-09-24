@@ -2,11 +2,12 @@
 #include "nv_key_binds.h"
 
 void test_bindRemove(void) {
-    bindInit();
-    bindAdd(BindMap_Normal, BindSeq('a'), (KeyBind){ 0 });
-    testAssert(bindExists(BindMap_Normal, BindSeq('a')));
-    bindRemove(BindMap_Normal, BindSeq('a'));
-    testAssert(!bindExists(BindMap_Normal, BindSeq('a')));
+    int32_t root = bindAddRootMap();
+
+    bindAdd(root, BindSeq('a'), (KeyBind){ 0 });
+    testAssert(bindExists(root, BindSeq('a')));
+    bindRemove(root, BindSeq('a'));
+    testAssert(!bindExists(root, BindSeq('a')));
     bindQuit();
 }
 

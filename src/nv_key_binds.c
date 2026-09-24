@@ -58,7 +58,6 @@ void bindPrintRoot(int32_t root) {
 void bindAdd(int32_t root, BindKeys seq, KeyBind keyBind) {
     BindMap *map = _mapGet(&g_bindRoots, root);
     if (map == NULL) return;
-
     while (*seq != BindEnd) {
         BindMap *newMap = _mapGet(map, *seq);
         if (newMap == NULL) {
@@ -176,7 +175,7 @@ static BindMatchResult _bindMatchRec(
     BindMatchResult wildRes = _bindMatchRec(wildcard, seq + 1, &wildBind);
     BindMatchResult specRes = _bindMatchRec(specific, seq + 1, &specBind);
 
-    *outBind = specRes >= BindMatch_Partial ? specBind : wildBind;
+    *outBind = specRes >= BindMatch_Found ? specBind : wildBind;
     // If the values lie in the diagonal
     if (wildRes + specRes == BindMatch_Partial) {
         return BindMatch_Partial;
@@ -198,7 +197,7 @@ static uint16_t _mapIdx(BindMap *nodes, uint16_t cap, int32_t key) {
             return idx;
         }
     }
-    return (hash + cap) & (cap - 1);
+    return (hash + cap - 1) & (cap - 1);
 }
 
 static void _mapDestroy(BindMap *map) {
@@ -265,12 +264,6 @@ static bool _mapRemove(BindMap *map, int32_t key) {
         idx = (idx + 1) & mask;
     }
     return true;
-}
-
-void bindInit(void) {
-    bindAddRootMap(); // BindMap_Normal
-    bindAddRootMap(); // BindMap_Selection
-    bindAddRootMap(); // BindMap_Edit
 }
 
 void bindQuit(void) {
