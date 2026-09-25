@@ -13,7 +13,7 @@
 #include "nv_tui.h"
 
 Editor g_ed = { 0 };
-int32_t g_mapNormal, g_mapEdit, g_mapSel, g_mapCmd;
+int32_t g_mapNormal, g_mapEdit, g_mapSel, g_mapCmd, g_mapGlob;
 
 static void _addKeyBinds(void);
 
@@ -86,7 +86,7 @@ void editorHandleKey(int32_t key) {
     if (key == TermKey_None) return;
     if (key == TermKey_CtrlQ) editorForceExit();
 
-    KeyBind bind = { 0 };
+    Bind bind = { 0 };
     BindMatchResult res = { 0 };
     if (g_ed.runningCommand) {
         res = bindMatch(g_mapCmd, BindSeq(key), &bind);
@@ -112,7 +112,7 @@ void editorHandleKey(int32_t key) {
 
 runBind:
     if (!bind.hasSelection) {
-        bind.callback(bind.userData, BindSeq(key), (CtxSelection){ 0 });
+        bindInvokeCallback(bind, BindSeq(key));
     }
 }
 
@@ -260,57 +260,57 @@ Ctx *editorActiveContext(void) {
 
 // --------------------------- Default key binds ---------------------------- //
 
-static void _callCtxCB(void *user, int32_t *keys, CtxSelection sel);
-static void _callPanelCB(void *user, int32_t *keys, CtxSelection sel);
-static void _normalModeCB(void *user, int32_t *keys, CtxSelection sel);
-static void _editModeCB(void *user, int32_t *keys, CtxSelection sel);
-static void _selModeCB(void *user, int32_t *keys, CtxSelection sel);
-static void _insertText(void *user, int32_t *keys, CtxSelection sel);
-static void _goToNormalMode(void *user, int32_t *keys, CtxSelection sel);
+static void _callCtxCB(void *func);
+static void _callPanelCB(void *user);
+static void _normalModeCB(int32_t *keys);
+static void _editModeCB(int32_t *keys);
+static void _selModeCB(int32_t *keys);
+static void _insertText(int32_t *keys);
+static void _goToNormalMode(void);
 
-static void _cmdSetInput(void *user, BindKeys keys, CtxSelection sel);
+static void _cmdSetInput(int user);
 
 static void _addNormalMode(void);
 static void _addEditMode(void);
 static void _addSelMode(void);
 static void _addCmdMode(void);
+static void _addGlobBinds(void);
 
 static void _addKeyBinds(void) {
     _addNormalMode();
     _addEditMode();
     _addSelMode();
     _addCmdMode();
+    _addGlobBinds();
 }
 
 #define mkBind(map, cb, ...)                                                   \
-    bindAdd(map, BindSeq(__VA_ARGS__), (KeyBind) { .callback = (cb) })
+    bindAdd(map, BindSeq(__VA_ARGS__), (Bind) { .callback = (cb) })
 
 #define mkSelBind(map, cb, ...)                                                \
     bindAdd(                                                                   \
         map,                                                                   \
         BindSeq(__VA_ARGS__),                                                  \
-        (KeyBind){ .callback = (cb), .hasSel = true }                          \
+        (Bind){ .callback = (cb), .hasSel = true }                          \
     )
 
 #define mkCtxBind(map, fn, ...)                                                \
     bindAdd(                                                                   \
         map,                                                                   \
         BindSeq(__VA_ARGS__),                                                  \
-        (KeyBind){ .callback = _callCtxCB, .userData = (void *)(fn) }          \
+        (Bind){ .callback = BindCBPtr(_callCtxCB, (fn)) }                   \
     )
 
 static void addNormalMovement(int32_t map) {
     mkCtxBind(map, ctxCurMoveUp, 'i');
     mkCtxBind(map, ctxCurMoveToPrevParagraph, 'I');
-    bindAdd(map, BindSeq(TermKey_CtrlI), (KeyBind){
-        .callback = _callPanelCB,
-        .userData = (void *)uiBufPanelMoveHalfUp
+    bindAdd(map, BindSeq(TermKey_CtrlI), (Bind){
+        .callback = BindCBPtr(_callPanelCB, uiBufPanelMoveHalfUp)
     });
     mkCtxBind(map, ctxCurMoveDown, 'k');
     mkCtxBind(map, ctxCurMoveToNextParagraph, 'K');
-    bindAdd(map, BindSeq(TermKey_CtrlK), (KeyBind){
-        .callback = _callPanelCB,
-        .userData = (void *)uiBufPanelMoveHalfDown
+    bindAdd(map, BindSeq(TermKey_CtrlK), (Bind){
+        .callback = BindCBPtr(_callPanelCB, uiBufPanelMoveHalfDown)
     });
     mkCtxBind(map, ctxCurMoveToPrevParagraph, 'I');
     mkCtxBind(map, ctxCurMoveLeft, 'j');
@@ -340,23 +340,23 @@ static void _addNormalMode(void) {
     addNormalMovement(g_mapNormal);
     addArrowKeys(g_mapNormal);
 
-    mkBind(g_mapNormal, _normalModeCB, 'e');
-    mkBind(g_mapNormal, _normalModeCB, 'E');
-    mkBind(g_mapNormal, _normalModeCB, 'h');
-    mkBind(g_mapNormal, _normalModeCB, 'H');
-    mkBind(g_mapNormal, _normalModeCB, 's');
-    mkBind(g_mapNormal, _normalModeCB, 'S');
-    mkBind(g_mapNormal, _normalModeCB, 'Y');
-    mkBind(g_mapNormal, _normalModeCB, TermKey_CtrlY);
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 'e');
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 'E');
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 'h');
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 'H');
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 's');
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 'S');
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 'Y');
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), TermKey_CtrlY);
     mkCtxBind(g_mapNormal, ctxRemoveBack, 'q');
     mkCtxBind(g_mapNormal, ctxRemoveFwd, 'Q');
     mkCtxBind(g_mapNormal, ctxIndent, 'd');
     mkCtxBind(g_mapNormal, ctxDedent, 'D');
-    mkBind(g_mapNormal, _normalModeCB, 'R');
-    mkBind(g_mapNormal, _normalModeCB, TermKey_CtrlR);
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 'R');
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), TermKey_CtrlR);
     mkCtxBind(g_mapNormal, ctxUndo, 'z');
     mkCtxBind(g_mapNormal, ctxRedo, 'Z');
-    mkBind(g_mapNormal, _normalModeCB, 'p');
+    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 'p');
 }
 
 static void _addSelMode(void) {
@@ -365,15 +365,15 @@ static void _addSelMode(void) {
     addNormalMovement(g_mapSel);
     addArrowKeys(g_mapSel);
 
-    mkBind(g_mapSel, _selModeCB, 'y');
-    mkBind(g_mapSel, _selModeCB, 'r');
-    mkBind(g_mapSel, _selModeCB, 'h');
-    mkBind(g_mapSel, _selModeCB, 'H');
+    mkBind(g_mapSel, BindCBKeys(_selModeCB), 'y');
+    mkBind(g_mapSel, BindCBKeys(_selModeCB), 'r');
+    mkBind(g_mapSel, BindCBKeys(_selModeCB), 'h');
+    mkBind(g_mapSel, BindCBKeys(_selModeCB), 'H');
     mkCtxBind(g_mapSel, ctxIndent, 'd');
     mkCtxBind(g_mapSel, ctxDedent, 'D');
-    mkBind(g_mapSel, _goToNormalMode, TermKey_CtrlC);
-    mkBind(g_mapSel, _goToNormalMode, TermKey_CtrlQ);
-    mkBind(g_mapSel, _goToNormalMode, TermKey_Escape);
+    mkBind(g_mapSel, BindCBNoArgs(_goToNormalMode), TermKey_CtrlC);
+    mkBind(g_mapSel, BindCBNoArgs(_goToNormalMode), TermKey_CtrlQ);
+    mkBind(g_mapSel, BindCBNoArgs(_goToNormalMode), TermKey_Escape);
 }
 
 static void _addEditMode(void) {
@@ -395,58 +395,58 @@ static void _addEditMode(void) {
     mkCtxBind(g_mapEdit, ctxRemoveFwd, TermKey_Delete);
     mkCtxBind(g_mapEdit, ctxIndent, TermKey_CtrlD);
     mkCtxBind(g_mapEdit, ctxDedent, TermKey_CtrlS);
-    mkBind(g_mapEdit, _editModeCB, TermKey_CtrlW);
-    mkBind(g_mapEdit, _editModeCB, TermKey_CtrlR);
+    mkBind(g_mapEdit, BindCBKeys(_editModeCB), TermKey_CtrlW);
+    mkBind(g_mapEdit, BindCBKeys(_editModeCB), TermKey_CtrlR);
     mkCtxBind(g_mapEdit, ctxInsertLineAbove, TermKey_CtrlO);
     mkCtxBind(g_mapEdit, ctxInsertLineBelow, TermKey_CtrlU);
-    mkBind(g_mapEdit, _editModeCB, TermKey_CtrlT);
-    mkBind(g_mapEdit, _editModeCB, TermKey_CtrlY);
-    mkBind(g_mapEdit, _goToNormalMode, TermKey_CtrlC);
-    mkBind(g_mapEdit, _goToNormalMode, TermKey_CtrlQ);
-    mkBind(g_mapEdit, _goToNormalMode, TermKey_Escape);
-    mkBind(g_mapEdit, _insertText, BindAny);
+    mkBind(g_mapEdit, BindCBKeys(_editModeCB), TermKey_CtrlT);
+    mkBind(g_mapEdit, BindCBKeys(_editModeCB), TermKey_CtrlY);
+    mkBind(g_mapEdit, BindCBNoArgs(_goToNormalMode), TermKey_CtrlC);
+    mkBind(g_mapEdit, BindCBNoArgs(_goToNormalMode), TermKey_CtrlQ);
+    mkBind(g_mapEdit, BindCBNoArgs(_goToNormalMode), TermKey_Escape);
+    mkBind(g_mapEdit, BindCBKeys(_insertText), BindAny);
 }
 
 static void _addCmdMode(void) {
     g_mapCmd = bindAddRootMap();
 
-    KeyBind cancel = {
-        .callback = _cmdSetInput,
-        .userData = (void *)(uintptr_t)UICmdInput_Canceled
+    Bind cancel = {
+        .callback = BindCBInt(_cmdSetInput, UICmdInput_Canceled)
     };
     bindAdd(g_mapCmd, BindSeq(TermKey_CtrlC), cancel);
     bindAdd(g_mapCmd, BindSeq(TermKey_CtrlQ), cancel);
     bindAdd(g_mapCmd, BindSeq(TermKey_Escape), cancel);
 
-    KeyBind confirm = {
-        .callback = _cmdSetInput,
-        .userData = (void *)(uintptr_t)UICmdInput_Confirmed
+    Bind confirm = {
+        .callback = BindCBInt(_cmdSetInput, UICmdInput_Confirmed)
     };
     bindAdd(g_mapCmd, BindSeq('\r'), confirm);
     bindAdd(g_mapCmd, BindSeq('\n'), confirm);
 }
 
-static void _callCtxCB(void *user, int32_t *keys, CtxSelection sel) {
-    (void)keys;
-    (void)sel;
+static void _addGlobBinds(void) {
+    g_mapGlob = bindAddRootMap();
+
+    bindAdd(g_mapGlob, BindSeq('p'), (Bind){
+        .callback = BindCBNoArgs(editorOpenCommandPalette)
+    });
+}
+
+static void _callCtxCB(void *user) {
     Ctx *ctx = editorActiveContext();
     if (ctx != NULL) {
         ((void (*)(Ctx *))user)(ctx);
     }
 }
 
-static void _callPanelCB(void *user, int32_t *keys, CtxSelection sel) {
-    (void)keys;
-    (void)sel;
+static void _callPanelCB(void *user) {
     UIBufPanel *panel = editorActivePanel();
     if (panel != NULL) {
         ((void (*)(UIBufPanel *))user)(panel);
     }
 }
 
-static void _normalModeCB(void *user, int32_t *keys, CtxSelection sel) {
-    (void)user;
-    (void)sel;
+static void _normalModeCB(int32_t *keys) {
     UIBufPanel *panel = editorActivePanel();
     if (panel == NULL) return;
 
@@ -515,9 +515,7 @@ static void _normalModeCB(void *user, int32_t *keys, CtxSelection sel) {
     }
 }
 
-static void _editModeCB(void *user, int32_t *keys, CtxSelection sel) {
-    (void)user;
-    (void)sel;
+static void _editModeCB(int32_t *keys) {
     Ctx *ctx = editorActiveContext();
     if (ctx == NULL) return;
 
@@ -557,10 +555,7 @@ static void _editModeCB(void *user, int32_t *keys, CtxSelection sel) {
     }
 }
 
-static void _insertText(void *user, int32_t *keys, CtxSelection sel) {
-    (void)user;
-    (void)sel;
-
+static void _insertText(int32_t *keys) {
     Ctx *ctx = editorActiveContext();
     if (ctx == NULL) return;
 
@@ -573,11 +568,7 @@ static void _insertText(void *user, int32_t *keys, CtxSelection sel) {
     }
 }
 
-static void _goToNormalMode(void *user, int32_t *keys, CtxSelection sel) {
-    (void)user;
-    (void)sel;
-    (void)keys;
-
+static void _goToNormalMode(void) {
     UIBufPanel *panel = editorActivePanel();
     Ctx *ctx = editorActiveContext();
     if (panel != NULL) {
@@ -586,9 +577,7 @@ static void _goToNormalMode(void *user, int32_t *keys, CtxSelection sel) {
     }
 }
 
-static void _selModeCB(void *user, int32_t *keys, CtxSelection sel) {
-    (void)user;
-    (void)sel;
+static void _selModeCB(int32_t *keys) {
     UIBufPanel *panel = editorActivePanel();
     if (panel == NULL) return;
 
@@ -628,10 +617,7 @@ static void _selModeCB(void *user, int32_t *keys, CtxSelection sel) {
     }
 }
 
-static void _cmdSetInput(void *user, BindKeys keys, CtxSelection sel) {
-    (void)keys;
-    (void)sel;
-
-    g_ed.ui.cmdInput.state = (uintptr_t)user;
+static void _cmdSetInput(int user) {
+    g_ed.ui.cmdInput.state = user;
 }
 

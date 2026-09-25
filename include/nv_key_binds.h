@@ -1,25 +1,88 @@
 #ifndef NV_KEY_BINDS_H_
 #define NV_KEY_BINDS_H_
 
-#include "nv_context.h"
 #include "nv_term.h"
 
 #define BindAny (TermKey_MAX + 1)
 #define BindEnd (TermKey_MAX + 100)
 
+// Create a bind sequence: appends BindEnd at the end.
 #define BindSeq(...) ((BindKeys){ __VA_ARGS__, BindEnd })
+// Create a bind callback with no arguments.
+#define BindCBNoArgs(fn)                                                       \
+    ((BindCallback){                                                           \
+        .kind = BindCallback_NoArgs,                                           \
+        .func.noArgs = (fn)                                                    \
+    })
+// Create a bind callback with a pointer argument.
+#define BindCBPtr(fn, usr)                                                     \
+    ((BindCallback){                                                           \
+        .kind = BindCallback_Ptr,                                              \
+        .func.ptrArg = {                                                       \
+            .func = (void(*)(void *))(fn),                                     \
+            .arg = (void *)(usr)                                               \
+        }                                                                      \
+    })
+// Create a bind callback with an int argument.
+#define BindCBInt(fn, usr)                                                     \
+    ((BindCallback){                                                           \
+        .kind = BindCallback_Ptr,                                              \
+        .func.intArg = { .func = (fn), .arg = (usr) }                          \
+    })
+// Create a bind callback with a BindKeys argument.
+#define BindCBKeys(fn)                                                         \
+    ((BindCallback){                                                           \
+        .kind = BindCallback_Keys,                                             \
+        .func.keysArg = (fn)                                                   \
+    })
+// Create a bind callback with pointer and BindKeys arguments.
+#define BindCBPtrKeys(fn, usr)                                                 \
+    ((BindCallback){                                                           \
+        .kind = BindCallback_PtrKeys,                                          \
+        .func.ptrArg = {                                                       \
+            .func = ((void)(*)(void *, BindKeys))(fn),                         \
+            .arg = (void *)(usr) }                                             \
+    })
 
 typedef int32_t BindKeys[];
-typedef void (*BindCallback)(void *user, BindKeys keys, CtxSelection selection);
 
-typedef struct KeyBind {
+typedef union BindCallbackFunc {
+    void (*noArgs)(void);
+    struct {
+        void (*func)(void *);
+        void *arg;
+    } ptrArg;
+    struct {
+        void (*func)(int);
+        int arg;
+    } intArg; // for enums
+    void (*keysArg)(BindKeys);
+    struct {
+        void (*func)(void *, BindKeys);
+        void *arg;
+    } ptrKeys;
+} BindCallbackFunc;
+
+typedef enum BindCallbackKind {
+    BindCallback_NoArgs,
+    BindCallback_Ptr,
+    BindCallback_Int,
+    BindCallback_Keys,
+    BindCallback_PtrKeys
+} BindCallbackKind;
+
+typedef struct BindCallback {
+    BindCallbackKind kind;
+    BindCallbackFunc func;
+} BindCallback;
+
+typedef struct Bind {
     BindCallback callback;
-    void *userData;
     bool hasSelection;
-} KeyBind;
+} Bind;
 
 typedef struct BindMap {
-    KeyBind *value;
+    Bind *value;
     int32_t key;
 
     uint16_t cap;
@@ -57,16 +120,19 @@ int32_t bindAddRootMap(void);
 bool bindRootMapExists(int32_t id);
 
 // Add a key bind, override the existing one if present.
-void bindAdd(int32_t root, BindKeys seq, KeyBind keyBind);
+void bindAdd(int32_t root, BindKeys seq, Bind keyBind);
 // Remove a key bind, return `true` if a key bind was removed and `false` if no
 // action was taken. `BindAny` is matched only to itself.
 bool bindRemove(int32_t root, BindKeys seq);
 // Check if a bind exists.
 bool bindExists(int32_t root, BindKeys seq);
 // Find the best-match for a sequence.
-BindMatchResult bindMatch(int32_t root, BindKeys seq, KeyBind *outBind);
+BindMatchResult bindMatch(int32_t root, BindKeys seq, Bind *outBind);
 
 // Print a root tree. Useful for debugging.
 void bindPrintRoot(int32_t root);
+
+// Invoke the callback of a key bind.
+void bindInvokeCallback(Bind bind, BindKeys seq);
 
 #endif // !NV_KEY_BINDS_H_

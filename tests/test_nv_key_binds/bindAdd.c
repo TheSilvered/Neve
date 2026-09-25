@@ -1,7 +1,7 @@
 #include "nv_test.h"
 #include "nv_key_binds.h"
 
-static KeyBind emptyBind = { 0 };
+static Bind emptyBind = { 0 };
 
 void test_bindAddToRoot(void) {
     int32_t root = bindAddRootMap();

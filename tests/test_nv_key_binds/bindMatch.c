@@ -6,7 +6,7 @@ typedef BindMatchResult BMR;
 void test_bindMatchNotFound(void) {
     int32_t root = bindAddRootMap();
 
-    KeyBind bind = { 0 };
+    Bind bind = { 0 };
     bindAdd(root, BindSeq('x'), bind);
     bindAdd(root, BindSeq('x', 'y'), bind);
     bindAdd(root, BindSeq('x', 'z'), bind);
@@ -26,7 +26,7 @@ void test_bindMatchNotFound(void) {
 void test_bindMatchIncomplete(void) {
     int32_t root = bindAddRootMap();
 
-    KeyBind bind = { 0 };
+    Bind bind = { 0 };
     bindAdd(root, BindSeq('x', 'y', 'z'), bind);
     bindAdd(root, BindSeq('a', BindAny, 'c'), bind);
 
@@ -42,11 +42,11 @@ void test_bindMatchIncomplete(void) {
 void test_bindMatchFound(void) {
     int32_t root = bindAddRootMap();
 
-    KeyBind bind = { 0 };
+    Bind bind = { 0 };
     bindAdd(root, BindSeq('x', 'y', 'z'), bind);
     bindAdd(root, BindSeq('a', BindAny, 'c'), bind);
-    bindAdd(root, BindSeq('i'), (KeyBind){ .userData = (void *)1 });
-    bindAdd(root, BindSeq(BindAny), (KeyBind){ .userData = (void *)2 });
+    bindAdd(root, BindSeq('i'), (Bind){ .callback.kind = BindCallback_Ptr });
+    bindAdd(root, BindSeq(BindAny), (Bind){ .callback.kind = BindCallback_Int });
 
     bindPrintRoot(root);
 
@@ -59,10 +59,10 @@ void test_bindMatchFound(void) {
     testAssert(result == BindMatch_Found);
     result = bindMatch(root, BindSeq('i'), &bind);
     testAssert(result == BindMatch_Found);
-    testAssert(bind.userData == (void *)1);
+    testAssert(bind.callback.kind == BindCallback_Ptr);
     result = bindMatch(root, BindSeq('j'), &bind);
     testAssert(result == BindMatch_Found);
-    testAssert(bind.userData == (void *)2);
+    testAssert(bind.callback.kind == BindCallback_Int);
 
     bindQuit();
 }
@@ -70,7 +70,7 @@ void test_bindMatchFound(void) {
 void test_bindMatchPartial(void) {
     int32_t root = bindAddRootMap();
 
-    KeyBind bind = { 0 };
+    Bind bind = { 0 };
     bindAdd(root, BindSeq('x', 'y'), bind);
     bindAdd(root, BindSeq('x', 'y', 'z'), bind);
     bindAdd(root, BindSeq('a', 'b'), bind);

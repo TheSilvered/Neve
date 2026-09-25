@@ -8,8 +8,8 @@
 BindMap g_bindRoots = { 0 };
 
 Pool g_bindPool = {
-    .blockSize = sizeof(KeyBind),
-    .pageSize = sizeof(KeyBind) * 2048
+    .blockSize = sizeof(Bind),
+    .pageSize = sizeof(Bind) * 2048
 };
 
 static BindMap *_mapInsert(BindMap *map, BindMap entry);
@@ -18,7 +18,7 @@ static bool _mapRemove(BindMap *map, int32_t key);
 static BindMatchResult _bindMatchRec(
     BindMap *map,
     int32_t *seq,
-    KeyBind *outBind
+    Bind *outBind
 );
 
 int32_t bindAddRootMap(void) {
@@ -55,7 +55,7 @@ void bindPrintRoot(int32_t root) {
     _printMap(map, 0);
 }
 
-void bindAdd(int32_t root, BindKeys seq, KeyBind keyBind) {
+void bindAdd(int32_t root, BindKeys seq, Bind keyBind) {
     BindMap *map = _mapGet(&g_bindRoots, root);
     if (map == NULL) return;
     while (*seq != BindEnd) {
@@ -70,7 +70,7 @@ void bindAdd(int32_t root, BindKeys seq, KeyBind keyBind) {
     if (map->value != NULL) {
         poolFree(&g_bindPool, map->value);
     }
-    KeyBind *bind = poolAlloc(&g_bindPool);
+    Bind *bind = poolAlloc(&g_bindPool);
     *bind = keyBind;
     map->value = bind;
 }
@@ -119,7 +119,7 @@ bool bindExists(int32_t root, BindKeys seq) {
     return map != NULL && map->value != NULL;
 }
 
-BindMatchResult bindMatch(int32_t root, BindKeys seq, KeyBind *outBind) {
+BindMatchResult bindMatch(int32_t root, BindKeys seq, Bind *outBind) {
     BindMap *rootMap = _mapGet(&g_bindRoots, root);
     if (rootMap == NULL) return BindMatch_NotFound;
     return _bindMatchRec(rootMap, seq, outBind);
@@ -128,7 +128,7 @@ BindMatchResult bindMatch(int32_t root, BindKeys seq, KeyBind *outBind) {
 static BindMatchResult _bindMatchRec(
     BindMap *map,
     int32_t *seq,
-    KeyBind *outBind
+    Bind *outBind
 ) {
     if (seq[0] == BindEnd) {
         if (map->value == NULL) {
@@ -169,8 +169,8 @@ static BindMatchResult _bindMatchRec(
      *
      */
 
-    KeyBind wildBind = { 0 };
-    KeyBind specBind = { 0 };
+    Bind wildBind = { 0 };
+    Bind specBind = { 0 };
 
     BindMatchResult wildRes = _bindMatchRec(wildcard, seq + 1, &wildBind);
     BindMatchResult specRes = _bindMatchRec(specific, seq + 1, &specBind);
@@ -270,4 +270,24 @@ void bindQuit(void) {
     _mapDestroy(&g_bindRoots);
     g_bindRoots = (BindMap){ 0 };
     poolDestroy(&g_bindPool);
+}
+
+void bindInvokeCallback(Bind bind, BindKeys seq) {
+    switch (bind.callback.kind) {
+    case BindCallback_NoArgs:
+        bind.callback.func.noArgs();
+        break;
+    case BindCallback_Ptr:
+        bind.callback.func.ptrArg.func(bind.callback.func.ptrArg.arg);
+        break;
+    case BindCallback_Int:
+        bind.callback.func.intArg.func(bind.callback.func.intArg.arg);
+        break;
+    case BindCallback_Keys:
+        bind.callback.func.keysArg(seq);
+        break;
+    case BindCallback_PtrKeys:
+        bind.callback.func.ptrKeys.func(bind.callback.func.ptrKeys.arg, seq);
+        break;
+    }
 }
