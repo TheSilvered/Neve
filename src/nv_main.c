@@ -83,10 +83,6 @@ int keyLogMode(void) {
 
     while (true) {
         UcdCP byte = termGetInput();
-        if (byte == TermKey_CtrlC) {
-            printf("^C\n");
-            break;
-        }
         if (byte <= 0) {
             continue;
         }
@@ -97,9 +93,12 @@ int keyLogMode(void) {
         } else if (byte > ' ' && byte <= '~') {
             printf("%c", byte);
         } else {
-            printf("^%c", byte == 127 ? '?' : byte | 0x40);
+            printf("^%c", byte ^ 0x40);
         }
         fflush(stdout);
+        if (byte == TermKey_CtrlC) {
+            break;
+        }
     }
 
     termQuit();
