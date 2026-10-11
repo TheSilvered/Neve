@@ -146,6 +146,8 @@ void ctxInsertCP(Ctx *ctx, UcdCP cp);
 void ctxRemoveBack(Ctx *ctx);
 // Remove the character after the cursor.
 void ctxRemoveFwd(Ctx *ctx);
+// Remove the line the cursor is on.
+void ctxRemoveLine(Ctx *ctx);
 // Indent by `ctx->indentWidth` all lines with a cursor.
 void ctxIndent(Ctx *ctx);
 // Dedent a line by `ctx->indentWidth` all lines with a cursor.
@@ -187,6 +189,8 @@ ptrdiff_t ctxLineStart(const Ctx *ctx, size_t lineNo);
 // of the line feed for a regular line and the length of the buffer for the last
 // line.
 ptrdiff_t ctxLineEnd(const Ctx *ctx, size_t lineNo);
+// The same as `ctxLineEnd` but include the line separator if there is one.
+ptrdiff_t ctxLineEndInc(const Ctx *ctx, size_t lineNo);
 
 // Get the content of the context as a string view.
 // The view is valid until the text is edited.

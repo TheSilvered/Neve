@@ -55,6 +55,7 @@ static bool _ctxCurMoveEx(Ctx *ctx, size_t old, size_t new, size_t newCol);
 
 // Join cursor selections in the sels array
 static void _ctxSelJoin(Ctx *ctx);
+static void _ctxSelNormalize(Ctx *ctx);
 
 // Get info about the indentation.
 static size_t _ctxIndentInfo(Ctx *ctx, size_t line, ptrdiff_t *outIdx);
@@ -340,6 +341,15 @@ ptrdiff_t ctxLineEnd(const Ctx *ctx, size_t lineNo) {
         return  -1;
     } else {
         return i;
+    }
+}
+
+ptrdiff_t ctxLineEndInc(const Ctx *ctx, size_t lineNo) {
+    ptrdiff_t end = ctxLineEnd(ctx, lineNo);
+    if (end < 0 || (size_t)end < ctx->_buf.len) {
+        return end;
+    } else {
+        return end + 1;
     }
 }
 
@@ -1615,6 +1625,45 @@ void ctxRemoveFwd(Ctx *ctx) {
     }
 }
 
+void _ctxRemoveSelectionLines(Ctx *ctx) {
+    for (size_t i = 0; i < ctx->sels.len; i++) {
+        CtxSelection *sel = &ctx->sels.items[i];
+        size_t startLine, endLine;
+        ctxPosAt(ctx, sel->startIdx, &startLine, NULL);
+        ctxPosAt(ctx, sel->endIdx, &endLine, NULL);
+
+        sel->startIdx = (size_t)ctxLineStart(ctx, startLine);
+        sel->endIdx = (size_t)ctxLineEndInc(ctx, startLine);
+    }
+    _ctxSelNormalize(ctx);
+    _ctxRemoveSelections(ctx);
+}
+
+void _ctxRemoveCursorLines(Ctx *ctx) {
+    for (size_t i = 0; i < ctx->cursors.len; i++) {
+        size_t prevLen = ctx->cursors.len;
+        CtxCursor *cur = &ctx->cursors.items[i];
+        ptrdiff_t line = _ctxCurIndentLine(ctx, cur);
+        ptrdiff_t start = ctxLineStart(ctx, line);
+        ptrdiff_t end = ctxLineEndInc(ctx, line);
+        if (start < 0 || end < 0) continue;
+        _ctxReplace(ctx, start, end, NULL, 0);
+        // Do not advance when cursors are deleted
+        i -= prevLen - ctx->cursors.len;
+    }
+}
+
+void ctxRemoveLine(Ctx *ctx) {
+    ctxAddUndoCheckpoint(ctx);
+    ctxSelEnd(ctx);
+
+    if (ctx->sels.len != 0) {
+        _ctxRemoveSelectionLines(ctx);
+    } else {
+        _ctxRemoveCursorLines(ctx);
+    }
+}
+
 static size_t _ctxIndentInfo(Ctx *ctx, size_t line, ptrdiff_t *outIdx) {
     ptrdiff_t start = ctxLineStart(ctx, line);
     ptrdiff_t end = ctxLineEnd(ctx, line);
@@ -2273,7 +2322,10 @@ static void _ctxSelJoin(Ctx *ctx) {
         }
         arrAppend(&ctx->sels, sel);
     }
+    _ctxSelNormalize(ctx);
+}
 
+static void _ctxSelNormalize(Ctx *ctx) {
     // Sort the selection based on the starting index
     qsort(ctx->sels.items, ctx->sels.len, sizeof(*ctx->sels.items), _selCmp);
 
@@ -2306,11 +2358,11 @@ CtxSelection ctxCurToSel(const Ctx *ctx, CtxCursor *cur) {
         return (CtxSelection) { .startIdx = idx1, .endIdx = idx2 };
     case CtxSelection_Line: {
         size_t lineStart, lineEnd;
-        (void)ctxPosAt(ctx, idx1, &lineStart, NULL);
-        (void)ctxPosAt(ctx, idx2, &lineEnd, NULL);
+        ctxPosAt(ctx, idx1, &lineStart, NULL);
+        ctxPosAt(ctx, idx2, &lineEnd, NULL);
         return (CtxSelection) {
             .startIdx = ctxLineStart(ctx, lineStart),
-            .endIdx = ctxLineEnd(ctx, lineEnd)
+            .endIdx = ctxLineEndInc(ctx, lineEnd)
         };
     }
     default:
