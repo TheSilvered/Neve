@@ -9,10 +9,6 @@ static void _uiElemInit(
 
 static void _uiUpdater(UI *ui);
 static void _uiBufPanelUpdater(UIBufPanel *panel);
-
-// Edit always handles the input.
-// Return false if edit mode should be exited otherwise return true.
-
 static void _uiCmdInputUpdater(UICmdInput *cmdInput);
 
 static void _uiElemInit(
@@ -48,7 +44,6 @@ void uiBufPanelInit(UIBufPanel *panel) {
     _uiElemInit(&panel->elem, (UIUpdater)_uiBufPanelUpdater);
 
     panel->bufHd = bufInvalidHandle;
-    panel->mode = UIBufMode_Normal;
     panel->scrollX = 0;
     panel->scrollY = 0;
 }

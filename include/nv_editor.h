@@ -9,6 +9,13 @@
 
 #define EditorMaxBindLen 32
 
+typedef enum EditorMode {
+    EditorMode_Normal,
+    EditorMode_Edit,
+    EditorMode_Selection,
+    EditorMode_Command
+} EditorMode;
+
 // The state of the editor.
 typedef struct Editor {
     Screen screen;
@@ -18,8 +25,9 @@ typedef struct Editor {
     CmdResult *cmdResult;
     UI ui;
 
+    EditorMode _mode;
+    EditorMode _prevMode;
     bool running;
-    bool runningCommand;
 
     int32_t keys[EditorMaxBindLen + 1];
     uint8_t keyCount;
@@ -55,8 +63,6 @@ bool editorRefresh(void);
 bool editorOpen(const char *path);
 // Create a new file.
 void editorNewBuf(void);
-// Open the command palette.
-void editorOpenCommandPalette(void);
 
 // Get the current active panel, it may be NULL.
 UIBufPanel *editorActivePanel(void);
@@ -64,5 +70,9 @@ UIBufPanel *editorActivePanel(void);
 BufHandle editorActiveBuffer(void);
 // Get the current active context, it may be NULL.
 Ctx *editorActiveContext(void);
+// Set the mode of the editor.
+void editorSetMode(EditorMode mode);
+// Get the mode of the editor.
+EditorMode editorGetMode(void);
 
 #endif // !NV_EDITOR_H_

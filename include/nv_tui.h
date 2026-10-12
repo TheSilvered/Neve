@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include "nv_buffer.h"
-#include "nv_term.h"
 
 /*
 |--------------------------------------------------------------------------------|
@@ -43,16 +42,9 @@ struct UIElement {
     UIUpdater updater;
 };
 
-typedef enum UIBufMode {
-    UIBufMode_Normal,
-    UIBufMode_Edit,
-    UIBufMode_Selection
-} UIBufMode;
-
 typedef struct UIBufPanel {
     UIElement elem;
     BufHandle bufHd;
-    UIBufMode mode;
     size_t scrollX, scrollY;
 } UIBufPanel;
 

@@ -7,6 +7,7 @@
 static const char *_normalModeStr = "Normal";
 static const char *_editModeStr = "Edit";
 static const char *_selectionModeStr = "Selection";
+static const char *_commandModeStr = "Command";
 
 static Str lineBuf = { 0 };
 
@@ -406,19 +407,24 @@ static void _drawStatusBar(Screen *screen, const UIElement *statusBar) {
     }
 
     const char *modeStr = NULL;
-    switch (g_ed.ui.bufPanel.mode) {
-    case UIBufMode_Normal:
+    switch (editorGetMode()) {
+    case EditorMode_Normal:
         modeStr = _normalModeStr;
         break;
-    case UIBufMode_Edit:
+    case EditorMode_Edit:
         modeStr = _editModeStr;
         break;
-    case UIBufMode_Selection:
+    case EditorMode_Selection:
         modeStr = _selectionModeStr;
+        break;
+    case EditorMode_Command:
+        modeStr = _commandModeStr;
         break;
     default:
         nvUnreachable;
     }
+
+    
 
     screenWriteFmt(
         screen,

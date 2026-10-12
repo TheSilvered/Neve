@@ -27,7 +27,7 @@
 #define BindCBInt(fn, usr)                                                     \
     ((BindCallback){                                                           \
         .kind = BindCallback_Ptr,                                              \
-        .func.intArg = { .func = (fn), .arg = (usr) }                          \
+        .func.intArg = { .func = (void(*)(int))(fn), .arg = (usr) }            \
     })
 // Create a bind callback with a BindKeys argument.
 #define BindCBKeys(fn)                                                         \

@@ -11,7 +11,7 @@
 #include "nv_term.h"
 #include "nv_time.h"
 #include "nv_tui.h"
-#include "nv_logging.h"
+#include "nv_utils.h"
 
 Editor g_ed = { 0 };
 int32_t g_mapMove;
@@ -26,8 +26,9 @@ void editorInit(void) {
     bufMapInit(&g_ed.buffers);
     uiInit(&g_ed.ui);
 
+    g_ed._prevMode = EditorMode_Normal;
+    g_ed._mode = EditorMode_Normal;
     g_ed.running = true;
-    g_ed.runningCommand = false;
 
     arrAppend(&g_ed.commands, cmdEntryNew("q", cmdQuit));
 #ifdef NV_DEBUG
@@ -98,38 +99,45 @@ void _handleKeysWithFallbacks(int32_t maps[], uint8_t count) {
     BindMatchResult res = { 0 };
     g_ed.keys[g_ed.keyCount] = BindEnd;
 
-    bool setTimeout = false;
-    bool clearKeys = true;
+    bool incompleteFound = false;
+    uint64_t timeoutDuration = g_ed.opt.keyTimeoutDuration;
 
-    for (uint8_t i = 0; i < count; i++) {
-        res = bindMatch(maps[i], g_ed.keys, &bind);
+    uint8_t i;
+    for (i = 0; i < g_ed.keyCount && !incompleteFound; i++) {
+        for (uint8_t j = 0; j < count; j++) {
+            res = bindMatch(maps[j], g_ed.keys + i, &bind);
 
-        switch (res) {
-        case BindMatch_NotFound:
-            break;
-        case BindMatch_Incomplete:
-            setTimeout = true;
-            clearKeys = false;
-            break;
-        case BindMatch_Found:
-            // if a previous map in the higherarchy was incomplete
-            if (setTimeout) {
-                g_ed.onBindTimeout = bind;
-                g_ed.keyTimeoutEnd = timeRelNs() + g_ed.opt.keyTimeoutDuration;
-                return; // keep the keys
-            } else {
-                bindInvokeCallback(bind, g_ed.keys);
-                goto removeKeys;
+            switch (res) {
+            case BindMatch_NotFound:
+                break;
+            case BindMatch_Incomplete:
+                incompleteFound = true;
+                break;
+            case BindMatch_Found:
+                if (!incompleteFound) {
+                    timeoutDuration = 0;
+                }
+                goto setTimeout;
+            case BindMatch_Partial:
+                goto setTimeout;
             }
-        case BindMatch_Partial:
-            g_ed.onBindTimeout = bind;
-            g_ed.keyTimeoutEnd = timeRelNs() + g_ed.opt.keyTimeoutDuration;
-            return;
         }
     }
 
-removeKeys:
-    if (clearKeys) g_ed.keyCount = 0;
+    if (!incompleteFound) g_ed.keyCount = 0;
+    return;
+
+setTimeout:
+    g_ed.onBindTimeout = bind;
+    g_ed.keyTimeoutEnd = g_ed.lastUpdate + timeoutDuration;
+    g_ed.keyCount -= i;
+    // NOTE: `i` here is valid because we can only get to this branch from
+    // inside the inner loop and as a consequence `i++` does not execute once
+    // too many times
+    for (uint8_t j = 0; j < g_ed.keyCount - i; j++) {
+        g_ed.keys[j] = g_ed.keys[j + i];
+    }
+    g_ed.keys[g_ed.keyCount] = BindEnd;
 }
 
 void editorHandleKey(int32_t key) {
@@ -139,22 +147,21 @@ void editorHandleKey(int32_t key) {
         g_ed.keys[g_ed.keyCount++] = key;
     }
 
-    if (g_ed.runningCommand) {
-        _handleKeysWithFallbacks((int32_t[]){ g_mapCmd, g_mapEdit }, 2);
-        return;
-    }
-
-    UIBufMode mode = editorActivePanel()->mode;
-    switch (mode) {
-    case UIBufMode_Normal:
-        _handleKeysWithFallbacks((int32_t[]){ g_mapNormal, g_mapMove }, 2);
+    switch (g_ed._mode) {
+    case EditorMode_Normal:
+        _handleKeysWithFallbacks((int32_t[]){ g_mapNormal, g_mapMove, g_mapGlob }, 3);
         break;
-    case UIBufMode_Edit:
+    case EditorMode_Edit:
         _handleKeysWithFallbacks((int32_t[]){ g_mapEdit }, 1);
         break;
-    case UIBufMode_Selection:
-        _handleKeysWithFallbacks((int32_t[]){ g_mapSel, g_mapMove }, 2);
+    case EditorMode_Selection:
+        _handleKeysWithFallbacks((int32_t[]){ g_mapSel, g_mapMove, g_mapGlob }, 3);
         break;
+    case EditorMode_Command:
+        _handleKeysWithFallbacks((int32_t[]){ g_mapCmd, g_mapEdit }, 2);
+        break;
+    default:
+        nvUnreachable;
     }
 }
 
@@ -212,16 +219,16 @@ bool editorRefresh(void) {
         g_ed.keyTimeoutEnd = 0;
     }
 
-    if (g_ed.runningCommand) {
+    if (g_ed._mode == EditorMode_Command) {
         switch (g_ed.ui.cmdInput.state) {
         case UICmdInput_Inserting:
             break;
         case UICmdInput_Confirmed:
             _runCmd();
-            g_ed.runningCommand = false;
+            editorSetMode(g_ed._prevMode);
             break;
         case UICmdInput_Canceled:
-            g_ed.runningCommand = false;
+            editorSetMode(g_ed._prevMode);
             break;
         }
     }
@@ -275,24 +282,12 @@ void editorNewBuf(void) {
     g_ed.ui.bufPanel.bufHd = newBuf;
 }
 
-void editorOpenCommandPalette(void) {
-    g_ed.runningCommand = true;
-    g_ed.ui.cmdInput.state = UICmdInput_Inserting;
-    ctxDestroy(&g_ed.ui.cmdInput.ctx);
-    ctxInit(&g_ed.ui.cmdInput.ctx, false);
-    ctxCurAdd(&g_ed.ui.cmdInput.ctx, 0);
-    if (g_ed.cmdResult != NULL) {
-        memFree(g_ed.cmdResult);
-        g_ed.cmdResult = NULL;
-    }
-}
-
 UIBufPanel *editorActivePanel(void) {
-    return g_ed.runningCommand ? NULL : &g_ed.ui.bufPanel;
+    return g_ed._mode == EditorMode_Command ? NULL : &g_ed.ui.bufPanel;
 }
 
 BufHandle editorActiveBuffer(void) {
-    if (g_ed.runningCommand) {
+    if (g_ed._mode == EditorMode_Command) {
         return bufInvalidHandle;
     } else {
         return g_ed.ui.bufPanel.bufHd;
@@ -300,7 +295,7 @@ BufHandle editorActiveBuffer(void) {
 }
 
 Ctx *editorActiveContext(void) {
-    if (g_ed.runningCommand) {
+    if (g_ed._mode == EditorMode_Command) {
         return &g_ed.ui.cmdInput.ctx;
     } else {
         return &bufRef(&g_ed.buffers, g_ed.ui.bufPanel.bufHd)->ctx;
@@ -491,7 +486,6 @@ static void _addNormalMode(void) {
 
     // TODO: [^S]
     // TODO: [^D]
-    mkBind(g_mapNormal, BindCBKeys(_normalModeCB), 'p');
 }
 
 static void _addEditMode(void) {
@@ -572,7 +566,7 @@ static void _addGlobBinds(void) {
     g_mapGlob = bindAddRootMap();
 
     bindAdd(g_mapGlob, BindSeq('p'), (Bind){
-        .callback = BindCBNoArgs(editorOpenCommandPalette)
+        .callback = BindCBInt(editorSetMode, EditorMode_Command)
     });
 }
 
@@ -591,40 +585,35 @@ static void _callPanelCB(void *user) {
 }
 
 static void _normalModeCB(BindKeys keys) {
-    UIBufPanel *panel = editorActivePanel();
-    if (panel == NULL) return;
-
-    Buf *buf = bufRef(&g_ed.buffers, panel->bufHd);
-    if (buf == NULL) return;
-    Ctx *ctx = &buf->ctx;
+    Ctx *ctx = editorActiveContext();
 
     switch (keys[0]) {
     case 'e':
-        panel->mode = UIBufMode_Edit;
+        editorSetMode(EditorMode_Edit);
         break;
     case 'E':
         ctxCurMoveToLineEnd(ctx);
-        panel->mode = UIBufMode_Edit;
+        editorSetMode(EditorMode_Edit);
         break;
     case TermKey_CtrlE:
         ctxCurMoveToLineStart(ctx);
-        panel->mode = UIBufMode_Edit;
+        editorSetMode(EditorMode_Edit);
         break;
     case 'h':
         ctxInsertLineBelow(ctx);
-        panel->mode = UIBufMode_Edit;
+        editorSetMode(EditorMode_Edit);
         break;
     case 'H':
         ctxInsertLineAbove(ctx);
-        panel->mode = UIBufMode_Edit;
+        editorSetMode(EditorMode_Edit);
         break;
     case 's':
         ctxSelBegin(ctx, false);
-        panel->mode = UIBufMode_Selection;
+        editorSetMode(EditorMode_Selection);
         break;
     case 'S':
         ctxSelBegin(ctx, true);
-        panel->mode = UIBufMode_Selection;
+        editorSetMode(EditorMode_Selection);
         break;
     case 'Y':
         ctxSelBegin(ctx, true);
@@ -647,7 +636,7 @@ static void _normalModeCB(BindKeys keys) {
         if (ctxSelHas(ctx)) {
             ctxRemoveBack(ctx);
         }
-        panel->mode = UIBufMode_Edit;
+        editorSetMode(EditorMode_Edit);
         break;
     case TermKey_CtrlR:
         ctxSelBegin(ctx, false);
@@ -656,9 +645,6 @@ static void _normalModeCB(BindKeys keys) {
         if (ctxSelHas(ctx)) {
             ctxRemoveBack(ctx);
         }
-        break;
-    case 'p':
-        editorOpenCommandPalette();
         break;
     }
 }
@@ -721,7 +707,7 @@ static void _goToNormalModeCB(void) {
     Ctx *ctx = editorActiveContext();
     if (panel != NULL) {
         ctxSelCancel(ctx);
-        panel->mode = UIBufMode_Normal;
+        editorSetMode(EditorMode_Normal);
     }
 }
 
@@ -739,14 +725,14 @@ static void _selModeCB(BindKeys keys) {
         if (ctxSelHas(ctx)) {
             ctxRemoveBack(ctx);
         }
-        panel->mode = UIBufMode_Normal;
+        editorSetMode(EditorMode_Normal);
         break;
     case 'r':
         ctxSelEnd(ctx);
         if (ctxSelHas(ctx)) {
             ctxRemoveBack(ctx);
         }
-        panel->mode = UIBufMode_Edit;
+        editorSetMode(EditorMode_Edit);
         break;
     case 'h':
         if (ctxSelIsActive(ctx)) {
@@ -767,4 +753,42 @@ static void _selModeCB(BindKeys keys) {
 
 static void _cmdSetInputCB(int user) {
     g_ed.ui.cmdInput.state = user;
+}
+
+void editorSetMode(EditorMode mode) {
+    if (g_ed._mode != EditorMode_Command) {
+        g_ed._prevMode = g_ed._mode;
+    }
+
+    g_ed._mode = mode;
+    g_ed.keyCount = 0;
+
+    switch (mode) {
+    case EditorMode_Normal:
+    case EditorMode_Edit: {
+        Ctx *ctx = editorActiveContext();
+        if (ctx != NULL) {
+            ctxSelCancel(ctx);
+        }
+        break;
+    }
+    case EditorMode_Selection:
+        break;
+    case EditorMode_Command:
+        g_ed.ui.cmdInput.state = UICmdInput_Inserting;
+        ctxDestroy(&g_ed.ui.cmdInput.ctx);
+        ctxInit(&g_ed.ui.cmdInput.ctx, false);
+        ctxCurAdd(&g_ed.ui.cmdInput.ctx, 0);
+        if (g_ed.cmdResult != NULL) {
+            memFree(g_ed.cmdResult);
+            g_ed.cmdResult = NULL;
+        }
+        break;
+    default:
+        nvUnreachable;
+    }
+}
+
+EditorMode editorGetMode(void) {
+    return g_ed._mode;
 }
