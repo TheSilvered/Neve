@@ -17,7 +17,7 @@ void test_ctxCurMoveLineStartSingleLine(void) {
 
     testAssert(ctx.cursors.len == 1);
     testAssert(ctx.cursors.items[0].idx == 0);
-    testAssert(ctx.cursors.items[0].baseCol == 0);
+    testAssert(ctx.cursors.items[0].anchor == 0);
 
     ctxDestroy(&ctx);
 }
@@ -39,11 +39,11 @@ void test_ctxCurMoveLineStartMultiline(void) {
 
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 0);
-    testAssert(ctx.cursors.items[0].baseCol == 0);
+    testAssert(ctx.cursors.items[0].anchor == 0);
     testAssert(ctx.cursors.items[1].idx == 3);
-    testAssert(ctx.cursors.items[1].baseCol == 0);
+    testAssert(ctx.cursors.items[1].anchor == 0);
     testAssert(ctx.cursors.items[2].idx == 7);
-    testAssert(ctx.cursors.items[2].baseCol == 0);
+    testAssert(ctx.cursors.items[2].anchor == 0);
 
     ctxDestroy(&ctx);
 }

@@ -13,24 +13,24 @@ void test_ctxCurAt(void) {
     ctxCurAdd(&ctx, 15);
     ctxCurAdd(&ctx, 16);
 
-    testAssert(_ctxCurAt(&ctx, 0) == 0);
-    testAssert(_ctxCurAt(&ctx, 1) == 0);
-    testAssert(_ctxCurAt(&ctx, 2) == 0);
-    testAssert(_ctxCurAt(&ctx, 3) == 1);
-    testAssert(_ctxCurAt(&ctx, 4) == 1);
-    testAssert(_ctxCurAt(&ctx, 5) == 2);
-    testAssert(_ctxCurAt(&ctx, 6) == 2);
-    testAssert(_ctxCurAt(&ctx, 7) == 2);
-    testAssert(_ctxCurAt(&ctx, 8) == 2);
-    testAssert(_ctxCurAt(&ctx, 9) == 3);
-    testAssert(_ctxCurAt(&ctx, 10) == 3);
-    testAssert(_ctxCurAt(&ctx, 11) == 3);
-    testAssert(_ctxCurAt(&ctx, 12) == 3);
-    testAssert(_ctxCurAt(&ctx, 13) == 3);
-    testAssert(_ctxCurAt(&ctx, 14) == 3);
-    testAssert(_ctxCurAt(&ctx, 15) == 3);
-    testAssert(_ctxCurAt(&ctx, 16) == 4);
-    testAssert(_ctxCurAt(&ctx, 17) == 5);
+    testAssert(_ctxCurAt(&ctx.cursors, 0) == 0);
+    testAssert(_ctxCurAt(&ctx.cursors, 1) == 0);
+    testAssert(_ctxCurAt(&ctx.cursors, 2) == 0);
+    testAssert(_ctxCurAt(&ctx.cursors, 3) == 1);
+    testAssert(_ctxCurAt(&ctx.cursors, 4) == 1);
+    testAssert(_ctxCurAt(&ctx.cursors, 5) == 2);
+    testAssert(_ctxCurAt(&ctx.cursors, 6) == 2);
+    testAssert(_ctxCurAt(&ctx.cursors, 7) == 2);
+    testAssert(_ctxCurAt(&ctx.cursors, 8) == 2);
+    testAssert(_ctxCurAt(&ctx.cursors, 9) == 3);
+    testAssert(_ctxCurAt(&ctx.cursors, 10) == 3);
+    testAssert(_ctxCurAt(&ctx.cursors, 11) == 3);
+    testAssert(_ctxCurAt(&ctx.cursors, 12) == 3);
+    testAssert(_ctxCurAt(&ctx.cursors, 13) == 3);
+    testAssert(_ctxCurAt(&ctx.cursors, 14) == 3);
+    testAssert(_ctxCurAt(&ctx.cursors, 15) == 3);
+    testAssert(_ctxCurAt(&ctx.cursors, 16) == 4);
+    testAssert(_ctxCurAt(&ctx.cursors, 17) == 5);
 
     ctxDestroy(&ctx);
 }

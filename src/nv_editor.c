@@ -201,8 +201,8 @@ void _runCmd(void) {
         memFree(g_ed.cmdResult);
     }
     g_ed.cmdResult = cmdResultFailed(
-        "command '"strFmt"' not found",
-        strArg(&cmdName)
+        "command '"StrFmt"' not found",
+        StrArg(&cmdName)
     );
 }
 

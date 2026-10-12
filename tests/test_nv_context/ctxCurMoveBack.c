@@ -12,9 +12,9 @@ void test_ctxCurMoveBackAscii(void) {
     ctxCurMoveBack(&ctx);
 
     testAssert(ctx.cursors.items[0].idx == 0);
-    testAssert(ctx.cursors.items[0].baseCol == 0);
+    testAssert(ctx.cursors.items[0].anchor == 0);
     testAssert(ctx.cursors.items[1].idx == 1);
-    testAssert(ctx.cursors.items[1].baseCol == 1);
+    testAssert(ctx.cursors.items[1].anchor == 1);
 
     ctxDestroy(&ctx);
 }
@@ -33,11 +33,11 @@ void test_ctxCurMoveBackMultiline(void) {
 
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 0);
-    testAssert(ctx.cursors.items[0].baseCol == 0);
+    testAssert(ctx.cursors.items[0].anchor == 0);
     testAssert(ctx.cursors.items[1].idx == 2);
-    testAssert(ctx.cursors.items[1].baseCol == 2);
+    testAssert(ctx.cursors.items[1].anchor == 2);
     testAssert(ctx.cursors.items[2].idx == 3);
-    testAssert(ctx.cursors.items[2].baseCol == 0);
+    testAssert(ctx.cursors.items[2].anchor == 0);
 
     ctxDestroy(&ctx);
 }
@@ -54,23 +54,23 @@ void text_ctxCurMoveBackUnicode(void) {
     ctxCurAdd(&ctx, 7);
     ctxCurAdd(&ctx, 8);
 
-    testAssert(ctx.cursors.items[0].baseCol == 0);
-    testAssert(ctx.cursors.items[1].baseCol == 1);
-    testAssert(ctx.cursors.items[2].baseCol == 3);
-    testAssert(ctx.cursors.items[3].baseCol == 8);
-    testAssert(ctx.cursors.items[4].baseCol == 9);
+    testAssert(ctx.cursors.items[0].anchor == 0);
+    testAssert(ctx.cursors.items[1].anchor == 1);
+    testAssert(ctx.cursors.items[2].anchor == 3);
+    testAssert(ctx.cursors.items[3].anchor == 8);
+    testAssert(ctx.cursors.items[4].anchor == 9);
 
     ctxCurMoveBack(&ctx);
 
     testAssert(ctx.cursors.len == 4);
     testAssert(ctx.cursors.items[0].idx == 0);
-    testAssert(ctx.cursors.items[0].baseCol == 0);
+    testAssert(ctx.cursors.items[0].anchor == 0);
     testAssert(ctx.cursors.items[1].idx == 2);
-    testAssert(ctx.cursors.items[1].baseCol == 1);
+    testAssert(ctx.cursors.items[1].anchor == 1);
     testAssert(ctx.cursors.items[2].idx == 6);
-    testAssert(ctx.cursors.items[2].baseCol == 3);
+    testAssert(ctx.cursors.items[2].anchor == 3);
     testAssert(ctx.cursors.items[3].idx == 7);
-    testAssert(ctx.cursors.items[3].baseCol == 8);
+    testAssert(ctx.cursors.items[3].anchor == 8);
 
     ctxDestroy(&ctx);
 }

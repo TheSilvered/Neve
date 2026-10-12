@@ -9,7 +9,7 @@ typedef struct CtxRef {
 } CtxRef;
 
 typedef struct CtxCursor {
-    size_t idx, baseCol;
+    size_t idx, anchor;
     size_t _selStart;
 } CtxCursor;
 
@@ -53,6 +53,7 @@ typedef struct Ctx {
     ptrdiff_t _editCount; // Keep track of edits to add restore points.
     CtxSelections sels;   // Static selections.
     CtxCursors cursors;   // Cursors + active selections.
+    CtxCursors _curSwap;  // Cursor swap array for batch modifications.
     uint8_t selKind;      // Kind of selection.
     uint8_t tabStop;      // Max width of a tab.
     uint8_t indentWidth;  // How much to indent.

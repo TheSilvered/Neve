@@ -19,7 +19,7 @@ void test_ctxCurMoveToTextStartWithCursors(void) {
 
     testAssert(ctx.cursors.len == 1);
     testAssert(ctx.cursors.items[0].idx == 0);
-    testAssert(ctx.cursors.items[0].baseCol == 0);
+    testAssert(ctx.cursors.items[0].anchor == 0);
 
     ctxDestroy(&ctx);
 }

@@ -23,7 +23,7 @@ typedef struct Test {
 #define testMake(func) {                                                       \
         .callback = (func),                                                    \
         .name = #func,                                                         \
-        .expectFailure = false                                              \
+        .expectFailure = false                                                 \
     }
 
 // Initialize a test using `func` as the callback and the name, additionally
@@ -32,7 +32,7 @@ typedef struct Test {
 #define testMakeFail(func) {                                                   \
         .callback = (func),                                                    \
         .name = #func,                                                         \
-        .expectFailure = true                                               \
+        .expectFailure = true                                                  \
     }
 // Assert that `expr` is true
 #define testAssert(expr) _testAssert((expr), #expr, __FILE__, __LINE__)

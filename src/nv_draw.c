@@ -438,7 +438,7 @@ static void _drawStatusBar(Screen *screen, const UIElement *statusBar) {
             screen,
             statusBar->x + (uint16_t)_cStrWidth(modeStr) + 3,
             statusBar->y,
-            strFmt, strArg(&g_ed.cmdResult->msg)
+            StrFmt, StrArg(&g_ed.cmdResult->msg)
         );
     }
 }

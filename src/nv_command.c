@@ -127,9 +127,9 @@ CmdResult *cmdSave(StrView args) {
     FileIOResult result = bufWriteToDisk(buf);
     switch (result) {
     case FileIOResult_Success:
-        return cmdResultSuccess("saved at "strFmt, strArg(&buf->path));
+        return cmdResultSuccess("saved at "StrFmt, StrArg(&buf->path));
     case FileIOResult_BadPath:
-        return cmdResultFailed("invalid path '"strFmt"'", strArg(&buf->path));
+        return cmdResultFailed("invalid path '"StrFmt"'", StrArg(&buf->path));
     case FileIOResult_PermissionDenied:
         return cmdResultFailed("write permission denied");
     default:

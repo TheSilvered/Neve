@@ -6,6 +6,7 @@
 
 jmp_buf g_testJmpBuf;
 int g_testAssertLine;
+const char *g_testAssertFunc;
 const char *g_testAssertFile;
 const char *g_testAssertExpr;
 const char *g_testAssertMsg;
@@ -73,10 +74,11 @@ void _testHandleAbort(int status, bool expectedFailure) {
         return;
     }
     printf(
-        "  %s:%d[assertion failed]: %s (%s)\n",
+        "  %s:%d(%s): assertion failed :: %s :: %s\n",
         g_testAssertFile,
         g_testAssertLine,
-        status == 1 ? "" : g_testAssertMsg,
+        g_testAssertFunc,
+        status == 1 ? "\b\b\b\b" : g_testAssertMsg,
         g_testAssertExpr
     );
     memPrintAllocs();
