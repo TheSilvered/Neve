@@ -11,6 +11,7 @@
 #include "nv_term.h"
 #include "nv_time.h"
 #include "nv_tui.h"
+#include "nv_logging.h"
 
 Editor g_ed = { 0 };
 int32_t g_mapMove;
@@ -29,7 +30,12 @@ void editorInit(void) {
     g_ed.runningCommand = false;
 
     arrAppend(&g_ed.commands, cmdEntryNew("q", cmdQuit));
+#ifdef NV_DEBUG
+    // fq is too easy to type and can lead to slip-ups but it is useful when
+    // testing
     arrAppend(&g_ed.commands, cmdEntryNew("fq", cmdForceQuit));
+#endif
+    arrAppend(&g_ed.commands, cmdEntryNew("forcequit", cmdForceQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("quit", cmdQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("exit", cmdQuit));
     arrAppend(&g_ed.commands, cmdEntryNew("w", cmdSave));
@@ -42,6 +48,8 @@ void editorInit(void) {
     arrAppend(&g_ed.commands, cmdEntryNew("pwd", cmdWorkingDir));
 
     _addKeyBinds();
+
+    g_ed.opt.keyTimeoutDuration = 5 * TimeSecond;
 
     termWrite(sLen(
         escEnableAltBuffer
@@ -83,35 +91,70 @@ void editorForceExit(void) {
     g_ed.running = false;
 }
 
-void editorHandleKey(int32_t key) {
-    if (key == TermKey_None) return;
+void _handleKeysWithFallbacks(int32_t maps[], uint8_t count) {
+    // TODO: immediate selection handling
 
     Bind bind = { 0 };
     BindMatchResult res = { 0 };
-    if (g_ed.runningCommand) {
-        res = bindMatch(g_mapCmd, BindSeq(key), &bind);
-    } else {
-        UIBufMode mode = editorActivePanel()->mode;
-        switch (mode) {
-        case UIBufMode_Normal:
-            res = bindMatch(g_mapNormal, BindSeq(key), &bind);
+    g_ed.keys[g_ed.keyCount] = BindEnd;
+
+    bool setTimeout = false;
+    bool clearKeys = true;
+
+    for (uint8_t i = 0; i < count; i++) {
+        res = bindMatch(maps[i], g_ed.keys, &bind);
+
+        switch (res) {
+        case BindMatch_NotFound:
             break;
-        case UIBufMode_Edit:
-            res = bindMatch(g_mapEdit, BindSeq(key), &bind);
+        case BindMatch_Incomplete:
+            setTimeout = true;
+            clearKeys = false;
             break;
-        case UIBufMode_Selection:
-            res = bindMatch(g_mapSel, BindSeq(key), &bind);
-            break;
+        case BindMatch_Found:
+            // if a previous map in the higherarchy was incomplete
+            if (setTimeout) {
+                g_ed.onBindTimeout = bind;
+                g_ed.keyTimeoutEnd = timeRelNs() + g_ed.opt.keyTimeoutDuration;
+                return; // keep the keys
+            } else {
+                bindInvokeCallback(bind, g_ed.keys);
+                goto removeKeys;
+            }
+        case BindMatch_Partial:
+            g_ed.onBindTimeout = bind;
+            g_ed.keyTimeoutEnd = timeRelNs() + g_ed.opt.keyTimeoutDuration;
+            return;
         }
     }
 
-    if (res != BindMatch_Found) {
-        res = bindMatch(g_mapMove, BindSeq(key), &bind);
-        if (res != BindMatch_Found) return;
+removeKeys:
+    if (clearKeys) g_ed.keyCount = 0;
+}
+
+void editorHandleKey(int32_t key) {
+    if (key == TermKey_None) return;
+
+    if (g_ed.keyCount < EditorMaxBindLen) {
+        g_ed.keys[g_ed.keyCount++] = key;
     }
 
-    if (!bind.hasSelection) {
-        bindInvokeCallback(bind, BindSeq(key));
+    if (g_ed.runningCommand) {
+        _handleKeysWithFallbacks((int32_t[]){ g_mapCmd, g_mapEdit }, 2);
+        return;
+    }
+
+    UIBufMode mode = editorActivePanel()->mode;
+    switch (mode) {
+    case UIBufMode_Normal:
+        _handleKeysWithFallbacks((int32_t[]){ g_mapNormal, g_mapMove }, 2);
+        break;
+    case UIBufMode_Edit:
+        _handleKeysWithFallbacks((int32_t[]){ g_mapEdit }, 1);
+        break;
+    case UIBufMode_Selection:
+        _handleKeysWithFallbacks((int32_t[]){ g_mapSel, g_mapMove }, 2);
+        break;
     }
 }
 
@@ -163,13 +206,20 @@ bool editorRefresh(void) {
     }
     g_ed.lastUpdate = timeRelNs();
 
+    if (g_ed.keyTimeoutEnd != 0 && g_ed.lastUpdate >= g_ed.keyTimeoutEnd) {
+        bindInvokeCallback(g_ed.onBindTimeout, g_ed.keys);
+        g_ed.keyCount = 0;
+        g_ed.keyTimeoutEnd = 0;
+    }
+
     if (g_ed.runningCommand) {
         switch (g_ed.ui.cmdInput.state) {
         case UICmdInput_Inserting:
             break;
         case UICmdInput_Confirmed:
             _runCmd();
-            // fallthrough
+            g_ed.runningCommand = false;
+            break;
         case UICmdInput_Canceled:
             g_ed.runningCommand = false;
             break;

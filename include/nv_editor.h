@@ -3,8 +3,11 @@
 
 #include "nv_buffer.h"
 #include "nv_command.h"
+#include "nv_key_binds.h"
 #include "nv_screen.h"
 #include "nv_tui.h"
+
+#define EditorMaxBindLen 32
 
 // The state of the editor.
 typedef struct Editor {
@@ -14,8 +17,18 @@ typedef struct Editor {
     CmdMap commands;
     CmdResult *cmdResult;
     UI ui;
+
     bool running;
     bool runningCommand;
+
+    int32_t keys[EditorMaxBindLen + 1];
+    uint8_t keyCount;
+    Bind onBindTimeout;
+    uint64_t keyTimeoutEnd;
+
+    struct {
+        uint64_t keyTimeoutDuration;
+    } opt; // options
 } Editor;
 
 // Global editor variable.

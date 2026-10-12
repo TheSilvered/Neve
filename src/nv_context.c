@@ -346,7 +346,7 @@ ptrdiff_t ctxLineEnd(const Ctx *ctx, size_t lineNo) {
 
 ptrdiff_t ctxLineEndInc(const Ctx *ctx, size_t lineNo) {
     ptrdiff_t end = ctxLineEnd(ctx, lineNo);
-    if (end < 0 || (size_t)end < ctx->_buf.len) {
+    if (end < 0 || (size_t)end == ctx->_buf.len) {
         return end;
     } else {
         return end + 1;
@@ -1643,10 +1643,18 @@ void _ctxRemoveCursorLines(Ctx *ctx) {
     for (size_t i = 0; i < ctx->cursors.len; i++) {
         size_t prevLen = ctx->cursors.len;
         CtxCursor *cur = &ctx->cursors.items[i];
-        ptrdiff_t line = _ctxCurIndentLine(ctx, cur);
-        ptrdiff_t start = ctxLineStart(ctx, line);
-        ptrdiff_t end = ctxLineEndInc(ctx, line);
+        size_t lineNo;
+        ctxPosAt(ctx, cur->idx, &lineNo, NULL);
+        ptrdiff_t start = ctxLineStart(ctx, lineNo);
+        ptrdiff_t end = ctxLineEnd(ctx, lineNo);
+
         if (start < 0 || end < 0) continue;
+
+        if ((size_t)end < ctx->_buf.len) {
+            end++;
+        } else if (start > 0) {
+            start--;
+        }
         _ctxReplace(ctx, start, end, NULL, 0);
         // Do not advance when cursors are deleted
         i -= prevLen - ctx->cursors.len;

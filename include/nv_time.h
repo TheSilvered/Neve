@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define TimeMilliSec (UINT64_C(1000000))
+#define TimeSecond (UINT64_C(1000000000))
+
 // Get a relative timestamp in nanoseconds. The actual resolution may vary.
 // Subsequent calls are guaranteed to always have a value greater than or equal
 // to previous calls.

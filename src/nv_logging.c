@@ -51,10 +51,22 @@ void logQuit(void) {
     fileClose(&logFile);
 }
 
-nvUnixFmt(1, 2) void logFmt(nvWinFmt const char *fmt, ...) {
+nvUnixFmt(2, 3) void logFmt(LogLevel lvl, nvWinFmt const char *fmt, ...) {
+    switch (lvl) {
+    case Log_Info:
+        fputs("[INFO]    ", logFile.fp);
+        break;
+    case Log_Warning:
+        fputs("[WARNING] ", logFile.fp);
+        break;
+    case Log_Error:
+        fputs("[ERROR]   ", logFile.fp);
+        break;
+    }
     va_list args;
     va_start(args, fmt);
     (void)vfprintf(logFile.fp, fmt, args);
     va_end(args);
+    putc('\n', logFile.fp);
     fflush(logFile.fp);
 }

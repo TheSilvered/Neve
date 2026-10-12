@@ -4,9 +4,15 @@
 #include <stdbool.h>
 #include "nv_utils.h"
 
+typedef enum LogLevel {
+    Log_Info,
+    Log_Warning,
+    Log_Error
+} LogLevel;
+
 bool logInit(const char *filePath);
 void logQuit(void);
 
-nvUnixFmt(1, 2) void logFmt(nvWinFmt const char *fmt, ...);
+nvUnixFmt(2, 3) void logFmt(LogLevel lvl, nvWinFmt const char *fmt, ...);
 
 #endif // !NV_LOGGING_H_
