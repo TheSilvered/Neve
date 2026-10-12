@@ -52,6 +52,8 @@ static void _ctxCurAddEx(Ctx *ctx, size_t idx, size_t col);
 // Return `true` if the new cursor already exists
 static bool _ctxCurMove(Ctx *ctx, size_t old, size_t new);
 static bool _ctxCurMoveEx(Ctx *ctx, size_t old, size_t new, size_t newCol);
+// Remove the cursor at 'idx' in the file if it exists
+void _ctxCurRemove(Ctx *ctx, size_t idx);
 
 // Join cursor selections in the sels array
 static void _ctxSelJoin(Ctx *ctx);
@@ -1092,7 +1094,7 @@ static inline void _ctxReplace_MoveCursorsOutOfSpan(
     size_t curIdx = _ctxCurAt(ctx, start + 1);
     if (curIdx < ctx->cursors.len) {
         while (ctx->cursors.items[curIdx].idx < end) {
-            ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
+            _ctxCurMove(ctx, ctx->cursors.items[curIdx].idx, end);
         }
     }
 }
@@ -1970,7 +1972,7 @@ void ctxCurAdd(Ctx *ctx, size_t idx) {
     _ctxCurAddEx(ctx, idx, col);
 }
 
-void ctxCurRemove(Ctx *ctx, size_t idx) {
+void _ctxCurRemove(Ctx *ctx, size_t idx) {
     size_t curIdx = _ctxCurAt(ctx, idx);
     if (curIdx < ctx->cursors.len && ctx->cursors.items[curIdx].idx == idx) {
         arrRemove(&ctx->cursors, curIdx);
@@ -2016,7 +2018,7 @@ static bool _ctxCurMoveEx(
                 cursors[oldIdx]._selStart
             );
         }
-        ctxCurRemove(ctx, old);
+        _ctxCurRemove(ctx, old);
         return true;
     }
 
@@ -2043,10 +2045,6 @@ static bool _ctxCurMoveEx(
         cursors[newIdx] = newCursor;
     }
     return false;
-}
-
-void ctxCurMove(Ctx *ctx, size_t old, size_t new) {
-    (void)_ctxCurMove(ctx, old, new);
 }
 
 void ctxCurMoveLeft(Ctx *ctx) {

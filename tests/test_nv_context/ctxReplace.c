@@ -220,10 +220,10 @@ void test_ctxReplaceSameLenWSelCursors(void) {
 
     ctxSelBegin(&ctx, false);
 
-    ctxCurMove(&ctx, 1, 6);
-    ctxCurMove(&ctx, 7, 1);
-    ctxCurMove(&ctx, 3, 0);
-    ctxCurMove(&ctx, 4, 7);
+    _ctxCurMove(&ctx, 1, 6);
+    _ctxCurMove(&ctx, 7, 1);
+    _ctxCurMove(&ctx, 3, 0);
+    _ctxCurMove(&ctx, 4, 7);
 
     _ctxReplace(&ctx, 2, 5, (Utf8Ch *)"rpl", 3);
     testAssert(ctx.cursors.len == 4);
@@ -252,10 +252,10 @@ void test_ctxReplaceShorterWSelCursors(void) {
 
     ctxSelBegin(&ctx, false);
 
-    ctxCurMove(&ctx, 1, 6);
-    ctxCurMove(&ctx, 7, 1);
-    ctxCurMove(&ctx, 3, 0);
-    ctxCurMove(&ctx, 4, 7);
+    _ctxCurMove(&ctx, 1, 6);
+    _ctxCurMove(&ctx, 7, 1);
+    _ctxCurMove(&ctx, 3, 0);
+    _ctxCurMove(&ctx, 4, 7);
 
     _ctxReplace(&ctx, 2, 5, (Utf8Ch *)"rp", 2);
     testAssert(ctx.cursors.len == 4);
@@ -284,10 +284,10 @@ void test_ctxReplaceEmptyWSelCursors(void) {
 
     ctxSelBegin(&ctx, false);
 
-    ctxCurMove(&ctx, 1, 6);
-    ctxCurMove(&ctx, 7, 1);
-    ctxCurMove(&ctx, 3, 0);
-    ctxCurMove(&ctx, 4, 7);
+    _ctxCurMove(&ctx, 1, 6);
+    _ctxCurMove(&ctx, 7, 1);
+    _ctxCurMove(&ctx, 3, 0);
+    _ctxCurMove(&ctx, 4, 7);
 
     _ctxReplace(&ctx, 2, 5, NULL, 0);
     testAssert(ctx.cursors.len == 4);
@@ -316,10 +316,10 @@ void test_ctxReplaceLongerWSelCursors(void) {
 
     ctxSelBegin(&ctx, false);
 
-    ctxCurMove(&ctx, 1, 6);
-    ctxCurMove(&ctx, 7, 1);
-    ctxCurMove(&ctx, 3, 0);
-    ctxCurMove(&ctx, 4, 7);
+    _ctxCurMove(&ctx, 1, 6);
+    _ctxCurMove(&ctx, 7, 1);
+    _ctxCurMove(&ctx, 3, 0);
+    _ctxCurMove(&ctx, 4, 7);
 
     _ctxReplace(&ctx, 2, 5, (Utf8Ch *)"rplx", 4);
     testAssert(ctx.cursors.len == 4);

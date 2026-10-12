@@ -73,10 +73,6 @@ void ctxDestroy(Ctx *ctx);
 
 // Add a cursor at 'idx' in the file
 void ctxCurAdd(Ctx *ctx, size_t idx);
-// Remove the cursor at 'idx' in the file if it exists
-void ctxCurRemove(Ctx *ctx, size_t idx);
-// Replace the cursor at 'old' with the cursor at 'new'
-void ctxCurMove(Ctx *ctx, size_t old, size_t new);
 
 // Move to the previous character in the line
 void ctxCurMoveLeft(Ctx *ctx);

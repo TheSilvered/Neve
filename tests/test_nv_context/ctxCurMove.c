@@ -11,7 +11,7 @@ void test_ctxCurMove(void) {
     ctxCurAdd(&ctx, 4);
     ctxCurAdd(&ctx, 6);
 
-    ctxCurMove(&ctx, 6, 7);
+    _ctxCurMove(&ctx, 6, 7);
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 2);
     testAssert(ctx.cursors.items[0]._selStart == 2);
@@ -20,7 +20,7 @@ void test_ctxCurMove(void) {
     testAssert(ctx.cursors.items[2].idx == 7);
     testAssert(ctx.cursors.items[2]._selStart == 6);
 
-    ctxCurMove(&ctx, 2, 5);
+    _ctxCurMove(&ctx, 2, 5);
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 4);
     testAssert(ctx.cursors.items[0]._selStart == 4);
@@ -29,7 +29,7 @@ void test_ctxCurMove(void) {
     testAssert(ctx.cursors.items[2].idx == 7);
     testAssert(ctx.cursors.items[2]._selStart == 6);
 
-    ctxCurMove(&ctx, 5, 6);
+    _ctxCurMove(&ctx, 5, 6);
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 4);
     testAssert(ctx.cursors.items[0]._selStart == 4);
@@ -38,7 +38,7 @@ void test_ctxCurMove(void) {
     testAssert(ctx.cursors.items[2].idx == 7);
     testAssert(ctx.cursors.items[2]._selStart == 6);
 
-    ctxCurMove(&ctx, 1, 8);
+    _ctxCurMove(&ctx, 1, 8);
     testAssert(ctx.cursors.len == 4);
     testAssert(ctx.cursors.items[0].idx == 4);
     testAssert(ctx.cursors.items[0]._selStart == 4);
@@ -49,7 +49,7 @@ void test_ctxCurMove(void) {
     testAssert(ctx.cursors.items[3].idx == 8);
     testAssert(ctx.cursors.items[3]._selStart == 8);
 
-    ctxCurMove(&ctx, 6, 7);
+    _ctxCurMove(&ctx, 6, 7);
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 4);
     testAssert(ctx.cursors.items[0]._selStart == 4);
@@ -58,7 +58,7 @@ void test_ctxCurMove(void) {
     testAssert(ctx.cursors.items[2].idx == 8);
     testAssert(ctx.cursors.items[2]._selStart == 8);
 
-    ctxCurMove(&ctx, 4, 4);
+    _ctxCurMove(&ctx, 4, 4);
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 4);
     testAssert(ctx.cursors.items[0]._selStart == 4);
@@ -67,7 +67,7 @@ void test_ctxCurMove(void) {
     testAssert(ctx.cursors.items[2].idx == 8);
     testAssert(ctx.cursors.items[2]._selStart == 8);
 
-    ctxCurMove(&ctx, 8, 1);
+    _ctxCurMove(&ctx, 8, 1);
     testAssert(ctx.cursors.len == 3);
     testAssert(ctx.cursors.items[0].idx == 1);
     testAssert(ctx.cursors.items[0]._selStart == 8);
